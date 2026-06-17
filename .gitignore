@@ -1,5 +1,5 @@
 *.bin
-old/*
+old/
 
 .DS_store
 
