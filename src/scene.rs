@@ -9,6 +9,7 @@ use crate::{
 pub enum SceneId {
     Main,
     Menu,
+    PoseViewer,
 }
 
 pub trait Scene {

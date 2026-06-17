@@ -7,7 +7,7 @@ use crate::{
     scene::{Scene, SceneId},
 };
 
-const ITEMS: [&str; 2] = ["Resume", "Reset stats"];
+const ITEMS: [&str; 3] = ["Resume", "Reset stats", "Pose viewer"];
 
 pub struct MenuScene {
     selected: usize,
@@ -39,6 +39,7 @@ impl Scene for MenuScene {
                     *ctx = GameContext::new();
                     return Some(SceneId::Main);
                 }
+                2 => return Some(SceneId::PoseViewer),
                 _ => {}
             }
         }

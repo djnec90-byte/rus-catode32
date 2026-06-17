@@ -5,6 +5,7 @@ mod assets;
 mod behavior;
 mod behaviors;
 mod board;
+mod character;
 mod context;
 mod game;
 mod input;

@@ -2,7 +2,7 @@ use embedded_graphics::{
     mono_font::{ascii::FONT_6X10, MonoTextStyle},
     pixelcolor::BinaryColor,
     prelude::*,
-    primitives::{PrimitiveStyle, PrimitiveStyleBuilder, Rectangle},
+    primitives::{Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle},
     text::{Baseline, Text},
 };
 use esp_hal::{i2c::master::I2c, Blocking};
@@ -82,6 +82,13 @@ impl Renderer {
         };
         Rectangle::new(pos, size)
             .into_styled(style)
+            .draw(&mut self.display)
+            .unwrap();
+    }
+
+    pub fn draw_line(&mut self, start: Point, end: Point) {
+        Line::new(start, end)
+            .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1))
             .draw(&mut self.display)
             .unwrap();
     }
