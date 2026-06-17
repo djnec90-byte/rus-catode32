@@ -2,11 +2,15 @@
 #![no_main]
 
 mod assets;
+mod behavior;
+mod behaviors;
 mod board;
 mod context;
 mod game;
 mod input;
 mod render;
+mod scene;
+mod scenes;
 
 use esp_backtrace as _;
 use esp_hal::{clock::CpuClock, main};
@@ -23,7 +27,7 @@ fn main() -> ! {
     let board = board::init(peripherals);
     let renderer = Renderer::new(board.i2c);
 
-    println!("catode32 v0.10.0 — game loop");
+    println!("catode32 v0.10.0 — behavior framework");
 
     Game::new(renderer, board.buttons).run();
 }
