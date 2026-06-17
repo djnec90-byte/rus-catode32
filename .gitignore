@@ -1,6 +1,10 @@
 *.bin
 old/
 
+# Rust
+/target/
+
+
 .DS_store
 
 build/
@@ -11,7 +15,7 @@ log.txt
 parse_stats.py
 *stats.csv*
 
-context.json
+*context.json
 backup.json
 backup.old.json
 save.json

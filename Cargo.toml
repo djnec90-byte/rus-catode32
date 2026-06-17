@@ -1,0 +1,28 @@
+[package]
+name = "catode32"
+version = "0.10.0"
+edition = "2021"
+description = "ESP32 virtual pet — Rust rewrite of the MicroPython v0.9.x line"
+license = "MIT"
+repository = "https://github.com/moonbench/catode32"
+
+[dependencies]
+esp-hal = { version = "1.1.1", features = ["esp32c6", "rt"] }
+esp-backtrace = { version = "0.19.0", features = ["esp32c6", "panic-handler", "println"] }
+esp-println = { version = "0.17.0", features = ["esp32c6"] }
+esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32c6"] }
+ssd1306 = "0.10.0"
+embedded-graphics = "0.8.2"
+heapless = "0.8"
+
+[profile.dev]
+opt-level = 1
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = "fat"
+opt-level = "s"
+overflow-checks = false
