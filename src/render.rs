@@ -1,0 +1,157 @@
+use embedded_graphics::{
+    mono_font::{ascii::FONT_6X10, MonoTextStyle},
+    pixelcolor::BinaryColor,
+    prelude::*,
+    primitives::{PrimitiveStyle, PrimitiveStyleBuilder, Rectangle},
+    text::{Baseline, Text},
+};
+use esp_hal::{i2c::master::I2c, Blocking};
+use ssd1306::{
+    mode::BufferedGraphicsMode, prelude::*, rotation::DisplayRotation, size::DisplaySize128x64,
+    I2CDisplayInterface, Ssd1306,
+};
+
+type DisplayInterface = ssd1306::prelude::I2CInterface<I2c<'static, Blocking>>;
+type Display = Ssd1306<DisplayInterface, DisplaySize128x64, BufferedGraphicsMode<DisplaySize128x64>>;
+
+pub struct Sprite {
+    pub width: u16,
+    pub height: u16,
+    pub frames: &'static [&'static [u8]],
+    pub fill_frames: Option<&'static [&'static [u8]]>,
+}
+
+#[derive(Clone, Copy)]
+pub struct SpriteOpts {
+    pub frame: usize,
+    pub transparent: bool,
+    pub invert: bool,
+    pub mirror_h: bool,
+    pub mirror_v: bool,
+    pub transparent_color: bool,
+}
+
+impl Default for SpriteOpts {
+    fn default() -> Self {
+        Self {
+            frame: 0,
+            transparent: true,
+            invert: false,
+            mirror_h: false,
+            mirror_v: false,
+            transparent_color: false,
+        }
+    }
+}
+
+pub struct Renderer {
+    display: Display,
+}
+
+impl Renderer {
+    pub fn new(i2c: I2c<'static, Blocking>) -> Self {
+        let interface = I2CDisplayInterface::new(i2c);
+        let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
+            .into_buffered_graphics_mode();
+        display.init().unwrap();
+        Self { display }
+    }
+
+    pub fn clear(&mut self) {
+        self.display.clear_buffer();
+    }
+
+    pub fn flush(&mut self) {
+        self.display.flush().unwrap();
+    }
+
+    pub fn draw_text(&mut self, text: &str, pos: Point) {
+        let style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+        Text::with_baseline(text, pos, style, Baseline::Top)
+            .draw(&mut self.display)
+            .unwrap();
+    }
+
+    pub fn draw_rect(&mut self, pos: Point, size: Size, filled: bool) {
+        let style = if filled {
+            PrimitiveStyleBuilder::new()
+                .fill_color(BinaryColor::On)
+                .build()
+        } else {
+            PrimitiveStyle::with_stroke(BinaryColor::On, 1)
+        };
+        Rectangle::new(pos, size)
+            .into_styled(style)
+            .draw(&mut self.display)
+            .unwrap();
+    }
+
+    pub fn draw_pixel(&mut self, pos: Point, on: bool) {
+        let color = if on { BinaryColor::On } else { BinaryColor::Off };
+        Pixel(pos, color).draw(&mut self.display).unwrap();
+    }
+
+    pub fn draw_sprite_raw(
+        &mut self,
+        data: &[u8],
+        width: u16,
+        height: u16,
+        pos: Point,
+        opts: SpriteOpts,
+    ) {
+        let row_bytes = (width as usize + 7) / 8;
+        let pixels = (0..height).flat_map(|y| {
+            (0..width).filter_map(move |x| {
+                let mut sx = x as usize;
+                let mut sy = y as usize;
+                if opts.mirror_h {
+                    sx = width as usize - 1 - sx;
+                }
+                if opts.mirror_v {
+                    sy = height as usize - 1 - sy;
+                }
+                let byte = data[sy * row_bytes + sx / 8];
+                let bit = 7 - (sx % 8);
+                let mut on = (byte >> bit) & 1 == 1;
+                if opts.invert {
+                    on = !on;
+                }
+                if opts.transparent && on == opts.transparent_color {
+                    return None;
+                }
+                Some(Pixel(
+                    Point::new(pos.x + x as i32, pos.y + y as i32),
+                    if on { BinaryColor::On } else { BinaryColor::Off },
+                ))
+            })
+        });
+        self.display.draw_iter(pixels).ok();
+    }
+
+    pub fn draw_sprite(&mut self, sprite: &Sprite, pos: Point, opts: SpriteOpts) {
+        if let Some(fill_frames) = sprite.fill_frames {
+            let fill_idx = opts.frame.min(fill_frames.len().saturating_sub(1));
+            let fill_opts = SpriteOpts {
+                transparent: true,
+                transparent_color: true,
+                invert: true,
+                ..opts
+            };
+            self.draw_sprite_raw(
+                fill_frames[fill_idx],
+                sprite.width,
+                sprite.height,
+                pos,
+                fill_opts,
+            );
+        }
+        let frame_idx = opts.frame.min(sprite.frames.len().saturating_sub(1));
+        self.draw_sprite_raw(
+            sprite.frames[frame_idx],
+            sprite.width,
+            sprite.height,
+            pos,
+            opts,
+        );
+    }
+}
