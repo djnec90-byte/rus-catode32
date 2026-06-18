@@ -63,7 +63,7 @@ const BIG_MENU: &[MenuItem] = &[
     MenuItem { label: "Locations",  icon: Some(icons::HOUSE),     submenu: Some(LOCATIONS),  action: None,                                                confirm: None },
     MenuItem { label: "Forecast",   icon: Some(icons::SUN),       submenu: None,             action: Some(MenuAction::Scene(SceneId::Forecast)),         confirm: None },
     MenuItem { label: "Minigames",  icon: Some(icons::MINIGAMES), submenu: Some(MINIGAMES),  action: None,                                                confirm: None },
-    MenuItem { label: "Store",      icon: Some(icons::STORE),     submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("store"))),    confirm: None },
+    MenuItem { label: "Store",      icon: Some(icons::STORE),     submenu: None,             action: Some(MenuAction::Scene(SceneId::Store)),            confirm: None },
     MenuItem { label: "Social",     icon: Some(icons::CAT),       submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("social"))),   confirm: None },
     MenuItem { label: "Pet info",   icon: Some(icons::CAT),       submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("pet_info"))), confirm: None },
     MenuItem { label: "Debug",      icon: Some(icons::WRENCH),    submenu: Some(DEBUG),      action: None,                                                confirm: None },
@@ -93,6 +93,8 @@ impl Scene for MenuScene {
             MenuResult::Continue => None,
             MenuResult::Closed => Some(ctx.last_main_scene),
             MenuResult::Action(MenuAction::Scene(id)) => Some(id),
+            // The main menu doesn't surface Store-purchase actions.
+            MenuResult::Action(MenuAction::Store(_)) => None,
         }
     }
 

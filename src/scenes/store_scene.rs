@@ -1,0 +1,535 @@
+// TODO: Python store shows dynamic confirm text (e.g. "Can't afford!", "Already
+// owned!", per-item price strings) BEFORE the action fires. The Rust port uses
+// static menu trees and instead surfaces those messages as a post-action popup.
+// Functionally equivalent but a small UX deviation; revisit when the menu
+// system can hold owned-string items.
+
+use embedded_graphics::prelude::{Point, Size};
+use heapless::String;
+
+use crate::{
+    assets::store as art,
+    context::{FoodItem, GameContext, PotSize, SeedKind, StatId, ToolKind, ToyVariant},
+    input::{Button, Buttons},
+    render::Renderer,
+    scene::{Scene, SceneId},
+    ui::menu::{Menu, MenuAction, MenuItem, MenuResult, ServiceKind, StoreAction},
+    ui::popup::Popup,
+};
+
+const FOOD_USES: u8 = 5;
+const SEEDS_PER_PACK: u8 = 3;
+const FERTILIZER_COST: u8 = 25;
+const MEDICINE_COST: u8 = 50;
+const GROOM_COST: u8 = 50;
+const TRAIN_COST: u8 = 100;
+
+const MENU_WIDTH: i32 = 60;
+const ART_PANEL_X: i32 = 64;
+
+const COIN_X: i32 = 84;
+const COIN_Y: i32 = 29;
+
+const FOOD: &[MenuItem] = &[
+    food_item("Kibble",  FoodItem::Kibble,  5,  "Kibble(5): 5c"),
+    food_item("Cod",     FoodItem::Cod,     6,  "Cod(5): 6c"),
+    food_item("Haddock", FoodItem::Haddock, 7,  "Haddock(5): 7c"),
+    food_item("Trout",   FoodItem::Trout,   8,  "Trout(5): 8c"),
+    food_item("Shrimp",  FoodItem::Shrimp,  9,  "Shrimp(5): 9c"),
+    food_item("Herring", FoodItem::Herring, 10, "Herring(5): 10c"),
+    food_item("Turkey",  FoodItem::Turkey,  10, "Turkey(5): 10c"),
+    food_item("Tuna",    FoodItem::Tuna,    12, "Tuna(5): 12c"),
+    food_item("Salmon",  FoodItem::Salmon,  12, "Salmon(5): 12c"),
+    food_item("Chicken", FoodItem::Chicken, 13, "Chicken(5): 13c"),
+    food_item("Liver",   FoodItem::Liver,   14, "Liver(5): 14c"),
+    food_item("Beef",    FoodItem::Beef,    14, "Beef(5): 14c"),
+    food_item("Lamb",    FoodItem::Lamb,    15, "Lamb(5): 15c"),
+];
+
+const SNACKS: &[MenuItem] = &[
+    food_item("Carrots", FoodItem::Carrots,  2, "Carrots(5): 2c"),
+    food_item("Pumpkin", FoodItem::Pumpkin,  2, "Pumpkin(5): 2c"),
+    food_item("Treats",  FoodItem::Treats,   3, "Treats(5): 3c"),
+    food_item("Bytes",   FoodItem::FishBite, 4, "Bytes(5): 4c"),
+    food_item("Eggs",    FoodItem::Eggs,     5, "Eggs(5): 5c"),
+    food_item("Nuggets", FoodItem::Nugget,   5, "Nuggets(5): 5c"),
+    food_item("Milk",    FoodItem::Milk,     6, "Milk(5): 6c"),
+    food_item("Sticks",  FoodItem::ChewStick, 6, "Sticks(5): 6c"),
+    food_item("Puree",   FoodItem::Puree,    8, "Puree(5): 8c"),
+];
+
+const TOYS: &[MenuItem] = &[
+    toy_item("String",  ToyVariant::String_, 20, "String: 20c"),
+    toy_item("Feather", ToyVariant::Feather, 35, "Feather: 35c"),
+    toy_item("Mouse",   ToyVariant::Mouse,   40, "Mouse Toy: 40c"),
+    toy_item("Yarn",    ToyVariant::Ball,    50, "Yarn Ball: 50c"),
+    toy_item("Bubbles", ToyVariant::Bubbles, 45, "Bubbles: 45c"),
+    toy_item("Laser",   ToyVariant::Laser,   75, "Laser Pointer: 75c"),
+];
+
+const POTS: &[MenuItem] = &[
+    pot_item("Small",   PotSize::Small,   15, "Small pot: 15c"),
+    pot_item("Medium",  PotSize::Medium,  25, "Medium pot: 25c"),
+    pot_item("Large",   PotSize::Large,   40, "Large pot: 40c"),
+    pot_item("Planter", PotSize::Planter, 55, "Planter box: 55c"),
+];
+
+const SEEDS: &[MenuItem] = &[
+    seed_item("Grass",   SeedKind::CatGrass,  4,  "Cat Grass x3: 4c"),
+    seed_item("Freesia", SeedKind::Freesia,   10, "Freesia x3: 10c"),
+    seed_item("Sun",     SeedKind::Sunflower, 12, "Sunflower x3: 12c"),
+    seed_item("Rose",    SeedKind::Rose,      15, "Rose x3: 15c"),
+];
+
+const TOOLS: &[MenuItem] = &[
+    tool_item("Spade",  ToolKind::Spade,       40, "Spade: 40c"),
+    tool_item("W. Can", ToolKind::WateringCan, 50, "Watering Can: 50c"),
+];
+
+const GARDEN: &[MenuItem] = &[
+    MenuItem { label: "Pots",       icon: None, submenu: Some(POTS),  action: None, confirm: None },
+    MenuItem { label: "Seeds",      icon: None, submenu: Some(SEEDS), action: None, confirm: None },
+    MenuItem { label: "Tools",      icon: None, submenu: Some(TOOLS), action: None, confirm: None },
+    MenuItem {
+        label: "Fertilizer",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyFertilizer(FERTILIZER_COST))),
+        confirm: Some("Fertilizer: 25c"),
+    },
+];
+
+const SERVICE: &[MenuItem] = &[
+    MenuItem {
+        label: "Groom",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyService(ServiceKind::Groom, GROOM_COST))),
+        confirm: Some("Groom: 50c"),
+    },
+    MenuItem {
+        label: "Train",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyService(ServiceKind::Train, TRAIN_COST))),
+        confirm: Some("Train: 100c"),
+    },
+];
+
+// TODO: replace these Stub trip destinations with real vacation scenes once
+// they're ported. The purchase still deducts coins and changes scene.
+const TRIPS: &[MenuItem] = &[
+    MenuItem {
+        label: "Park",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyTrip(
+            SceneId::Stub("vacation_park"),
+            15,
+        ))),
+        confirm: Some("Trip: park 15c"),
+    },
+    MenuItem {
+        label: "Forest",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyTrip(
+            SceneId::Stub("vacation_forest"),
+            25,
+        ))),
+        confirm: Some("Trip: forest 25c"),
+    },
+    MenuItem {
+        label: "Aqua.",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyTrip(
+            SceneId::Stub("vacation_aquarium"),
+            50,
+        ))),
+        confirm: Some("Trip: aquarium 50c"),
+    },
+    MenuItem {
+        label: "Beach",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyTrip(
+            SceneId::Stub("vacation_beach"),
+            100,
+        ))),
+        confirm: Some("Trip: beach 100c"),
+    },
+];
+
+const ROOT: &[MenuItem] = &[
+    MenuItem { label: "Food",    icon: None, submenu: Some(FOOD),    action: None, confirm: None },
+    MenuItem { label: "Snacks",  icon: None, submenu: Some(SNACKS),  action: None, confirm: None },
+    MenuItem { label: "Toys",    icon: None, submenu: Some(TOYS),    action: None, confirm: None },
+    MenuItem { label: "Garden",  icon: None, submenu: Some(GARDEN),  action: None, confirm: None },
+    MenuItem { label: "Service", icon: None, submenu: Some(SERVICE), action: None, confirm: None },
+    MenuItem { label: "Trips",   icon: None, submenu: Some(TRIPS),   action: None, confirm: None },
+    MenuItem {
+        label: "Meds.",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyMedicine(MEDICINE_COST))),
+        confirm: Some("Medicine: 50c"),
+    },
+    MenuItem {
+        label: "Exit",
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::Leave)),
+        confirm: None,
+    },
+];
+
+const fn food_item(label: &'static str, item: FoodItem, cost: u8, confirm: &'static str) -> MenuItem {
+    MenuItem {
+        label,
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyFood(item, cost))),
+        confirm: Some(confirm),
+    }
+}
+
+const fn toy_item(label: &'static str, variant: ToyVariant, cost: u8, confirm: &'static str) -> MenuItem {
+    MenuItem {
+        label,
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyToy(variant, cost))),
+        confirm: Some(confirm),
+    }
+}
+
+const fn pot_item(label: &'static str, pot: PotSize, cost: u8, confirm: &'static str) -> MenuItem {
+    MenuItem {
+        label,
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyPot(pot, cost))),
+        confirm: Some(confirm),
+    }
+}
+
+const fn seed_item(label: &'static str, seed: SeedKind, cost: u8, confirm: &'static str) -> MenuItem {
+    MenuItem {
+        label,
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuySeeds(seed, cost))),
+        confirm: Some(confirm),
+    }
+}
+
+const fn tool_item(label: &'static str, tool: ToolKind, cost: u8, confirm: &'static str) -> MenuItem {
+    MenuItem {
+        label,
+        icon: None,
+        submenu: None,
+        action: Some(MenuAction::Store(StoreAction::BuyTool(tool, cost))),
+        confirm: Some(confirm),
+    }
+}
+
+pub struct StoreScene {
+    menu: Menu,
+    popup: Popup,
+    popup_active: bool,
+    pending_scene: Option<SceneId>,
+}
+
+impl StoreScene {
+    pub fn new() -> Self {
+        Self {
+            menu: Menu::with_width(ROOT, MENU_WIDTH, MENU_WIDTH),
+            popup: Popup::new(14, 20, 100, 24),
+            popup_active: false,
+            pending_scene: None,
+        }
+    }
+
+    fn set_popup(&mut self, text: &str) {
+        self.popup.set_text(text, true, true);
+        self.popup_active = true;
+    }
+
+    fn try_spend(ctx: &mut GameContext, cost: u8) -> bool {
+        if ctx.coins >= cost as i32 {
+            ctx.coins -= cost as i32;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn handle_store_action(&mut self, ctx: &mut GameContext, action: StoreAction) -> Option<SceneId> {
+        match action {
+            StoreAction::Leave => return Some(ctx.last_main_scene),
+
+            StoreAction::BuyFood(item, cost) => {
+                if Self::try_spend(ctx, cost) {
+                    ctx.add_food_stock(item, FOOD_USES);
+                    self.set_popup("Purchased!");
+                } else {
+                    self.set_popup("Can't afford!");
+                }
+            }
+
+            StoreAction::BuyToy(variant, cost) => {
+                let existing = ctx.find_toy(variant);
+                if let Some(idx) = existing {
+                    if ctx.toys[idx].durability > 0 {
+                        self.set_popup("Already owned!");
+                    } else if Self::try_spend(ctx, cost) {
+                        ctx.refresh_toy(variant);
+                        self.set_popup(if matches!(variant, ToyVariant::Bubbles) {
+                            "Refilled!"
+                        } else {
+                            "Replaced!"
+                        });
+                    } else {
+                        self.set_popup("Can't afford!");
+                    }
+                } else if Self::try_spend(ctx, cost) {
+                    ctx.add_toy(variant);
+                    self.set_popup("Purchased!");
+                } else {
+                    self.set_popup("Can't afford!");
+                }
+            }
+
+            StoreAction::BuyPot(pot, cost) => {
+                if Self::try_spend(ctx, cost) {
+                    ctx.add_pot(pot);
+                    self.set_popup("Pot bought!");
+                } else {
+                    self.set_popup("Can't afford!");
+                }
+            }
+
+            StoreAction::BuySeeds(seed, cost) => {
+                if Self::try_spend(ctx, cost) {
+                    ctx.add_seeds(seed, SEEDS_PER_PACK);
+                    self.set_popup("Seeds bought!");
+                } else {
+                    self.set_popup("Can't afford!");
+                }
+            }
+
+            StoreAction::BuyTool(tool, cost) => {
+                if ctx.owns_tool(tool) {
+                    self.set_popup("Already owned!");
+                } else if Self::try_spend(ctx, cost) {
+                    ctx.set_tool(tool, true);
+                    self.set_popup("Tool bought!");
+                } else {
+                    self.set_popup("Can't afford!");
+                }
+            }
+
+            StoreAction::BuyFertilizer(cost) => {
+                if Self::try_spend(ctx, cost) {
+                    ctx.fertilizer = ctx.fertilizer.saturating_add(1);
+                    self.set_popup("Fertilizer bought!");
+                } else {
+                    self.set_popup("Can't afford!");
+                }
+            }
+
+            StoreAction::BuyMedicine(cost) => {
+                if Self::try_spend(ctx, cost) {
+                    ctx.medicine = ctx.medicine.saturating_add(1);
+                    self.set_popup("Medicine bought!");
+                } else {
+                    self.set_popup("Can't afford!");
+                }
+            }
+
+            StoreAction::BuyService(kind, cost) => {
+                if !Self::try_spend(ctx, cost) {
+                    self.set_popup("Can't afford!");
+                } else {
+                    match kind {
+                        ServiceKind::Groom => {
+                            ctx.apply_stat_changes(&[
+                                (StatId::Cleanliness, 40.0),
+                                (StatId::Sociability, 8.0),
+                                (StatId::Courage, 6.0),
+                            ]);
+                            self.set_popup("A spa day!");
+                        }
+                        ServiceKind::Train => {
+                            ctx.apply_stat_changes(&[
+                                (StatId::Maturity, 5.0),
+                                (StatId::Sociability, 5.0),
+                                (StatId::Intelligence, 8.0),
+                                (StatId::Fitness, 6.0),
+                                (StatId::Mischievousness, -8.0),
+                            ]);
+                            self.set_popup("Training done!");
+                        }
+                    }
+                }
+            }
+
+            StoreAction::BuyTrip(dest, cost) => {
+                if Self::try_spend(ctx, cost) {
+                    self.pending_scene = Some(dest);
+                    self.set_popup("Enjoy the trip!");
+                } else {
+                    self.set_popup("Can't afford!");
+                }
+            }
+        }
+        None
+    }
+
+    fn draw_store_art(&self, renderer: &mut Renderer) {
+        use crate::render::SpriteOpts;
+
+        let inverted = SpriteOpts {
+            invert: true,
+            transparent: true,
+            transparent_color: true,
+            ..Default::default()
+        };
+
+        // Roof shingles row 1
+        for i in 0..7 {
+            renderer.draw_sprite_raw(
+                art::SHINGLE1,
+                art::SHINGLE1_W,
+                art::SHINGLE1_H,
+                Point::new(128 - 62 + (i * 9), 0),
+                SpriteOpts::default(),
+            );
+        }
+
+        // Sign frame
+        renderer.draw_line(Point::new(128, 5), Point::new(66, 5));
+        renderer.draw_line(Point::new(128, 17), Point::new(66, 17));
+        renderer.draw_pixel(Point::new(66, 6), true);
+        renderer.draw_pixel(Point::new(66, 16), true);
+        renderer.draw_line(Point::new(65, 6), Point::new(65, 16));
+        renderer.draw_rect(Point::new(68, 7), Size::new(64, 9), true);
+        renderer.draw_line(Point::new(67, 8), Point::new(67, 14));
+
+        renderer.draw_sprite_raw(art::PAW_LOGO, art::PAW_LOGO_W, art::PAW_LOGO_H, Point::new(73, 8), inverted);
+        renderer.draw_sprite_raw(art::STORE_TEXT, art::STORE_TEXT_W, art::STORE_TEXT_H, Point::new(86, 9), inverted);
+        renderer.draw_sprite_raw(art::PAW_LOGO, art::PAW_LOGO_W, art::PAW_LOGO_H, Point::new(113, 8), inverted);
+
+        // Roof shingles row 2
+        for i in 0..9 {
+            renderer.draw_sprite_raw(
+                art::SHINGLE2,
+                art::SHINGLE2_W,
+                art::SHINGLE2_H,
+                Point::new(128 - 68 + (i * 8), 19),
+                SpriteOpts::default(),
+            );
+        }
+
+        // Pillar
+        renderer.draw_rect(Point::new(65, 29), Size::new(2, 15), false);
+        renderer.draw_sprite_raw(art::SHADOW1, art::SHADOW1_W, art::SHADOW1_H, Point::new(68, 31), SpriteOpts::default());
+        renderer.draw_rect(Point::new(68, 35), Size::new(3, 9), true);
+
+        // Counter
+        renderer.draw_rect(Point::new(59, 45), Size::new(69, 2), false);
+        renderer.draw_pixel(Point::new(58, 45), true);
+
+        for i in 0..4 {
+            renderer.draw_sprite_raw(
+                art::COUNTER_STRUT,
+                art::COUNTER_STRUT_W,
+                art::COUNTER_STRUT_H,
+                Point::new(128 - 66 + (i * 18), 48),
+                SpriteOpts::default(),
+            );
+        }
+
+        // Items on counter
+        renderer.draw_sprite_raw(art::ITEMS1, art::ITEMS1_W, art::ITEMS1_H, Point::new(79, 37), SpriteOpts::default());
+        renderer.draw_sprite_raw(art::ITEMS2, art::ITEMS2_W, art::ITEMS2_H, Point::new(110, 39), SpriteOpts::default());
+        renderer.draw_sprite_raw(art::ITEMS3, art::ITEMS3_W, art::ITEMS3_H, Point::new(73, 27), SpriteOpts::default());
+
+        // Under-counter slats
+        renderer.draw_line(Point::new(63, 53), Point::new(63, 63));
+        renderer.draw_line(Point::new(63, 63), Point::new(128, 63));
+        for i in 0..13 {
+            renderer.draw_rect(Point::new(65 + i * 5, 53), Size::new(4, 9), true);
+        }
+    }
+
+    fn draw_coins(&self, ctx: &GameContext, renderer: &mut Renderer) {
+        let mut buf: String<8> = String::new();
+        let coins = ctx.coins.clamp(0, 9999);
+        let _ = write_u16(&mut buf, coins as u16);
+        let _ = buf.push('c');
+        renderer.draw_text(buf.as_str(), Point::new(COIN_X, COIN_Y));
+    }
+}
+
+fn write_u16<const N: usize>(buf: &mut String<N>, mut v: u16) -> Result<(), ()> {
+    if v == 0 {
+        return buf.push('0').map_err(|_| ());
+    }
+    let mut digits = [0u8; 5];
+    let mut n = 0;
+    while v > 0 {
+        digits[n] = b'0' + (v % 10) as u8;
+        v /= 10;
+        n += 1;
+    }
+    for i in (0..n).rev() {
+        buf.push(digits[i] as char).map_err(|_| ())?;
+    }
+    Ok(())
+}
+
+impl Scene for StoreScene {
+    fn enter(&mut self, _ctx: &mut GameContext) {
+        self.menu.reset_to(ROOT);
+        self.popup_active = false;
+        self.pending_scene = None;
+    }
+
+    fn update(
+        &mut self,
+        ctx: &mut GameContext,
+        buttons: &mut Buttons,
+        _dt: f32,
+    ) -> Option<SceneId> {
+        if self.popup_active {
+            if buttons.was_just_pressed(Button::A) || buttons.was_just_pressed(Button::B) {
+                self.popup_active = false;
+                if let Some(dest) = self.pending_scene.take() {
+                    return Some(dest);
+                }
+            }
+            return None;
+        }
+
+        match self.menu.handle_input(buttons) {
+            MenuResult::Continue => None,
+            MenuResult::Closed => Some(ctx.last_main_scene),
+            MenuResult::Action(MenuAction::Scene(id)) => Some(id),
+            MenuResult::Action(MenuAction::Store(action)) => self.handle_store_action(ctx, action),
+        }
+    }
+
+    fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
+        self.draw_store_art(renderer);
+        self.draw_coins(ctx, renderer);
+        self.menu.draw(renderer);
+        if self.popup_active {
+            self.popup.draw(renderer, false);
+        }
+        // Silence unused-import lint when ART_PANEL_X is not actively used as a
+        // const expression at runtime — kept as documentation of the layout.
+        let _ = ART_PANEL_X;
+    }
+}

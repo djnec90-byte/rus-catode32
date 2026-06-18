@@ -62,6 +62,107 @@ pub enum FoodKind {
     CaughtSnack,
 }
 
+/// Specific food/snack items the player can purchase and keep stock of.
+/// Distinct from `FoodKind`, which is the coarse category used for meal variety.
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(usize)]
+pub enum FoodItem {
+    // Meals
+    Kibble = 0,
+    Cod,
+    Haddock,
+    Trout,
+    Shrimp,
+    Herring,
+    Turkey,
+    Tuna,
+    Salmon,
+    Chicken,
+    Liver,
+    Beef,
+    Lamb,
+    // Snacks
+    Carrots,
+    Pumpkin,
+    Treats,
+    FishBite,
+    Eggs,
+    Nugget,
+    Milk,
+    ChewStick,
+    Puree,
+}
+
+pub const FOOD_ITEM_COUNT: usize = 22;
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(usize)]
+pub enum ToyVariant {
+    String_ = 0,
+    Feather,
+    Mouse,
+    Ball,
+    Bubbles,
+    Laser,
+}
+
+pub const TOY_VARIANT_COUNT: usize = 6;
+
+impl ToyVariant {
+    pub const fn max_durability(self) -> u8 {
+        match self {
+            ToyVariant::String_ => 28,
+            ToyVariant::Feather => 28,
+            ToyVariant::Mouse => 42,
+            ToyVariant::Ball => 42,
+            ToyVariant::Bubbles => 35,
+            ToyVariant::Laser => 100,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct ToyEntry {
+    pub variant: ToyVariant,
+    pub durability: u8,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(usize)]
+pub enum PotSize {
+    Small = 0,
+    Medium,
+    Large,
+    Planter,
+}
+
+pub const POT_SIZE_COUNT: usize = 4;
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(usize)]
+pub enum SeedKind {
+    CatGrass = 0,
+    Freesia,
+    Sunflower,
+    Rose,
+}
+
+pub const SEED_KIND_COUNT: usize = 4;
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(usize)]
+pub enum ToolKind {
+    Spade = 0,
+    WateringCan,
+}
+
+pub const TOOL_COUNT: usize = 2;
+
 pub const RECENT_HISTORY: usize = 5;
 
 #[allow(dead_code)]
@@ -93,6 +194,17 @@ pub struct GameContext {
     pub time_speed: f32,
 
     pub coins: i32,
+
+    // Inventory — separate per-category storage. Counts are indexed by enum
+    // discriminant (use `as usize`). Toys are a sparse list with per-instance
+    // durability since each variant has at most one entry in the player's bag.
+    pub food_stock: [u8; FOOD_ITEM_COUNT],
+    pub toys: Vec<ToyEntry, TOY_VARIANT_COUNT>,
+    pub pots: [u8; POT_SIZE_COUNT],
+    pub seeds: [u8; SEED_KIND_COUNT],
+    pub tools: [bool; TOOL_COUNT],
+    pub fertilizer: u8,
+    pub medicine: u8,
 
     pub zoomies_high_score: i32,
     pub maze_best_time: i32,
@@ -174,6 +286,18 @@ impl GameContext {
             sickness: 0.0,
             time_speed: 1.0,
             coins: 50,
+            food_stock: {
+                let mut s = [0u8; FOOD_ITEM_COUNT];
+                s[FoodItem::Kibble as usize] = 5;
+                s[FoodItem::Nugget as usize] = 3;
+                s
+            },
+            toys: Vec::new(),
+            pots: [0u8; POT_SIZE_COUNT],
+            seeds: [0u8; SEED_KIND_COUNT],
+            tools: [false; TOOL_COUNT],
+            fertilizer: 0,
+            medicine: 0,
             zoomies_high_score: 0,
             maze_best_time: 0,
             snake_high_score: 0,
@@ -326,5 +450,53 @@ impl GameContext {
     /// Recency index of `id` in the recent-behaviors ring, or None.
     pub fn recent_index(&self, id: BehaviorId) -> Option<usize> {
         self.recent_behaviors.iter().position(|b| *b == id)
+    }
+
+    pub fn add_food_stock(&mut self, item: FoodItem, uses: u8) {
+        let i = item as usize;
+        self.food_stock[i] = self.food_stock[i].saturating_add(uses);
+    }
+
+    pub fn add_pot(&mut self, pot: PotSize) {
+        let i = pot as usize;
+        self.pots[i] = self.pots[i].saturating_add(1);
+    }
+
+    pub fn add_seeds(&mut self, seed: SeedKind, n: u8) {
+        let i = seed as usize;
+        self.seeds[i] = self.seeds[i].saturating_add(n);
+    }
+
+    pub fn owns_tool(&self, tool: ToolKind) -> bool {
+        self.tools[tool as usize]
+    }
+
+    pub fn set_tool(&mut self, tool: ToolKind, owned: bool) {
+        self.tools[tool as usize] = owned;
+    }
+
+    pub fn find_toy(&self, variant: ToyVariant) -> Option<usize> {
+        self.toys.iter().position(|t| t.variant == variant)
+    }
+
+    pub fn add_toy(&mut self, variant: ToyVariant) -> bool {
+        if self.find_toy(variant).is_some() {
+            return false;
+        }
+        self.toys
+            .push(ToyEntry {
+                variant,
+                durability: variant.max_durability(),
+            })
+            .is_ok()
+    }
+
+    pub fn refresh_toy(&mut self, variant: ToyVariant) -> bool {
+        if let Some(idx) = self.find_toy(variant) {
+            self.toys[idx].durability = variant.max_durability();
+            true
+        } else {
+            false
+        }
     }
 }

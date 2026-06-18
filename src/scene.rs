@@ -16,6 +16,7 @@ pub enum SceneId {
     PoseViewer,
     Stats,
     Forecast,
+    Store,
     Stub(&'static str),
 }
 

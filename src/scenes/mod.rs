@@ -6,6 +6,7 @@ pub mod menu_scene;
 pub mod outside_scene;
 pub mod pose_scene;
 pub mod stats_scene;
+pub mod store_scene;
 pub mod stub_scene;
 pub mod treehouse_scene;
 
@@ -19,6 +20,7 @@ use menu_scene::MenuScene;
 use outside_scene::OutsideScene;
 use pose_scene::PoseScene;
 use stats_scene::StatsScene;
+use store_scene::StoreScene;
 use stub_scene::StubScene;
 use treehouse_scene::TreehouseScene;
 
@@ -32,6 +34,7 @@ pub enum ActiveScene {
     PoseViewer(PoseScene),
     Stats(StatsScene),
     Forecast(ForecastScene),
+    Store(StoreScene),
     Stub(StubScene),
 }
 
@@ -47,6 +50,7 @@ impl ActiveScene {
             SceneId::PoseViewer => ActiveScene::PoseViewer(PoseScene::new()),
             SceneId::Stats => ActiveScene::Stats(StatsScene::new()),
             SceneId::Forecast => ActiveScene::Forecast(ForecastScene::new()),
+            SceneId::Store => ActiveScene::Store(StoreScene::new()),
             SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
@@ -62,6 +66,7 @@ impl ActiveScene {
             ActiveScene::PoseViewer(s) => s,
             ActiveScene::Stats(s) => s,
             ActiveScene::Forecast(s) => s,
+            ActiveScene::Store(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
@@ -77,6 +82,7 @@ impl ActiveScene {
             ActiveScene::PoseViewer(s) => s,
             ActiveScene::Stats(s) => s,
             ActiveScene::Forecast(s) => s,
+            ActiveScene::Store(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
