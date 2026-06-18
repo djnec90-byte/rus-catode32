@@ -1,4 +1,4 @@
-use crate::{behaviors::ActiveBehavior, context::GameContext};
+use crate::{assets::character::PoseId, behaviors::ActiveBehavior, context::GameContext};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BehaviorId {
@@ -15,6 +15,7 @@ pub enum BehaviorState {
 pub trait Behavior {
     fn name(&self) -> &'static str;
     fn progress(&self) -> f32;
+    fn pose(&self) -> PoseId;
 
     fn enter(&mut self, _ctx: &mut GameContext) {}
     fn update(&mut self, ctx: &mut GameContext, dt: f32) -> BehaviorState;
@@ -74,5 +75,9 @@ impl BehaviorManager {
 
     pub fn current_progress(&self) -> f32 {
         self.current.as_behavior().progress()
+    }
+
+    pub fn current_pose(&self) -> PoseId {
+        self.current.as_behavior().pose()
     }
 }

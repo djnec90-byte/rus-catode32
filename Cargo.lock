@@ -68,6 +68,7 @@ dependencies = [
  "esp-hal",
  "esp-println",
  "heapless 0.8.0",
+ "micromath",
  "ssd1306",
 ]
 

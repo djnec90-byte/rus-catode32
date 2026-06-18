@@ -5,6 +5,7 @@ use crate::{
     input::Buttons,
     render::Renderer,
     scene::{SceneId, SceneManager},
+    time_system::TimeSystem,
 };
 
 const FPS: u64 = 12;
@@ -15,18 +16,20 @@ pub struct Game {
     buttons: Buttons,
     context: GameContext,
     scene_manager: SceneManager,
+    time_system: TimeSystem,
     last_dt_ms: u64,
 }
 
 impl Game {
     pub fn new(renderer: Renderer, buttons: Buttons) -> Self {
         let mut context = GameContext::new();
-        let scene_manager = SceneManager::new(&mut context, SceneId::Main);
+        let scene_manager = SceneManager::new(&mut context, SceneId::Inside);
         Self {
             renderer,
             buttons,
             context,
             scene_manager,
+            time_system: TimeSystem::new(),
             last_dt_ms: 0,
         }
     }
@@ -55,6 +58,7 @@ impl Game {
     }
 
     fn update(&mut self, dt: f32) {
+        self.time_system.advance(&mut self.context, dt);
         self.context.tick(dt);
         self.scene_manager
             .update(&mut self.context, &mut self.buttons, dt);
@@ -62,6 +66,8 @@ impl Game {
 
     fn draw(&mut self) {
         self.renderer.clear();
+        // Baseline; scenes that want lightning override this within their draw.
+        self.renderer.set_invert(false);
         self.scene_manager
             .draw(&self.context, &mut self.renderer, self.last_dt_ms);
         self.renderer.flush();

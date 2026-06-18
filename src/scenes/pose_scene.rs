@@ -72,7 +72,7 @@ impl Scene for PoseScene {
             self.show_grid = !self.show_grid;
         }
         if buttons.was_just_pressed(Button::B) || buttons.was_just_pressed(Button::Menu1) {
-            return Some(SceneId::Main);
+            return Some(SceneId::Inside);
         }
 
         self.anim.update(self.current_pose().data(), dt);

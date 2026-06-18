@@ -1,41 +1,77 @@
-pub mod main_scene;
+pub mod bedroom_scene;
+pub mod inside_scene;
+pub mod kitchen_scene;
 pub mod menu_scene;
+pub mod outside_scene;
 pub mod pose_scene;
+pub mod stats_scene;
+pub mod stub_scene;
+pub mod treehouse_scene;
 
 use crate::scene::{Scene, SceneId};
 
-use main_scene::MainScene;
+use bedroom_scene::BedroomScene;
+use inside_scene::InsideScene;
+use kitchen_scene::KitchenScene;
 use menu_scene::MenuScene;
+use outside_scene::OutsideScene;
 use pose_scene::PoseScene;
+use stats_scene::StatsScene;
+use stub_scene::StubScene;
+use treehouse_scene::TreehouseScene;
 
 pub enum ActiveScene {
-    Main(MainScene),
+    Inside(InsideScene),
+    Outside(OutsideScene),
+    Bedroom(BedroomScene),
+    Kitchen(KitchenScene),
+    Treehouse(TreehouseScene),
     Menu(MenuScene),
     PoseViewer(PoseScene),
+    Stats(StatsScene),
+    Stub(StubScene),
 }
 
 impl ActiveScene {
     pub fn from_id(id: SceneId) -> Self {
         match id {
-            SceneId::Main => ActiveScene::Main(MainScene::new()),
+            SceneId::Inside => ActiveScene::Inside(InsideScene::new()),
+            SceneId::Outside => ActiveScene::Outside(OutsideScene::new()),
+            SceneId::Bedroom => ActiveScene::Bedroom(BedroomScene::new()),
+            SceneId::Kitchen => ActiveScene::Kitchen(KitchenScene::new()),
+            SceneId::Treehouse => ActiveScene::Treehouse(TreehouseScene::new()),
             SceneId::Menu => ActiveScene::Menu(MenuScene::new()),
             SceneId::PoseViewer => ActiveScene::PoseViewer(PoseScene::new()),
+            SceneId::Stats => ActiveScene::Stats(StatsScene::new()),
+            SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
 
     pub fn as_scene_mut(&mut self) -> &mut dyn Scene {
         match self {
-            ActiveScene::Main(s) => s,
+            ActiveScene::Inside(s) => s,
+            ActiveScene::Outside(s) => s,
+            ActiveScene::Bedroom(s) => s,
+            ActiveScene::Kitchen(s) => s,
+            ActiveScene::Treehouse(s) => s,
             ActiveScene::Menu(s) => s,
             ActiveScene::PoseViewer(s) => s,
+            ActiveScene::Stats(s) => s,
+            ActiveScene::Stub(s) => s,
         }
     }
 
     pub fn as_scene(&self) -> &dyn Scene {
         match self {
-            ActiveScene::Main(s) => s,
+            ActiveScene::Inside(s) => s,
+            ActiveScene::Outside(s) => s,
+            ActiveScene::Bedroom(s) => s,
+            ActiveScene::Kitchen(s) => s,
+            ActiveScene::Treehouse(s) => s,
             ActiveScene::Menu(s) => s,
             ActiveScene::PoseViewer(s) => s,
+            ActiveScene::Stats(s) => s,
+            ActiveScene::Stub(s) => s,
         }
     }
 }

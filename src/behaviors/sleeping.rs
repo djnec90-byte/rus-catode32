@@ -1,4 +1,5 @@
 use crate::{
+    assets::character::PoseId,
     behavior::{Behavior, BehaviorState},
     context::GameContext,
 };
@@ -32,6 +33,13 @@ impl Behavior for SleepingBehavior {
 
     fn progress(&self) -> f32 {
         (self.timer / DURATION).clamp(0.0, 1.0)
+    }
+
+    fn pose(&self) -> PoseId {
+        // TODO: Python has a settling sequence (sitting.side.looking_down →
+        // leaning_forward.side.neutral) and then picks the final sleep pose randomly
+        // from SLEEP_POSES (sploot / modest / crossed).
+        PoseId::SleepingSideCrossed
     }
 
     fn update(&mut self, _ctx: &mut GameContext, dt: f32) -> BehaviorState {

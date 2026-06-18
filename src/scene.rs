@@ -7,9 +7,15 @@ use crate::{
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SceneId {
-    Main,
+    Inside,
+    Outside,
+    Bedroom,
+    Kitchen,
+    Treehouse,
     Menu,
     PoseViewer,
+    Stats,
+    Stub(&'static str),
 }
 
 pub trait Scene {

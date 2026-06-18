@@ -1,0 +1,141 @@
+use embedded_graphics::prelude::{Point, Size};
+
+use crate::{
+    assets::{
+        furniture::{BOOKSHELF, CAT_BED_SIDE, PILLOW},
+        items::YARN_BALL,
+    },
+    context::GameContext,
+    environment::Layer,
+    input::{Button, Buttons},
+    location_scene::LocationScene,
+    render::{Renderer, SpriteOpts},
+    scene::{Scene, SceneId},
+};
+
+const WORLD_WIDTH: i32 = 256;
+const CHAR_WORLD_X: i32 = 64;
+const CHAR_WORLD_Y: i32 = 64;
+const BED_WORLD_X: i32 = 108;
+const LAMP_WORLD_X: i32 = 146;
+const CAT_BED_WORLD_X: i32 = 125;
+
+pub struct BedroomScene {
+    base: LocationScene,
+}
+
+impl BedroomScene {
+    pub fn new() -> Self {
+        Self {
+            base: LocationScene::new(WORLD_WIDTH, Point::new(CHAR_WORLD_X, CHAR_WORLD_Y)),
+        }
+    }
+
+    fn draw_lamp(&self, renderer: &mut Renderer) {
+        let bg_offset = self.base.environment.camera_offset(Layer::Background);
+        let lamp_x = LAMP_WORLD_X - bg_offset;
+        // Base
+        renderer.draw_line(Point::new(lamp_x - 5, 63), Point::new(lamp_x + 5, 63));
+        renderer.draw_line(Point::new(lamp_x - 3, 62), Point::new(lamp_x + 3, 62));
+        // Stem
+        renderer.draw_rect(Point::new(lamp_x - 1, 20), Size::new(3, 48), true);
+        // Shade
+        renderer.draw_line(Point::new(lamp_x - 12, 20), Point::new(lamp_x + 12, 20));
+        renderer.draw_line(Point::new(lamp_x - 5, 8), Point::new(lamp_x + 5, 8));
+        renderer.draw_line(Point::new(lamp_x - 12, 20), Point::new(lamp_x - 5, 8));
+        renderer.draw_line(Point::new(lamp_x + 12, 20), Point::new(lamp_x + 5, 8));
+        // Cord
+        renderer.draw_line(Point::new(lamp_x + 4, 20), Point::new(lamp_x + 4, 28));
+    }
+
+    fn draw_bed(&self, renderer: &mut Renderer) {
+        let mg_offset = self.base.environment.camera_offset(Layer::Midground);
+        let bed_x = BED_WORLD_X - mg_offset;
+        // Mask
+        renderer.fill_rect_off(Point::new(bed_x, 32), Size::new(82, 20));
+        renderer.fill_rect_off(Point::new(bed_x + 50, 23), Size::new(23, 10));
+        renderer.fill_rect_off(Point::new(bed_x + 73, 25), Size::new(2, 8));
+        // Frame
+        renderer.draw_rect(Point::new(bed_x, 50), Size::new(80, 5), true);
+        renderer.draw_rect(Point::new(bed_x, 55), Size::new(8, 9), true);
+        renderer.draw_rect(Point::new(bed_x + 80, 16), Size::new(8, 48), true);
+        // Mattress outline
+        renderer.draw_rect(Point::new(bed_x, 32), Size::new(79, 16), false);
+    }
+
+    fn draw_cat_bed_rim(&self, renderer: &mut Renderer) {
+        let fg_offset = self.base.environment.camera_offset(Layer::Foreground);
+        let bed_x = CAT_BED_WORLD_X - fg_offset;
+        let w = CAT_BED_SIDE.width as i32;
+        // Left rim
+        renderer.draw_sprite(
+            &CAT_BED_SIDE,
+            Point::new(bed_x, 52),
+            SpriteOpts::default(),
+        );
+        // Middle gap (mask + 3 horizontal rim lines)
+        renderer.fill_rect_off(Point::new(bed_x + w, 54), Size::new(20, 10));
+        renderer.draw_line(Point::new(bed_x + w, 54), Point::new(bed_x + w + 20, 54));
+        renderer.draw_line(Point::new(bed_x + w, 63), Point::new(bed_x + w + 20, 63));
+        renderer.draw_line(Point::new(bed_x + w, 59), Point::new(bed_x + w + 20, 59));
+        // Right rim (mirrored)
+        renderer.draw_sprite(
+            &CAT_BED_SIDE,
+            Point::new(bed_x + w + 20, 52),
+            SpriteOpts {
+                mirror_h: true,
+                ..Default::default()
+            },
+        );
+    }
+}
+
+impl Scene for BedroomScene {
+    fn enter(&mut self, ctx: &mut GameContext) {
+        self.base.enter(ctx);
+        let bookshelf_y = 63 - BOOKSHELF.height as i32;
+        self.base.environment.add_object(
+            Layer::Foreground,
+            &BOOKSHELF,
+            0,
+            bookshelf_y,
+            false,
+        );
+        self.base.environment.add_object(Layer::Midground, &PILLOW, 158, 23, false);
+        let yarn_y = 63 - YARN_BALL.height as i32;
+        self.base.environment.add_object(Layer::Midground, &YARN_BALL, 82, yarn_y, false);
+    }
+
+    fn update(
+        &mut self,
+        ctx: &mut GameContext,
+        buttons: &mut Buttons,
+        dt: f32,
+    ) -> Option<SceneId> {
+        if let Some(id) = self.base.update(ctx, buttons, dt) {
+            return Some(id);
+        }
+        if buttons.was_just_pressed(Button::Menu2) {
+            self.base.character.skip_behavior(ctx);
+        }
+        // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
+        // TODO: context.cat_bed_x tracking (Python sets context.cat_bed_x to position the
+        //       cat in the bed; behaviors check this to play "sleeping in bed" pose adjustments).
+        // TODO: plant surfaces (PLANT_SURFACES) once the plant system is ported.
+        // TODO: on_post_draw lightning inversion for indoor rooms with no sky drawn.
+        None
+    }
+
+    fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
+        // Closed room — no sky.
+        self.base.environment.draw_layer(renderer, Layer::Background);
+        self.draw_lamp(renderer);
+        self.base.environment.draw_layer(renderer, Layer::Midground);
+        self.draw_bed(renderer);
+        self.base.environment.draw_layer(renderer, Layer::Foreground);
+        self.base.draw_character(renderer);
+        // Cat bed rim drawn AFTER the character so the cat appears nestled inside.
+        self.draw_cat_bed_rim(renderer);
+        self.base.draw_dev_overlay(renderer, ctx);
+    }
+}

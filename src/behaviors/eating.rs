@@ -1,4 +1,5 @@
 use crate::{
+    assets::character::PoseId,
     behavior::{Behavior, BehaviorState},
     context::GameContext,
 };
@@ -32,6 +33,13 @@ impl Behavior for EatingBehavior {
 
     fn progress(&self) -> f32 {
         (self.timer / DURATION).clamp(0.0, 1.0)
+    }
+
+    fn pose(&self) -> PoseId {
+        // TODO: Python uses a phased sequence: standing.side.happy (approach) →
+        // leaning_forward.side.eating (eat) → leaning_forward.side.neutral (chew),
+        // with REJECTION_POSES if the cat dislikes the food.
+        PoseId::LeaningForwardSideEating
     }
 
     fn update(&mut self, _ctx: &mut GameContext, dt: f32) -> BehaviorState {

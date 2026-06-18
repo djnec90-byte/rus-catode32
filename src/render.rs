@@ -46,6 +46,7 @@ impl Default for SpriteOpts {
 
 pub struct Renderer {
     display: Display,
+    invert_state: bool,
 }
 
 impl Renderer {
@@ -54,7 +55,18 @@ impl Renderer {
         let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
             .into_buffered_graphics_mode();
         display.init().unwrap();
-        Self { display }
+        Self {
+            display,
+            invert_state: false,
+        }
+    }
+
+    pub fn set_invert(&mut self, invert: bool) {
+        if self.invert_state == invert {
+            return;
+        }
+        self.display.set_invert(invert).ok();
+        self.invert_state = invert;
     }
 
     pub fn clear(&mut self) {
@@ -67,6 +79,13 @@ impl Renderer {
 
     pub fn draw_text(&mut self, text: &str, pos: Point) {
         let style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+        Text::with_baseline(text, pos, style, Baseline::Top)
+            .draw(&mut self.display)
+            .unwrap();
+    }
+
+    pub fn draw_text_inverted(&mut self, text: &str, pos: Point) {
+        let style = MonoTextStyle::new(&FONT_6X10, BinaryColor::Off);
         Text::with_baseline(text, pos, style, Baseline::Top)
             .draw(&mut self.display)
             .unwrap();
@@ -89,6 +108,16 @@ impl Renderer {
     pub fn draw_line(&mut self, start: Point, end: Point) {
         Line::new(start, end)
             .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1))
+            .draw(&mut self.display)
+            .unwrap();
+    }
+
+    pub fn fill_rect_off(&mut self, pos: Point, size: Size) {
+        let style = PrimitiveStyleBuilder::new()
+            .fill_color(BinaryColor::Off)
+            .build();
+        Rectangle::new(pos, size)
+            .into_styled(style)
             .draw(&mut self.display)
             .unwrap();
     }
