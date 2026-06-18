@@ -1,10 +1,15 @@
 use heapless::Vec;
 
+use esp_hal::rng::Rng;
+
 use crate::{
     behavior::BehaviorId,
+    pet_seed::{PetGender, StarSign},
     scene::SceneId,
     time_system::{Season, Weather},
 };
+
+pub const PET_NAME_MAX: usize = 12;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -240,6 +245,11 @@ pub struct GameContext {
 
     // RNG seed used by the behavior layer.
     pub rng: u32,
+    // Hardware RNG handle for code paths that need fresh entropy (e.g. adoption
+    // seed generation). Carries no state — `Rng` is a zero-sized peripheral
+    // marker; it's stashed on the context so scenes can reach it without
+    // plumbing a separate parameter.
+    pub hw_rng: Rng,
 
     // Cross-scene signals.
     pub pending_scene: Option<SceneId>,
@@ -247,19 +257,36 @@ pub struct GameContext {
 
     // TODO(plant_system): drive from real plant inventory once ported.
     pub scene_plant_health: i8,
-    // TODO(personality): drive from pet seed/personality once ported.
     pub in_familiar_location: bool,
+
+    // Pet identity — set during the adoption scene from a 64-bit seed.
+    pub pet_seed: u64,
+    pub pet_name: heapless::String<PET_NAME_MAX>,
+    pub pet_gender: Option<PetGender>,
+    pub star_sign: Option<StarSign>,
+
+    // Personality-derived favorites. All set during adoption from `pet_seed`.
     pub fav_weather: Option<FavWeather>,
-    // TODO(personality): wired to favourite-food / least-favourite-food once ported.
-    pub fav_meal: Option<FoodKind>,
-    pub least_fav_meal: Option<FoodKind>,
+    pub fav_meal: Option<FoodItem>,
+    pub least_fav_meal: Option<FoodItem>,
+    pub fav_snack: Option<FoodItem>,
+    pub least_fav_snack: Option<FoodItem>,
+    pub fav_toy: Option<ToyVariant>,
+    pub least_fav_toy: Option<ToyVariant>,
+    pub fav_location: Option<SceneId>,
+    pub least_fav_location: Option<SceneId>,
+
     // TODO(meal_system): used by eating for variety penalty.
     pub recent_meals: Vec<FoodKind, RECENT_HISTORY>,
-    // TODO(milestones): tracked by interaction behaviors for first-time bonuses.
+
+    // First-run tutorial state.
+    pub first_impressions: bool,
+    // Milestones tracked by interaction behaviors for first-time bonuses.
     pub milestone_fed: bool,
     pub milestone_petted: bool,
     pub milestone_played: bool,
     pub milestone_groomed: bool,
+    pub milestone_store: bool,
 }
 
 impl GameContext {
@@ -329,20 +356,37 @@ impl GameContext {
             in_cat_bed: false,
 
             rng: 0xC0FFEEu32,
+            hw_rng: Rng::new(),
 
             pending_scene: None,
             pending_popup_icon: None,
 
             scene_plant_health: 0,
             in_familiar_location: true,
+
+            pet_seed: 0,
+            pet_name: heapless::String::new(),
+            pet_gender: None,
+            star_sign: None,
+
             fav_weather: None,
             fav_meal: None,
             least_fav_meal: None,
+            fav_snack: None,
+            least_fav_snack: None,
+            fav_toy: None,
+            least_fav_toy: None,
+            fav_location: None,
+            least_fav_location: None,
+
             recent_meals: Vec::new(),
+
+            first_impressions: false,
             milestone_fed: false,
             milestone_petted: false,
             milestone_played: false,
             milestone_groomed: false,
+            milestone_store: false,
         }
     }
 

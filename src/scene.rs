@@ -17,6 +17,7 @@ pub enum SceneId {
     Stats,
     Forecast,
     Store,
+    Adoption,
     Stub(&'static str),
 }
 

@@ -39,11 +39,8 @@ impl EatingBehavior {
     }
 
     fn would_reject(&self, ctx: &GameContext) -> bool {
-        if let Some(least) = ctx.least_fav_meal {
-            if least == self.food {
-                return true;
-            }
-        }
+        // TODO(meal_system): least_fav_meal is now a specific FoodItem, not a
+        // FoodKind. Reinstate the comparison once eating accepts a FoodItem.
         ctx.fullness > 85.0
     }
 }

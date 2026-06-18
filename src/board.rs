@@ -2,6 +2,7 @@ use esp_hal::{
     gpio::{Input, InputConfig, Pull},
     i2c::master::{Config, I2c},
     peripherals::Peripherals,
+    rng::Rng,
     time::Rate,
     Blocking,
 };
@@ -15,6 +16,7 @@ pub const I2C_FREQ_KHZ: u32 = 400;
 pub struct Board {
     pub i2c: I2c<'static, Blocking>,
     pub buttons: Buttons,
+    pub rng: Rng,
 }
 
 pub fn init(peripherals: Peripherals) -> Board {
@@ -36,5 +38,9 @@ pub fn init(peripherals: Peripherals) -> Board {
         Input::new(peripherals.GPIO2, input_config),
     ]);
 
-    Board { i2c, buttons }
+    Board {
+        i2c,
+        buttons,
+        rng: Rng::new(),
+    }
 }

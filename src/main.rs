@@ -12,6 +12,8 @@ mod environment;
 mod game;
 mod input;
 mod location_scene;
+mod pet_names;
+mod pet_seed;
 mod rand;
 mod render;
 mod scene;
@@ -39,5 +41,5 @@ fn main() -> ! {
 
     println!("catode32 v0.10.0 — behavior framework");
 
-    Game::new(renderer, board.buttons).run();
+    Game::new(renderer, board.buttons, board.rng).run();
 }

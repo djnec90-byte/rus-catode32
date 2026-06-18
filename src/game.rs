@@ -1,4 +1,7 @@
-use esp_hal::time::{Duration, Instant};
+use esp_hal::{
+    rng::Rng,
+    time::{Duration, Instant},
+};
 
 use crate::{
     context::GameContext,
@@ -7,6 +10,13 @@ use crate::{
     scene::{SceneId, SceneManager},
     time_system::TimeSystem,
 };
+
+/// Stubbed save-file check. Always returns `false` until the save/load layer
+/// is ported — the boot path therefore always lands in the adoption flow.
+/// TODO(save_load): consult the persisted save file once that layer exists.
+fn has_save() -> bool {
+    false
+}
 
 const FPS: u64 = 12;
 const FRAME_TIME_MS: u64 = 1000 / FPS;
@@ -21,9 +31,19 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(renderer: Renderer, buttons: Buttons) -> Self {
+    pub fn new(renderer: Renderer, buttons: Buttons, rng: Rng) -> Self {
         let mut context = GameContext::new();
-        let scene_manager = SceneManager::new(&mut context, SceneId::Inside);
+        // Seed the behavior RNG from the hardware peripheral so each boot's
+        // behavior choices differ until/unless a save provides a seed.
+        let seed = rng.random();
+        context.rng = if seed == 0 { 1 } else { seed };
+        context.hw_rng = rng;
+        let start = if has_save() {
+            SceneId::Inside
+        } else {
+            SceneId::Adoption
+        };
+        let scene_manager = SceneManager::new(&mut context, start);
         Self {
             renderer,
             buttons,

@@ -1,4 +1,4 @@
-use embedded_graphics::prelude::{Point, Size};
+use embedded_graphics::prelude::Point;
 
 use crate::{
     assets::character::PoseId,
@@ -10,6 +10,7 @@ use crate::{
     render::Renderer,
     scene::SceneId,
     time_system::Weather,
+    ui::bubble::{self, BubbleIcon},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -175,16 +176,22 @@ impl Behavior for VocalizingBehavior {
         ctx.apply_stat_changes(&bonus);
     }
 
-    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, _: bool) {
+    fn draw(&self, renderer: &mut Renderer, ctx: &GameContext, char_screen: Point, mirror_h: bool) {
         if self.phase != Phase::Vocalizing {
             return;
         }
-        // Minimal speech bubble: rect + tail.
-        let bx = char_screen.x + 4;
-        let by = char_screen.y - 18;
-        renderer.draw_rect(Point::new(bx, by), Size::new(18, 10), false);
-        renderer.draw_line(Point::new(bx, by + 10), Point::new(bx + 3, by + 13));
-        renderer.draw_text("!", Point::new(bx + 6, by + 1));
+        let icon = ctx
+            .pending_popup_icon
+            .and_then(BubbleIcon::from_name)
+            .unwrap_or(BubbleIcon::Exclaim);
+        bubble::draw_above_char(
+            renderer,
+            icon,
+            char_screen.x,
+            char_screen.y,
+            self.progress(),
+            mirror_h,
+        );
     }
 }
 

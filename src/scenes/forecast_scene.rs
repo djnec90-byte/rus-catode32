@@ -168,9 +168,8 @@ impl Scene for ForecastScene {
         let ws = WeatherSystem::new();
         let forecast: heapless::Vec<ForecastEntry, FORECAST_MAX_ENTRIES> =
             ws.get_forecast(ctx, 72);
-        // TODO: thread real pet_seed through GameContext once the personality
-        // system is ported; matches Python's `getattr(ctx, 'pet_seed', 0)`.
-        let pet_seed: u32 = 0;
+        // Use the lower 32 bits of the adopted pet's seed for forecast jitter.
+        let pet_seed: u32 = ctx.pet_seed as u32;
         self.slots = build_slots(
             &forecast,
             ctx.time_hours,

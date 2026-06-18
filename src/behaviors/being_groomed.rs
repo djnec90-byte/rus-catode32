@@ -1,4 +1,4 @@
-use embedded_graphics::prelude::{Point, Size};
+use embedded_graphics::prelude::Point;
 
 use crate::{
     assets::character::PoseId,
@@ -7,6 +7,7 @@ use crate::{
     entities::character::Character,
     rand,
     render::Renderer,
+    ui::bubble::{self, BubbleIcon},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -119,15 +120,18 @@ impl Behavior for BeingGroomedBehavior {
         ctx.apply_stat_changes(&bonus);
     }
 
-    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, _: bool) {
+    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, mirror_h: bool) {
         if !matches!(self.phase, Phase::Enjoying) || self.rejected {
             return;
         }
-        // Heart bubble.
-        let bx = char_screen.x + 4;
-        let by = char_screen.y - 18;
-        renderer.draw_rect(Point::new(bx, by), Size::new(14, 12), false);
-        renderer.draw_text("v", Point::new(bx + 4, by + 1));
+        bubble::draw_above_char(
+            renderer,
+            BubbleIcon::Heart,
+            char_screen.x,
+            char_screen.y,
+            self.progress(),
+            mirror_h,
+        );
     }
 }
 

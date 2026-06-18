@@ -1,4 +1,4 @@
-use embedded_graphics::prelude::{Point, Size};
+use embedded_graphics::prelude::Point;
 
 use crate::{
     assets::character::PoseId,
@@ -8,6 +8,7 @@ use crate::{
     entities::character::Character,
     rand,
     render::Renderer,
+    ui::bubble::{self, BubbleIcon},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -110,12 +111,16 @@ impl Behavior for GreetingBehavior {
         ctx.apply_stat_changes(&bonus);
     }
 
-    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, _: bool) {
+    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, mirror_h: bool) {
         if matches!(self.phase, Phase::Sniffing) {
-            let bx = char_screen.x + 4;
-            let by = char_screen.y - 18;
-            renderer.draw_rect(Point::new(bx, by), Size::new(12, 10), false);
-            renderer.draw_text("?", Point::new(bx + 3, by + 1));
+            bubble::draw_above_char(
+                renderer,
+                BubbleIcon::Question,
+                char_screen.x,
+                char_screen.y,
+                self.progress(),
+                mirror_h,
+            );
         }
     }
 }

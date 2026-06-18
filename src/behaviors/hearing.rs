@@ -1,4 +1,4 @@
-use embedded_graphics::prelude::{Point, Size};
+use embedded_graphics::prelude::Point;
 
 use crate::{
     assets::character::PoseId,
@@ -7,6 +7,7 @@ use crate::{
     entities::character::Character,
     rand,
     render::Renderer,
+    ui::bubble::{self, BubbleIcon},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -89,15 +90,21 @@ impl Behavior for HearingBehavior {
         ]);
     }
 
-    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, _: bool) {
+    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, mirror_h: bool) {
         if self.phase != Phase::Noticing {
             return;
         }
-        // Question bubble.
-        let bx = char_screen.x + 4;
-        let by = char_screen.y - 18;
-        renderer.draw_rect(Point::new(bx, by), Size::new(12, 10), false);
-        renderer.draw_text("?", Point::new(bx + 3, by + 1));
-        let _ = self.icon;
+        let icon = self
+            .icon
+            .and_then(BubbleIcon::from_name)
+            .unwrap_or(BubbleIcon::Question);
+        bubble::draw_above_char(
+            renderer,
+            icon,
+            char_screen.x,
+            char_screen.y,
+            0.0,
+            mirror_h,
+        );
     }
 }

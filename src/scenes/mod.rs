@@ -1,3 +1,4 @@
+pub mod adoption_scene;
 pub mod bedroom_scene;
 pub mod forecast_scene;
 pub mod inside_scene;
@@ -12,6 +13,7 @@ pub mod treehouse_scene;
 
 use crate::scene::{Scene, SceneId};
 
+use adoption_scene::AdoptionScene;
 use bedroom_scene::BedroomScene;
 use forecast_scene::ForecastScene;
 use inside_scene::InsideScene;
@@ -35,6 +37,7 @@ pub enum ActiveScene {
     Stats(StatsScene),
     Forecast(ForecastScene),
     Store(StoreScene),
+    Adoption(AdoptionScene),
     Stub(StubScene),
 }
 
@@ -51,6 +54,7 @@ impl ActiveScene {
             SceneId::Stats => ActiveScene::Stats(StatsScene::new()),
             SceneId::Forecast => ActiveScene::Forecast(ForecastScene::new()),
             SceneId::Store => ActiveScene::Store(StoreScene::new()),
+            SceneId::Adoption => ActiveScene::Adoption(AdoptionScene::new()),
             SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
@@ -67,6 +71,7 @@ impl ActiveScene {
             ActiveScene::Stats(s) => s,
             ActiveScene::Forecast(s) => s,
             ActiveScene::Store(s) => s,
+            ActiveScene::Adoption(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
@@ -83,6 +88,7 @@ impl ActiveScene {
             ActiveScene::Stats(s) => s,
             ActiveScene::Forecast(s) => s,
             ActiveScene::Store(s) => s,
+            ActiveScene::Adoption(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }

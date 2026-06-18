@@ -7,6 +7,7 @@ use crate::{
     entities::character::Character,
     rand,
     render::Renderer,
+    ui::bubble::{self, BubbleIcon},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -125,15 +126,23 @@ impl Behavior for AttentionBehavior {
         ctx.apply_stat_changes(&bonus);
     }
 
-    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, _: bool) {
+    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, mirror_h: bool) {
         if matches!(self.phase, Phase::Realizing) {
+            // Rising exclaim above head — matches Python's rise animation.
             let rise = ((self.excl_rise * 14.0) as i32).min(14);
             renderer.draw_text(
                 "!",
                 Point::new(char_screen.x - 2, char_screen.y - 14 - rise),
             );
         } else if matches!(self.phase, Phase::Noticing) {
-            renderer.draw_text("?", Point::new(char_screen.x + 2, char_screen.y - 14));
+            bubble::draw_above_char(
+                renderer,
+                BubbleIcon::Question,
+                char_screen.x,
+                char_screen.y,
+                self.progress(),
+                mirror_h,
+            );
         }
     }
 }
