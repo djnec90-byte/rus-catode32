@@ -79,7 +79,6 @@ impl Game {
 
     fn update(&mut self, dt: f32) {
         self.time_system.advance(&mut self.context, dt);
-        self.context.tick(dt);
         self.scene_manager
             .update(&mut self.context, &mut self.buttons, dt);
     }

@@ -394,16 +394,6 @@ impl GameContext {
         self.meteor_shower_timer > 0.0
     }
 
-    pub fn tick(&mut self, dt: f32) {
-        let dt = dt * self.time_speed;
-        self.fullness = (self.fullness - 3.3 * dt).max(0.0);
-        self.energy = (self.energy - 2.0 * dt).max(0.0);
-        self.comfort = (self.comfort - 1.0 * dt).max(0.0);
-        self.playfulness = (self.playfulness - 1.5 * dt).max(0.0);
-        self.focus = (self.focus - 2.5 * dt).max(0.0);
-        self.recompute_health();
-    }
-
     pub fn recompute_health(&mut self) {
         let raw = 0.25 * self.fullness
             + 0.20 * self.fitness

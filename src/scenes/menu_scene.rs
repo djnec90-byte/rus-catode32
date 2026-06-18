@@ -65,7 +65,7 @@ const BIG_MENU: &[MenuItem] = &[
     MenuItem { label: "Minigames",  icon: Some(icons::MINIGAMES), submenu: Some(MINIGAMES),  action: None,                                                confirm: None },
     MenuItem { label: "Store",      icon: Some(icons::STORE),     submenu: None,             action: Some(MenuAction::Scene(SceneId::Store)),            confirm: None },
     MenuItem { label: "Social",     icon: Some(icons::CAT),       submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("social"))),   confirm: None },
-    MenuItem { label: "Pet info",   icon: Some(icons::CAT),       submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("pet_info"))), confirm: None },
+    MenuItem { label: "Pet info",   icon: Some(icons::CAT),       submenu: None,             action: Some(MenuAction::Scene(SceneId::PetInfo)),          confirm: None },
     MenuItem { label: "Debug",      icon: Some(icons::WRENCH),    submenu: Some(DEBUG),      action: None,                                                confirm: None },
     MenuItem { label: "Credits",    icon: Some(icons::CREDITS),   submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("credits"))),  confirm: None },
 ];

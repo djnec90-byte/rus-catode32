@@ -5,6 +5,7 @@ pub mod inside_scene;
 pub mod kitchen_scene;
 pub mod menu_scene;
 pub mod outside_scene;
+pub mod pet_info_scene;
 pub mod pose_scene;
 pub mod stats_scene;
 pub mod store_scene;
@@ -20,6 +21,7 @@ use inside_scene::InsideScene;
 use kitchen_scene::KitchenScene;
 use menu_scene::MenuScene;
 use outside_scene::OutsideScene;
+use pet_info_scene::PetInfoScene;
 use pose_scene::PoseScene;
 use stats_scene::StatsScene;
 use store_scene::StoreScene;
@@ -38,6 +40,7 @@ pub enum ActiveScene {
     Forecast(ForecastScene),
     Store(StoreScene),
     Adoption(AdoptionScene),
+    PetInfo(PetInfoScene),
     Stub(StubScene),
 }
 
@@ -55,6 +58,7 @@ impl ActiveScene {
             SceneId::Forecast => ActiveScene::Forecast(ForecastScene::new()),
             SceneId::Store => ActiveScene::Store(StoreScene::new()),
             SceneId::Adoption => ActiveScene::Adoption(AdoptionScene::new()),
+            SceneId::PetInfo => ActiveScene::PetInfo(PetInfoScene::new()),
             SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
@@ -72,6 +76,7 @@ impl ActiveScene {
             ActiveScene::Forecast(s) => s,
             ActiveScene::Store(s) => s,
             ActiveScene::Adoption(s) => s,
+            ActiveScene::PetInfo(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
@@ -89,6 +94,7 @@ impl ActiveScene {
             ActiveScene::Forecast(s) => s,
             ActiveScene::Store(s) => s,
             ActiveScene::Adoption(s) => s,
+            ActiveScene::PetInfo(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
