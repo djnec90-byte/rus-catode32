@@ -200,8 +200,7 @@ impl Scene for StatsScene {
         }
 
         if buttons.was_just_pressed(Button::B) {
-            // TODO: Python returns to 'last_main' (Inside/Outside/Bedroom/etc.) — we only have Inside.
-            return Some(SceneId::Inside);
+            return Some(ctx.last_main_scene);
         }
 
         None

@@ -94,7 +94,7 @@ impl TreehouseScene {
 
 impl Scene for TreehouseScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx);
+        self.base.enter(ctx, SceneId::Treehouse);
     }
 
     fn update(
@@ -107,7 +107,7 @@ impl Scene for TreehouseScene {
             return Some(id);
         }
         if buttons.was_just_pressed(Button::Menu2) {
-            self.base.character.skip_behavior(ctx);
+            self.base.behaviors.skip(ctx, &mut self.base.character);
         }
         // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
         // TODO: context.cat_bed_x tracking for sleep-in-bed pose adjustments.
@@ -125,7 +125,7 @@ impl Scene for TreehouseScene {
         self.draw_platform_mid(renderer);
         self.base.environment.draw_layer(renderer, Layer::Foreground);
         self.draw_platform_fg(renderer);
-        self.base.draw_character(renderer);
+        self.base.draw_character(renderer, ctx);
         self.draw_cat_bed_rim(renderer);
         self.base.draw_dev_overlay(renderer, ctx);
     }

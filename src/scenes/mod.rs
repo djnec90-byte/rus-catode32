@@ -1,4 +1,5 @@
 pub mod bedroom_scene;
+pub mod forecast_scene;
 pub mod inside_scene;
 pub mod kitchen_scene;
 pub mod menu_scene;
@@ -11,6 +12,7 @@ pub mod treehouse_scene;
 use crate::scene::{Scene, SceneId};
 
 use bedroom_scene::BedroomScene;
+use forecast_scene::ForecastScene;
 use inside_scene::InsideScene;
 use kitchen_scene::KitchenScene;
 use menu_scene::MenuScene;
@@ -29,6 +31,7 @@ pub enum ActiveScene {
     Menu(MenuScene),
     PoseViewer(PoseScene),
     Stats(StatsScene),
+    Forecast(ForecastScene),
     Stub(StubScene),
 }
 
@@ -43,6 +46,7 @@ impl ActiveScene {
             SceneId::Menu => ActiveScene::Menu(MenuScene::new()),
             SceneId::PoseViewer => ActiveScene::PoseViewer(PoseScene::new()),
             SceneId::Stats => ActiveScene::Stats(StatsScene::new()),
+            SceneId::Forecast => ActiveScene::Forecast(ForecastScene::new()),
             SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
@@ -57,6 +61,7 @@ impl ActiveScene {
             ActiveScene::Menu(s) => s,
             ActiveScene::PoseViewer(s) => s,
             ActiveScene::Stats(s) => s,
+            ActiveScene::Forecast(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
@@ -71,6 +76,7 @@ impl ActiveScene {
             ActiveScene::Menu(s) => s,
             ActiveScene::PoseViewer(s) => s,
             ActiveScene::Stats(s) => s,
+            ActiveScene::Forecast(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }

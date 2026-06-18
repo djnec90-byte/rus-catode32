@@ -20,12 +20,12 @@ impl StubScene {
 impl Scene for StubScene {
     fn update(
         &mut self,
-        _ctx: &mut GameContext,
+        ctx: &mut GameContext,
         buttons: &mut Buttons,
         _dt: f32,
     ) -> Option<SceneId> {
         if buttons.was_just_pressed(Button::B) || buttons.was_just_pressed(Button::Menu1) {
-            return Some(SceneId::Inside);
+            return Some(ctx.last_main_scene);
         }
         None
     }

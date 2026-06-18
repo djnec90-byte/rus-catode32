@@ -17,6 +17,7 @@ mod render;
 mod scene;
 mod scenes;
 mod sky;
+mod temperature_system;
 mod time_system;
 mod ui;
 mod weather_system;

@@ -61,7 +61,7 @@ const DEBUG: &[MenuItem] = &[
 const BIG_MENU: &[MenuItem] = &[
     MenuItem { label: "Pet stats",  icon: Some(icons::STATS),     submenu: None,             action: Some(MenuAction::Scene(SceneId::Stats)),            confirm: None },
     MenuItem { label: "Locations",  icon: Some(icons::HOUSE),     submenu: Some(LOCATIONS),  action: None,                                                confirm: None },
-    MenuItem { label: "Forecast",   icon: Some(icons::SUN),       submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("forecast"))), confirm: None },
+    MenuItem { label: "Forecast",   icon: Some(icons::SUN),       submenu: None,             action: Some(MenuAction::Scene(SceneId::Forecast)),         confirm: None },
     MenuItem { label: "Minigames",  icon: Some(icons::MINIGAMES), submenu: Some(MINIGAMES),  action: None,                                                confirm: None },
     MenuItem { label: "Store",      icon: Some(icons::STORE),     submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("store"))),    confirm: None },
     MenuItem { label: "Social",     icon: Some(icons::CAT),       submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("social"))),   confirm: None },
@@ -85,13 +85,13 @@ impl MenuScene {
 impl Scene for MenuScene {
     fn update(
         &mut self,
-        _ctx: &mut GameContext,
+        ctx: &mut GameContext,
         buttons: &mut Buttons,
         _dt: f32,
     ) -> Option<SceneId> {
         match self.menu.handle_input(buttons) {
             MenuResult::Continue => None,
-            MenuResult::Closed => Some(SceneId::Inside),
+            MenuResult::Closed => Some(ctx.last_main_scene),
             MenuResult::Action(MenuAction::Scene(id)) => Some(id),
         }
     }

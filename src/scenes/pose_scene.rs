@@ -49,7 +49,7 @@ impl Scene for PoseScene {
 
     fn update(
         &mut self,
-        _ctx: &mut GameContext,
+        ctx: &mut GameContext,
         buttons: &mut Buttons,
         dt: f32,
     ) -> Option<SceneId> {
@@ -72,7 +72,7 @@ impl Scene for PoseScene {
             self.show_grid = !self.show_grid;
         }
         if buttons.was_just_pressed(Button::B) || buttons.was_just_pressed(Button::Menu1) {
-            return Some(SceneId::Inside);
+            return Some(ctx.last_main_scene);
         }
 
         self.anim.update(self.current_pose().data(), dt);

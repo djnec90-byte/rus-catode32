@@ -69,7 +69,7 @@ impl KitchenScene {
 
 impl Scene for KitchenScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx);
+        self.base.enter(ctx, SceneId::Kitchen);
         // TODO: ClockWidget at world_x=100, world_y=0 (midground custom draw).
         // TODO: BOX_SMALL_1 and FOOD_BOWL items (Python adds them as foreground sprites).
         // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
@@ -86,7 +86,7 @@ impl Scene for KitchenScene {
             return Some(id);
         }
         if buttons.was_just_pressed(Button::Menu2) {
-            self.base.character.skip_behavior(ctx);
+            self.base.behaviors.skip(ctx, &mut self.base.character);
         }
         // TODO: ClockWidget.set_time(hours, minutes) per frame.
         // TODO: on_post_draw lightning inversion for indoor rooms with no sky drawn.
@@ -99,7 +99,7 @@ impl Scene for KitchenScene {
         self.base.environment.draw_layer(renderer, Layer::Midground);
         self.draw_counter(renderer);
         self.base.environment.draw_layer(renderer, Layer::Foreground);
-        self.base.draw_character(renderer);
+        self.base.draw_character(renderer, ctx);
         self.base.draw_dev_overlay(renderer, ctx);
     }
 }

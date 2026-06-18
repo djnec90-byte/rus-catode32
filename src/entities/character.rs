@@ -3,7 +3,6 @@ use esp_hal::time::Instant;
 
 use crate::{
     assets::character::PoseId,
-    behavior::BehaviorManager,
     character::{draw_pose, PoseAnim},
     context::GameContext,
     render::Renderer,
@@ -14,7 +13,6 @@ pub struct Character {
     pub mirror_h: bool,
     pub pose_id: PoseId,
     pub anim: PoseAnim,
-    behaviors: BehaviorManager,
 }
 
 impl Character {
@@ -25,39 +23,26 @@ impl Character {
             mirror_h: false,
             pose_id: PoseId::SittingSideNeutral,
             anim: PoseAnim::new(1),
-            behaviors: BehaviorManager::new(),
         }
     }
 
-    pub fn enter(&mut self, ctx: &mut GameContext) {
+    pub fn reseed_anim(&mut self) {
         let seed = (Instant::now().duration_since_epoch().as_micros() as u32).max(1);
         self.anim = PoseAnim::new(seed);
-        self.behaviors.start(ctx);
-        self.sync_pose();
         self.anim.reseed_for(self.pose_id.data());
     }
 
-    pub fn update(&mut self, ctx: &mut GameContext, dt: f32) {
-        self.behaviors.update(ctx, dt);
-        self.sync_pose();
-        self.anim.update(self.pose_id.data(), dt);
-    }
-
-    pub fn skip_behavior(&mut self, ctx: &mut GameContext) {
-        self.behaviors.skip(ctx);
-        self.sync_pose();
-    }
-
-    pub fn current_behavior_name(&self) -> &'static str {
-        self.behaviors.current_name()
-    }
-
-    fn sync_pose(&mut self) {
-        let next = self.behaviors.current_pose();
-        if self.pose_id != next {
-            self.pose_id = next;
-            self.anim.reseed_for(next.data());
+    /// Switch to a new pose if it differs from the current one, reseeding the
+    /// animation so the new pose's frames start at a randomized offset.
+    pub fn set_pose(&mut self, pose: PoseId) {
+        if self.pose_id != pose {
+            self.pose_id = pose;
+            self.anim.reseed_for(pose.data());
         }
+    }
+
+    pub fn animate(&mut self, dt: f32) {
+        self.anim.update(self.pose_id.data(), dt);
     }
 
     pub fn draw(&self, renderer: &mut Renderer, camera_x: i32) {
@@ -71,3 +56,7 @@ impl Character {
         );
     }
 }
+
+// Keep `GameContext` accessible from the trait without a circular import.
+#[allow(dead_code)]
+fn _ctx_marker(_: &GameContext) {}

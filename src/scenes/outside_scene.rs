@@ -186,7 +186,7 @@ fn make_critter(kind: CritterKind, world_width: i32, rng: &mut u32) -> Critter {
 
 impl Scene for OutsideScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx);
+        self.base.enter(ctx, SceneId::Outside);
         // Seed the scene's RNG from the system clock so each entry rolls a fresh world.
         self.rng = (Instant::now().duration_since_epoch().as_micros() as u32).max(1);
         self.spawn_critters(ctx);
@@ -206,7 +206,7 @@ impl Scene for OutsideScene {
             return Some(id);
         }
         if buttons.was_just_pressed(Button::Menu2) {
-            self.base.character.skip_behavior(ctx);
+            self.base.behaviors.skip(ctx, &mut self.base.character);
         }
         self.update_critters(dt * ctx.time_speed);
         // TODO: weather-change detection — Python re-enters the scene when weather changes
@@ -221,7 +221,7 @@ impl Scene for OutsideScene {
         self.base.draw_layers(renderer);
         self.draw_grass(renderer);
         self.draw_critters(renderer);
-        self.base.draw_character(renderer);
+        self.base.draw_character(renderer, ctx);
         self.base.draw_dev_overlay(renderer, ctx);
     }
 }

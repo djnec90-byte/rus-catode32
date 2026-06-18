@@ -1,5 +1,70 @@
-use crate::time_system::{Season, Weather};
+use heapless::Vec;
 
+use crate::{
+    behavior::BehaviorId,
+    scene::SceneId,
+    time_system::{Season, Weather},
+};
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum StatId {
+    Fullness,
+    Energy,
+    Comfort,
+    Playfulness,
+    Focus,
+    Fulfillment,
+    Cleanliness,
+    Intelligence,
+    Maturity,
+    Affection,
+    Fitness,
+    Serenity,
+    Courage,
+    Loyalty,
+    Mischievousness,
+    Curiosity,
+    Sociability,
+}
+
+impl StatId {
+    fn affected_by_sickness(self) -> bool {
+        matches!(
+            self,
+            StatId::Serenity
+                | StatId::Fulfillment
+                | StatId::Playfulness
+                | StatId::Comfort
+                | StatId::Energy
+                | StatId::Fitness
+                | StatId::Focus
+        )
+    }
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FavWeather {
+    Sunny,
+    Rainy,
+    Snowy,
+    Overcast,
+}
+
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FoodKind {
+    Kibble,
+    WetFood,
+    Treat,
+    Fish,
+    CaughtSnack,
+}
+
+pub const RECENT_HISTORY: usize = 5;
+
+#[allow(dead_code)]
 pub struct GameContext {
     pub health: f32,
     pub fullness: f32,
@@ -45,8 +110,44 @@ pub struct GameContext {
     pub weather: Weather,
     pub temperature: f32,
     pub weather_step: u32,
-    pub weather_timer: f32,        // in-game minutes remaining in current weather
-    pub meteor_shower_timer: f32,  // in-game minutes of active shower window
+    pub weather_timer: f32,
+    pub meteor_shower_timer: f32,
+
+    pub last_main_scene: SceneId,
+
+    // Behavior-system state.
+    pub recent_behaviors: Vec<BehaviorId, RECENT_HISTORY>,
+    pub current_behavior_name: Option<&'static str>,
+    pub pending_wake_greeting: bool,
+
+    // Scene-supplied bounds and props (set by scenes during enter()).
+    pub scene_x_min: i32,
+    pub scene_x_max: i32,
+    pub cat_bed_x: Option<i32>,
+    pub in_cat_bed: bool,
+
+    // RNG seed used by the behavior layer.
+    pub rng: u32,
+
+    // Cross-scene signals.
+    pub pending_scene: Option<SceneId>,
+    pub pending_popup_icon: Option<&'static str>,
+
+    // TODO(plant_system): drive from real plant inventory once ported.
+    pub scene_plant_health: i8,
+    // TODO(personality): drive from pet seed/personality once ported.
+    pub in_familiar_location: bool,
+    pub fav_weather: Option<FavWeather>,
+    // TODO(personality): wired to favourite-food / least-favourite-food once ported.
+    pub fav_meal: Option<FoodKind>,
+    pub least_fav_meal: Option<FoodKind>,
+    // TODO(meal_system): used by eating for variety penalty.
+    pub recent_meals: Vec<FoodKind, RECENT_HISTORY>,
+    // TODO(milestones): tracked by interaction behaviors for first-time bonuses.
+    pub milestone_fed: bool,
+    pub milestone_petted: bool,
+    pub milestone_played: bool,
+    pub milestone_groomed: bool,
 }
 
 impl GameContext {
@@ -85,13 +186,44 @@ impl GameContext {
             // TODO: derive season_offset from ctx.pet_seed once the personality system is ported.
             season_offset: 0,
             season: Season::Winter,
-            moon_phase: 2, // (0/6 + 2) % 8 — initial value matches day 0
+            moon_phase: 2,
             weather: Weather::Clear,
             temperature: 20.0,
             weather_step: 0,
             weather_timer: 0.0,
             meteor_shower_timer: 0.0,
+
+            last_main_scene: SceneId::Inside,
+
+            recent_behaviors: Vec::new(),
+            current_behavior_name: None,
+            pending_wake_greeting: false,
+
+            scene_x_min: 10,
+            scene_x_max: 118,
+            cat_bed_x: None,
+            in_cat_bed: false,
+
+            rng: 0xC0FFEEu32,
+
+            pending_scene: None,
+            pending_popup_icon: None,
+
+            scene_plant_health: 0,
+            in_familiar_location: true,
+            fav_weather: None,
+            fav_meal: None,
+            least_fav_meal: None,
+            recent_meals: Vec::new(),
+            milestone_fed: false,
+            milestone_petted: false,
+            milestone_played: false,
+            milestone_groomed: false,
         }
+    }
+
+    pub fn meteor_shower_happening(&self) -> bool {
+        self.meteor_shower_timer > 0.0
     }
 
     pub fn tick(&mut self, dt: f32) {
@@ -116,5 +248,83 @@ impl GameContext {
             + 0.025 * self.intelligence
             + 0.025 * self.playfulness;
         self.health = raw.clamp(0.0, 100.0);
+    }
+
+    fn stat_mut(&mut self, id: StatId) -> &mut f32 {
+        match id {
+            StatId::Fullness => &mut self.fullness,
+            StatId::Energy => &mut self.energy,
+            StatId::Comfort => &mut self.comfort,
+            StatId::Playfulness => &mut self.playfulness,
+            StatId::Focus => &mut self.focus,
+            StatId::Fulfillment => &mut self.fulfillment,
+            StatId::Cleanliness => &mut self.cleanliness,
+            StatId::Intelligence => &mut self.intelligence,
+            StatId::Maturity => &mut self.maturity,
+            StatId::Affection => &mut self.affection,
+            StatId::Fitness => &mut self.fitness,
+            StatId::Serenity => &mut self.serenity,
+            StatId::Courage => &mut self.courage,
+            StatId::Loyalty => &mut self.loyalty,
+            StatId::Mischievousness => &mut self.mischievousness,
+            StatId::Curiosity => &mut self.curiosity,
+            StatId::Sociability => &mut self.sociability,
+        }
+    }
+
+    /// Apply a batch of stat changes with asymptotic damping near 0 and 100.
+    /// Stats near their ceiling resist further increases; stats near the floor
+    /// resist further decreases. Mirrors Python `context.apply_stat_changes`.
+    pub fn apply_stat_changes(&mut self, changes: &[(StatId, f32)]) {
+        use micromath::F32Ext;
+        const EXP: f32 = 0.7;
+        let sickness = self.sickness;
+        for &(stat, delta) in changes {
+            if delta == 0.0 {
+                continue;
+            }
+            let cur = *self.stat_mut(stat);
+            let mut d = delta;
+            if d > 0.0 {
+                let room = ((100.0 - cur) / 100.0).max(0.0);
+                d *= room.powf(EXP);
+                if stat.affected_by_sickness() {
+                    if sickness >= 8.0 {
+                        d *= 0.4;
+                    } else if sickness >= 5.0 {
+                        d *= 0.6;
+                    } else if sickness >= 2.0 {
+                        d *= 0.8;
+                    }
+                }
+            } else {
+                let room = (cur / 100.0).max(0.0);
+                d *= room.powf(EXP);
+            }
+            let new_val = (cur + d).clamp(0.0, 100.0);
+            *self.stat_mut(stat) = new_val;
+        }
+        self.recompute_health();
+    }
+
+    /// Push a behavior id onto the recent-history ring; index 0 = most recent.
+    pub fn record_behavior(&mut self, id: BehaviorId) {
+        if self.recent_behaviors.is_full() {
+            self.recent_behaviors.pop();
+        }
+        let _ = self.recent_behaviors.insert(0, id);
+    }
+
+    /// TODO(meal_system): used by eating for variety penalty.
+    pub fn record_meal(&mut self, kind: FoodKind) {
+        if self.recent_meals.is_full() {
+            self.recent_meals.pop();
+        }
+        let _ = self.recent_meals.insert(0, kind);
+    }
+
+    /// Recency index of `id` in the recent-behaviors ring, or None.
+    pub fn recent_index(&self, id: BehaviorId) -> Option<usize> {
+        self.recent_behaviors.iter().position(|b| *b == id)
     }
 }

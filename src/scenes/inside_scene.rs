@@ -96,7 +96,7 @@ impl InsideScene {
 
 impl Scene for InsideScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx);
+        self.base.enter(ctx, SceneId::Inside);
         let bookshelf_y = 63 - BOOKSHELF.height as i32;
         self.base.environment.add_object(
             Layer::Foreground,
@@ -118,7 +118,7 @@ impl Scene for InsideScene {
             return Some(id);
         }
         if buttons.was_just_pressed(Button::Menu2) {
-            self.base.character.skip_behavior(ctx);
+            self.base.behaviors.skip(ctx, &mut self.base.character);
         }
         // TODO: weather-change detection (Python re-enters scene when weather changes
         //       so clouds/precipitation rebuild — needed once weather affects the indoor sky).
@@ -138,7 +138,7 @@ impl Scene for InsideScene {
         self.base.draw_sky(renderer, ctx);
         self.draw_window(renderer);
         self.base.draw_layers(renderer);
-        self.base.draw_character(renderer);
+        self.base.draw_character(renderer, ctx);
         self.base.draw_dev_overlay(renderer, ctx);
     }
 }

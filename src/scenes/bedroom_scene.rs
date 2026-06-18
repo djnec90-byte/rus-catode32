@@ -92,7 +92,7 @@ impl BedroomScene {
 
 impl Scene for BedroomScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx);
+        self.base.enter(ctx, SceneId::Bedroom);
         let bookshelf_y = 63 - BOOKSHELF.height as i32;
         self.base.environment.add_object(
             Layer::Foreground,
@@ -116,7 +116,7 @@ impl Scene for BedroomScene {
             return Some(id);
         }
         if buttons.was_just_pressed(Button::Menu2) {
-            self.base.character.skip_behavior(ctx);
+            self.base.behaviors.skip(ctx, &mut self.base.character);
         }
         // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
         // TODO: context.cat_bed_x tracking (Python sets context.cat_bed_x to position the
@@ -133,7 +133,7 @@ impl Scene for BedroomScene {
         self.base.environment.draw_layer(renderer, Layer::Midground);
         self.draw_bed(renderer);
         self.base.environment.draw_layer(renderer, Layer::Foreground);
-        self.base.draw_character(renderer);
+        self.base.draw_character(renderer, ctx);
         // Cat bed rim drawn AFTER the character so the cat appears nestled inside.
         self.draw_cat_bed_rim(renderer);
         self.base.draw_dev_overlay(renderer, ctx);

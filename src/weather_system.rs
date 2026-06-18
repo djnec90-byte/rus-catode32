@@ -1,7 +1,18 @@
+use heapless::Vec;
+
 use crate::{
     context::GameContext,
     time_system::{Season, Weather},
 };
+
+pub const FORECAST_MAX_ENTRIES: usize = 96;
+
+#[derive(Clone, Copy)]
+pub struct ForecastEntry {
+    pub weather: Weather,
+    pub duration_minutes: u32,
+    pub meteor_shower: bool,
+}
 
 const SNOW_TEMP_THRESHOLD: f32 = 4.0;
 const METEOR_SEED_OFFSET: u32 = 0x100000;
@@ -160,5 +171,51 @@ impl WeatherSystem {
 
         ctx.weather_timer = timer;
         ctx.meteor_shower_timer = shower_timer;
+    }
+
+    /// Build a deterministic forecast covering at least `hours` of future
+    /// in-game time, starting with the current weather and its remaining
+    /// duration. Mirrors the Python `WeatherSystem.get_forecast`.
+    pub fn get_forecast(&self, ctx: &GameContext, hours: u32) -> Vec<ForecastEntry, FORECAST_MAX_ENTRIES> {
+        let mut out: Vec<ForecastEntry, FORECAST_MAX_ENTRIES> = Vec::new();
+
+        let mut current = ctx.weather;
+        let mut step = ctx.weather_step;
+        let season = ctx.season;
+        let temperature = ctx.temperature;
+        let remaining = ctx.weather_timer.max(0.0);
+        let mut shower_timer = ctx.meteor_shower_timer.max(0.0);
+
+        let _ = out.push(ForecastEntry {
+            weather: current,
+            duration_minutes: remaining as u32,
+            meteor_shower: shower_timer > 0.0,
+        });
+
+        let mut total_minutes = remaining;
+        let target_minutes = (hours * 60) as f32;
+
+        // Consume the shower timer over the current weather's remaining window.
+        shower_timer = (shower_timer - remaining).max(0.0);
+
+        while total_minutes < target_minutes && !out.is_full() {
+            let (shower_start, shower_dur) = compute_meteor_shower(step, season);
+            if shower_start {
+                shower_timer = shower_timer.max(shower_dur as f32);
+            }
+            let (next_weather, duration) =
+                compute_transition(step, current, season, temperature);
+            let _ = out.push(ForecastEntry {
+                weather: next_weather,
+                duration_minutes: duration,
+                meteor_shower: shower_timer > 0.0,
+            });
+            total_minutes += duration as f32;
+            current = next_weather;
+            step = step.wrapping_add(1);
+            shower_timer = (shower_timer - duration as f32).max(0.0);
+        }
+
+        out
     }
 }

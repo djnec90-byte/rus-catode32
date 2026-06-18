@@ -11,39 +11,38 @@ use crate::{
     scene::SceneId,
 };
 
-const SLEEP_POSES: &[PoseId] = &[
-    PoseId::SleepingSideSploot,
-    PoseId::SleepingSideModest,
-    PoseId::SleepingSideCrossed,
+const NAP_POSES: &[PoseId] = &[
+    PoseId::LayingSideContent,
+    PoseId::LayingSideBliss,
+    PoseId::LayingSideNeutral,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Phase {
-    Considering,
     Settling,
-    Sleeping,
+    Napping,
     Waking,
 }
 
-pub struct SleepingBehavior {
+pub struct NappingBehavior {
     phase: Phase,
     phase_timer: f32,
     elapsed: f32,
     total: f32,
     pose_id: PoseId,
-    sleep_pose: PoseId,
+    nap_pose: PoseId,
     z_timer: f32,
 }
 
-impl SleepingBehavior {
+impl NappingBehavior {
     pub fn new() -> Self {
         Self {
-            phase: Phase::Considering,
+            phase: Phase::Settling,
             phase_timer: 0.0,
             elapsed: 0.0,
-            total: 50.0,
-            pose_id: PoseId::SittingForwardSleepy,
-            sleep_pose: PoseId::SleepingSideModest,
+            total: 20.0,
+            pose_id: PoseId::LayingSideNeutral,
+            nap_pose: PoseId::LayingSideContent,
             z_timer: 0.0,
         }
     }
@@ -53,14 +52,14 @@ impl SleepingBehavior {
             return true;
         }
         let threshold = if ctx.sickness >= 5.0 {
-            95.0
+            97.0
         } else if ctx.sickness >= 2.0 {
-            75.0
+            85.0
         } else {
             let mut t = if ctx.time_hours >= 21 || ctx.time_hours < 6 {
-                70.0
+                85.0
             } else {
-                40.0
+                60.0
             };
             if ctx.last_main_scene == SceneId::Bedroom {
                 t += 20.0;
@@ -71,11 +70,11 @@ impl SleepingBehavior {
     }
 
     pub fn priority(ctx: &GameContext, rng: &mut u32) -> u32 {
-        let lo = ctx.energy * 0.25;
-        let hi = (ctx.energy * 2.0).max(lo);
+        let lo = ctx.energy * 0.3;
+        let hi = (ctx.energy * 2.5).max(ctx.energy * 0.5);
         let mut base = rand::rand_range_f32(rng, lo, hi);
         if ctx.time_hours >= 19 || ctx.time_hours < 6 {
-            base *= 0.4;
+            base *= 0.5;
         }
         if ctx.last_main_scene == SceneId::Bedroom {
             base *= 0.55;
@@ -84,9 +83,9 @@ impl SleepingBehavior {
     }
 }
 
-impl Behavior for SleepingBehavior {
+impl Behavior for NappingBehavior {
     fn id(&self) -> BehaviorId {
-        BehaviorId::Sleeping
+        BehaviorId::Napping
     }
 
     fn progress(&self) -> f32 {
@@ -98,12 +97,12 @@ impl Behavior for SleepingBehavior {
     }
 
     fn enter(&mut self, ctx: &mut GameContext, _character: &mut Character) {
-        self.phase = Phase::Considering;
+        self.phase = Phase::Settling;
         self.phase_timer = 0.0;
         self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 45.0, 90.0);
-        self.sleep_pose = common::pick_pose(&mut ctx.rng, SLEEP_POSES);
-        self.pose_id = PoseId::SittingForwardSleepy;
+        self.total = rand::rand_range_f32(&mut ctx.rng, 20.0, 40.0);
+        self.nap_pose = common::pick_pose(&mut ctx.rng, NAP_POSES);
+        self.pose_id = PoseId::LayingSideNeutral;
     }
 
     fn update(
@@ -116,23 +115,18 @@ impl Behavior for SleepingBehavior {
         self.phase_timer += dt;
         self.z_timer += dt;
         match self.phase {
-            Phase::Considering if self.phase_timer >= 3.0 => {
-                self.phase = Phase::Settling;
+            Phase::Settling if self.phase_timer >= 2.5 => {
+                self.phase = Phase::Napping;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::LayingSideNeutral;
+                self.pose_id = self.nap_pose;
             }
-            Phase::Settling if self.phase_timer >= 3.0 => {
-                self.phase = Phase::Sleeping;
-                self.phase_timer = 0.0;
-                self.pose_id = self.sleep_pose;
-            }
-            Phase::Sleeping if self.phase_timer >= self.total - 9.0 => {
+            Phase::Napping if self.phase_timer >= self.total - 6.0 => {
                 self.phase = Phase::Waking;
                 self.phase_timer = 0.0;
                 self.pose_id = PoseId::LayingSideNeutral;
                 ctx.pending_wake_greeting = true;
             }
-            Phase::Waking if self.phase_timer >= 3.0 => {
+            Phase::Waking if self.phase_timer >= 2.5 => {
                 return BehaviorState::Completed;
             }
             _ => {}
@@ -145,16 +139,12 @@ impl Behavior for SleepingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Energy, 35.0));
-        let _ = bonus.push((StatId::Comfort, 10.0));
-        let _ = bonus.push((StatId::Focus, 12.0));
-        let _ = bonus.push((StatId::Serenity, 1.2));
-        let _ = bonus.push((StatId::Fullness, -8.0));
-        if ctx.in_cat_bed {
-            let _ = bonus.push((StatId::Comfort, 4.0));
-            let _ = bonus.push((StatId::Serenity, 0.6));
-        }
+        let mut bonus: heapless::Vec<(StatId, f32), 6> = heapless::Vec::new();
+        let _ = bonus.push((StatId::Energy, 18.0));
+        let _ = bonus.push((StatId::Comfort, 6.0));
+        let _ = bonus.push((StatId::Focus, 6.0));
+        let _ = bonus.push((StatId::Serenity, 0.6));
+        let _ = bonus.push((StatId::Fullness, -3.0));
         for entry in bonus.iter_mut() {
             entry.1 *= progress;
         }
@@ -168,24 +158,19 @@ impl Behavior for SleepingBehavior {
         char_screen: Point,
         _mirror_h: bool,
     ) {
-        if self.phase != Phase::Sleeping {
+        if self.phase != Phase::Napping {
             return;
         }
-        // Four animated wavy Z's drifting up.
-        let t = self.z_timer;
-        for i in 0..4 {
-            let phase = t + i as f32 * 0.6;
-            let dx = ((phase * 2.0) as i32) % 6 - 3;
-            let dy = (phase * 8.0) as i32 % 24;
-            let pos = Point::new(char_screen.x - 6 + dx, char_screen.y - 16 - dy);
-            renderer.draw_text("z", pos);
-        }
+        let dy = ((self.z_timer * 4.0) as i32) % 8;
+        renderer.draw_text(
+            "z",
+            Point::new(char_screen.x - 6, char_screen.y - 12 - dy),
+        );
     }
 
     fn mark_almost_done(&mut self) {
-        // Skip directly to the waking phase so the wake greeting fires quickly.
         self.phase = Phase::Waking;
         self.phase_timer = 0.0;
-        self.elapsed = self.total - 3.0;
+        self.elapsed = self.total - 2.0;
     }
 }
