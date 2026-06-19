@@ -94,6 +94,18 @@ impl Buttons {
         self.pressed_mask() != 0
     }
 
+    /// Mark every currently-held button as already seen, so the next
+    /// `was_just_pressed()` call will not report it as a fresh press.
+    /// Called by the sleep manager on wake so the button that triggered
+    /// the wake is not also passed through as a game action.
+    pub fn consume_all(&mut self) {
+        let now = Instant::now();
+        for i in 0..8 {
+            self.edge_state[i] = self.pins[i].is_low();
+            self.last_press[i] = Some(now);
+        }
+    }
+
     pub fn direction(&self) -> (i8, i8) {
         let mut dx = 0;
         let mut dy = 0;

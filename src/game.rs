@@ -8,6 +8,7 @@ use crate::{
     input::Buttons,
     render::Renderer,
     scene::{SceneId, SceneManager},
+    sleep_manager::SleepManager,
     time_system::TimeSystem,
 };
 
@@ -27,6 +28,7 @@ pub struct Game {
     context: GameContext,
     scene_manager: SceneManager,
     time_system: TimeSystem,
+    sleep_manager: SleepManager,
     last_dt_ms: u64,
 }
 
@@ -50,6 +52,7 @@ impl Game {
             context,
             scene_manager,
             time_system: TimeSystem::new(),
+            sleep_manager: SleepManager::new(),
             last_dt_ms: 0,
         }
     }
@@ -65,6 +68,12 @@ impl Game {
             self.last_dt_ms = elapsed_ms;
 
             let dt = elapsed_ms as f32 / 1000.0;
+
+            // Reset the inactivity timer whenever the player is touching a button.
+            if self.buttons.any_pressed() {
+                self.sleep_manager.notify_activity();
+            }
+
             self.update(dt);
             self.draw();
 
@@ -73,6 +82,21 @@ impl Game {
                 let wait_start = Instant::now();
                 let remaining = Duration::from_millis(FRAME_TIME_MS - frame_used);
                 while wait_start.elapsed() < remaining {}
+            }
+
+            // Enter basic sleep if idle long enough. Blocks here until a
+            // button press wakes the device; on return, reset the frame
+            // timer so the next iteration doesn't see a huge dt spike
+            // (the sleep loop already advanced time_system internally).
+            if self.sleep_manager.should_sleep() {
+                self.sleep_manager.enter_sleep(
+                    &mut self.renderer,
+                    &mut self.buttons,
+                    &mut self.context,
+                    &mut self.scene_manager,
+                    &mut self.time_system,
+                );
+                last_frame = Instant::now();
             }
         }
     }

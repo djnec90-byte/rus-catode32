@@ -55,6 +55,23 @@ impl SceneManager {
         }
     }
 
+    /// Minimal scene tick used by `SleepManager` while the screen is off.
+    ///
+    /// Mirrors Python `SceneManager.sleep_update`: ticks the current scene
+    /// so behaviors and needs keep advancing, but ignores any returned
+    /// scene-change request — switching scenes invisibly behind a black
+    /// screen would surprise the player on wake.
+    ///
+    /// TODO(sleep_pending_scene): Python defers scene changes triggered by
+    /// behaviors during sleep via `ctx.pending_scene` + a wake-time
+    /// `apply_pending_scene_after_sleep()` call. In Rust the location-scene
+    /// update already `take()`s `pending_scene` inline, so a scene change
+    /// requested mid-sleep is silently dropped. Fix once a sleep-aware
+    /// scene-switch path exists.
+    pub fn sleep_update(&mut self, ctx: &mut GameContext, buttons: &mut Buttons, dt: f32) {
+        let _ = self.current.as_scene_mut().update(ctx, buttons, dt);
+    }
+
     pub fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, dt_ms: u64) {
         self.current.as_scene().draw(ctx, renderer, dt_ms);
     }

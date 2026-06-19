@@ -61,6 +61,17 @@ impl Renderer {
         }
     }
 
+    /// Cut display panel power (~1–2 mA saving). Drawing still updates the
+    /// off-screen buffer; nothing reaches the panel until `power_on()`.
+    pub fn power_off(&mut self) {
+        self.display.set_display_on(false).ok();
+    }
+
+    /// Restore display panel power.
+    pub fn power_on(&mut self) {
+        self.display.set_display_on(true).ok();
+    }
+
     pub fn set_invert(&mut self, invert: bool) {
         if self.invert_state == invert {
             return;
