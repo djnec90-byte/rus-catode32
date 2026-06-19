@@ -1445,6 +1445,7 @@ pub static POSE_SITTING_SIDE_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_SIDE_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SIDE_ANGRY: Pose = Pose {
@@ -1454,6 +1455,7 @@ pub static POSE_SITTING_SIDE_ANGRY: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SIDE_HAPPY: Pose = Pose {
@@ -1463,6 +1465,7 @@ pub static POSE_SITTING_SIDE_HAPPY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SIDE_ALOOF: Pose = Pose {
@@ -1472,6 +1475,7 @@ pub static POSE_SITTING_SIDE_ALOOF: Pose = Pose {
     eyes: Some(&EYES_SIDE_ALOOF),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SIDE_ANNOYED: Pose = Pose {
@@ -1481,6 +1485,7 @@ pub static POSE_SITTING_SIDE_ANNOYED: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANNOYED),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SIDE_LOOKING_DOWN: Pose = Pose {
@@ -1490,6 +1495,7 @@ pub static POSE_SITTING_SIDE_LOOKING_DOWN: Pose = Pose {
     eyes: Some(&EYES_SIDE_DOWN),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_FORWARD_NEUTRAL: Pose = Pose {
@@ -1499,6 +1505,7 @@ pub static POSE_SITTING_FORWARD_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_FRONT_NEUTRAL2),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_FORWARD_SLEEPY: Pose = Pose {
@@ -1508,6 +1515,7 @@ pub static POSE_SITTING_FORWARD_SLEEPY: Pose = Pose {
     eyes: Some(&EYES_FRONT_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_FORWARD_SHOCKED: Pose = Pose {
@@ -1517,6 +1525,7 @@ pub static POSE_SITTING_FORWARD_SHOCKED: Pose = Pose {
     eyes: Some(&EYES_FRONT_SHOCKED),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_FORWARD_HAPPY: Pose = Pose {
@@ -1526,6 +1535,7 @@ pub static POSE_SITTING_FORWARD_HAPPY: Pose = Pose {
     eyes: Some(&EYES_FRONT_HAPPY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_FORWARD_ALOOF: Pose = Pose {
@@ -1535,6 +1545,7 @@ pub static POSE_SITTING_FORWARD_ALOOF: Pose = Pose {
     eyes: Some(&EYES_FRONT_ALOOF),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_FORWARD_CONTENT: Pose = Pose {
@@ -1544,6 +1555,7 @@ pub static POSE_SITTING_FORWARD_CONTENT: Pose = Pose {
     eyes: Some(&EYES_FRONT_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SILLY_SIDE_NEUTRAL: Pose = Pose {
@@ -1553,6 +1565,7 @@ pub static POSE_SITTING_SILLY_SIDE_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_SIDE_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SILLY_SIDE_ALOOF: Pose = Pose {
@@ -1562,6 +1575,7 @@ pub static POSE_SITTING_SILLY_SIDE_ALOOF: Pose = Pose {
     eyes: Some(&EYES_SIDE_ALOOF),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SILLY_SIDE_HAPPY: Pose = Pose {
@@ -1571,6 +1585,7 @@ pub static POSE_SITTING_SILLY_SIDE_HAPPY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SILLY_SIDE_ANGRY: Pose = Pose {
@@ -1580,6 +1595,7 @@ pub static POSE_SITTING_SILLY_SIDE_ANGRY: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_SILLY_SIDE_ANNOYED: Pose = Pose {
@@ -1589,6 +1605,7 @@ pub static POSE_SITTING_SILLY_SIDE_ANNOYED: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANNOYED),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_LICKING_SIDE_LICKING_LEG: Pose = Pose {
@@ -1598,6 +1615,7 @@ pub static POSE_SITTING_LICKING_SIDE_LICKING_LEG: Pose = Pose {
     eyes: Some(&EYES_LICKING),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_BEGGING_SIDE_ARM_UP: Pose = Pose {
@@ -1607,6 +1625,7 @@ pub static POSE_BEGGING_SIDE_ARM_UP: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_BEGGING_SIDE_ARM_UP2: Pose = Pose {
@@ -1616,6 +1635,7 @@ pub static POSE_BEGGING_SIDE_ARM_UP2: Pose = Pose {
     eyes: Some(&EYES_SIDE_DOWN),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_BEGGING_SIDE_DEMANDING: Pose = Pose {
@@ -1625,6 +1645,7 @@ pub static POSE_BEGGING_SIDE_DEMANDING: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_NEUTRAL: Pose = Pose {
@@ -1634,6 +1655,7 @@ pub static POSE_LAYING_SIDE_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_SIDE_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_NEUTRAL2: Pose = Pose {
@@ -1643,6 +1665,7 @@ pub static POSE_LAYING_SIDE_NEUTRAL2: Pose = Pose {
     eyes: Some(&EYES_SIDE_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_ANNOYED: Pose = Pose {
@@ -1652,6 +1675,7 @@ pub static POSE_LAYING_SIDE_ANNOYED: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANNOYED),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_HAPPY: Pose = Pose {
@@ -1661,6 +1685,7 @@ pub static POSE_LAYING_SIDE_HAPPY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_ALOOF: Pose = Pose {
@@ -1670,6 +1695,7 @@ pub static POSE_LAYING_SIDE_ALOOF: Pose = Pose {
     eyes: Some(&EYES_SIDE_ALOOF),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_ANGRY: Pose = Pose {
@@ -1679,6 +1705,7 @@ pub static POSE_LAYING_SIDE_ANGRY: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_BORED: Pose = Pose {
@@ -1688,6 +1715,7 @@ pub static POSE_LAYING_SIDE_BORED: Pose = Pose {
     eyes: Some(&EYES_FRONT_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_CONTENT: Pose = Pose {
@@ -1697,6 +1725,7 @@ pub static POSE_LAYING_SIDE_CONTENT: Pose = Pose {
     eyes: Some(&EYES_FRONT_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_BLISS: Pose = Pose {
@@ -1706,6 +1735,7 @@ pub static POSE_LAYING_SIDE_BLISS: Pose = Pose {
     eyes: Some(&EYES_FRONT_HAPPY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LAYING_SIDE_SULKING: Pose = Pose {
@@ -1715,6 +1745,7 @@ pub static POSE_LAYING_SIDE_SULKING: Pose = Pose {
     eyes: Some(&EYES_SIDE_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: Some((-9, 8)),
 };
 
 pub static POSE_LAYING_SIDE_SULKING2: Pose = Pose {
@@ -1724,6 +1755,7 @@ pub static POSE_LAYING_SIDE_SULKING2: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: false,
     tail_last: false,
+    head_offset: Some((-10, 8)),
 };
 
 pub static POSE_LAYING_SIDE_SICK: Pose = Pose {
@@ -1733,6 +1765,7 @@ pub static POSE_LAYING_SIDE_SICK: Pose = Pose {
     eyes: None,
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SLEEPING_SIDE_SPLOOT: Pose = Pose {
@@ -1742,6 +1775,7 @@ pub static POSE_SLEEPING_SIDE_SPLOOT: Pose = Pose {
     eyes: Some(&EYES_SHUT),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SLEEPING_SIDE_MODEST: Pose = Pose {
@@ -1751,6 +1785,7 @@ pub static POSE_SLEEPING_SIDE_MODEST: Pose = Pose {
     eyes: Some(&EYES_SHUT),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SLEEPING_SIDE_CROSSED: Pose = Pose {
@@ -1760,6 +1795,7 @@ pub static POSE_SLEEPING_SIDE_CROSSED: Pose = Pose {
     eyes: Some(&EYES_SHUT),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_STANDING_SIDE_NEUTRAL: Pose = Pose {
@@ -1769,6 +1805,7 @@ pub static POSE_STANDING_SIDE_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_SIDE_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_STANDING_SIDE_ANNOYED: Pose = Pose {
@@ -1778,6 +1815,7 @@ pub static POSE_STANDING_SIDE_ANNOYED: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANNOYED),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_STANDING_SIDE_SNIFFING: Pose = Pose {
@@ -1787,6 +1825,7 @@ pub static POSE_STANDING_SIDE_SNIFFING: Pose = Pose {
     eyes: Some(&EYES_SIDE_DOWN),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_STANDING_SIDE_HAPPY: Pose = Pose {
@@ -1796,6 +1835,7 @@ pub static POSE_STANDING_SIDE_HAPPY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_STANDING_SIDE_ALOOF: Pose = Pose {
@@ -1805,6 +1845,7 @@ pub static POSE_STANDING_SIDE_ALOOF: Pose = Pose {
     eyes: Some(&EYES_SIDE_ALOOF),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_STANDING_SIDE_ANGRY: Pose = Pose {
@@ -1814,6 +1855,7 @@ pub static POSE_STANDING_SIDE_ANGRY: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_STANDING_SIDE_NEUTRAL_LOOKING_DOWN: Pose = Pose {
@@ -1823,6 +1865,7 @@ pub static POSE_STANDING_SIDE_NEUTRAL_LOOKING_DOWN: Pose = Pose {
     eyes: Some(&EYES_SIDE_DOWN),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_STANDING_SIDE_CRAZY: Pose = Pose {
@@ -1832,6 +1875,7 @@ pub static POSE_STANDING_SIDE_CRAZY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HUGE),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LEANING_FORWARD_SIDE_NEUTRAL: Pose = Pose {
@@ -1841,6 +1885,7 @@ pub static POSE_LEANING_FORWARD_SIDE_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_SIDE_DOWN),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LEANING_FORWARD_SIDE_STRETCH: Pose = Pose {
@@ -1850,6 +1895,7 @@ pub static POSE_LEANING_FORWARD_SIDE_STRETCH: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LEANING_FORWARD_SIDE_EATING: Pose = Pose {
@@ -1859,6 +1905,7 @@ pub static POSE_LEANING_FORWARD_SIDE_EATING: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LEANING_FORWARD_SIDE_POUNCE: Pose = Pose {
@@ -1868,6 +1915,7 @@ pub static POSE_LEANING_FORWARD_SIDE_POUNCE: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_LEANING_FORWARD_SIDE_CRAZY: Pose = Pose {
@@ -1877,6 +1925,7 @@ pub static POSE_LEANING_FORWARD_SIDE_CRAZY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HUGE),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_KNEADING_SIDE_NEUTRAL: Pose = Pose {
@@ -1886,6 +1935,7 @@ pub static POSE_KNEADING_SIDE_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_SIDE_DOWN),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_KNEADING_SIDE_HAPPY: Pose = Pose {
@@ -1895,6 +1945,7 @@ pub static POSE_KNEADING_SIDE_HAPPY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_KNEADING_SIDE_ANGRY: Pose = Pose {
@@ -1904,6 +1955,7 @@ pub static POSE_KNEADING_SIDE_ANGRY: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_WALKING_SIDE_NEUTRAL: Pose = Pose {
@@ -1913,6 +1965,7 @@ pub static POSE_WALKING_SIDE_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_SIDE_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_WALKING_SIDE_DETERMINED: Pose = Pose {
@@ -1922,6 +1975,7 @@ pub static POSE_WALKING_SIDE_DETERMINED: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANNOYED),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_RUNNING_SIDE_NEUTRAL: Pose = Pose {
@@ -1931,6 +1985,7 @@ pub static POSE_RUNNING_SIDE_NEUTRAL: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANNOYED),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_RUNNING_SIDE_ANGRY: Pose = Pose {
@@ -1940,6 +1995,7 @@ pub static POSE_RUNNING_SIDE_ANGRY: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANGRY),
     head_first: true,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_RUNNING_SIDE_CRAZY: Pose = Pose {
@@ -1949,6 +2005,7 @@ pub static POSE_RUNNING_SIDE_CRAZY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HUGE),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_YELLING_FORWARD_LIFT_AND_YELL: Pose = Pose {
@@ -1958,6 +2015,7 @@ pub static POSE_YELLING_FORWARD_LIFT_AND_YELL: Pose = Pose {
     eyes: Some(&EYES_FRONT_YELL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_PLAYFUL_FORWARD_WOWED: Pose = Pose {
@@ -1967,6 +2025,7 @@ pub static POSE_PLAYFUL_FORWARD_WOWED: Pose = Pose {
     eyes: Some(&EYES_FRONT_LOOKAROUND),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_COSTUME_SITTING_SIDE_WITCH: Pose = Pose {
@@ -1976,6 +2035,7 @@ pub static POSE_COSTUME_SITTING_SIDE_WITCH: Pose = Pose {
     eyes: Some(&EYES_SIDE_NEUTRAL),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_COSTUME_SITTING_SIDE_WITCH_ANNOYED: Pose = Pose {
@@ -1985,6 +2045,7 @@ pub static POSE_COSTUME_SITTING_SIDE_WITCH_ANNOYED: Pose = Pose {
     eyes: Some(&EYES_SIDE_ANNOYED),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_COSTUME_SITTING_SIDE_WITCH_HAPPY: Pose = Pose {
@@ -1994,6 +2055,7 @@ pub static POSE_COSTUME_SITTING_SIDE_WITCH_HAPPY: Pose = Pose {
     eyes: Some(&EYES_SIDE_HAPPY),
     head_first: false,
     tail_last: false,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_BACK_BACK_NEUTRAL: Pose = Pose {
@@ -2003,6 +2065,7 @@ pub static POSE_SITTING_BACK_BACK_NEUTRAL: Pose = Pose {
     eyes: None,
     head_first: true,
     tail_last: true,
+    head_offset: None,
 };
 
 pub static POSE_SITTING_BACK_SIDE_NEUTRAL: Pose = Pose {
@@ -2012,6 +2075,7 @@ pub static POSE_SITTING_BACK_SIDE_NEUTRAL: Pose = Pose {
     eyes: None,
     head_first: true,
     tail_last: true,
+    head_offset: None,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

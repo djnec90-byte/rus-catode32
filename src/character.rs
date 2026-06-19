@@ -39,6 +39,7 @@ pub struct Pose {
     pub eyes: Option<&'static CharPart>,
     pub head_first: bool,
     pub tail_last: bool,
+    pub head_offset: Option<(i16, i16)>,
 }
 
 pub struct PoseAnim {
@@ -156,8 +157,12 @@ pub fn pose_layout(pose: &Pose, pos: Point, mirror_h: bool) -> PoseLayout {
     let head_attach_x = body_x + mirror_x(body.head_x, body.sprite.width, mirror_h);
     let head_attach_y = body_y + body.head_y;
     let head_anchor_x = mirror_x(head.anchor_x, head.sprite.width, mirror_h);
-    let head_x = head_attach_x - head_anchor_x;
-    let head_y = head_attach_y - head.anchor_y;
+    let mut head_x = head_attach_x - head_anchor_x;
+    let mut head_y = head_attach_y - head.anchor_y;
+    if let Some((ox, oy)) = pose.head_offset {
+        head_x += if mirror_h { -ox } else { ox };
+        head_y += oy;
+    }
 
     let tail_attach_x = body_x + mirror_x(body.tail_x, body.sprite.width, mirror_h);
     let tail_attach_y = body_y + body.tail_y;
