@@ -21,6 +21,7 @@ pub enum SceneId {
     PetInfo,
     Credits,
     DebugBehaviors,
+    DebugEnv,
     Stub(&'static str),
 }
 

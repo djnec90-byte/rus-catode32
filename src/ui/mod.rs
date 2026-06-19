@@ -5,3 +5,4 @@ pub mod location_menu;
 pub mod menu;
 pub mod popup;
 pub mod scrollbar;
+pub mod settings;

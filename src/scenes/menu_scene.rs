@@ -41,7 +41,7 @@ const WIRELESS: &[MenuItem] = &[
 ];
 
 const DEBUG: &[MenuItem] = &[
-    MenuItem { label: "Environment", icon: Some(icons::SUN),    submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("environment_settings"))), confirm: None },
+    MenuItem { label: "Environment", icon: Some(icons::SUN),    submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugEnv)),                     confirm: None },
     MenuItem { label: "Poses",       icon: Some(icons::CAT),    submenu: None,             action: Some(MenuAction::Scene(SceneId::PoseViewer)),                   confirm: None },
     MenuItem { label: "Behaviors",   icon: Some(icons::CAT),    submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugBehaviors)),               confirm: None },
     MenuItem { label: "Stats",       icon: Some(icons::CAT),    submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("debug_stats"))),          confirm: None },
