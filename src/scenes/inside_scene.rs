@@ -2,9 +2,10 @@ use embedded_graphics::prelude::{Point, Size};
 
 use crate::{
     assets::furniture::BOOKSHELF,
+    clock::ClockWidget,
     context::GameContext,
     environment::Layer,
-    input::{Button, Buttons},
+    input::Buttons,
     location_scene::LocationScene,
     render::Renderer,
     scene::{Scene, SceneId},
@@ -25,12 +26,14 @@ const WINDOW_H: i32 = 36;
 
 pub struct InsideScene {
     base: LocationScene,
+    clock: ClockWidget,
 }
 
 impl InsideScene {
     pub fn new() -> Self {
         Self {
             base: LocationScene::new(WORLD_WIDTH, Point::new(CHAR_WORLD_X, CHAR_WORLD_Y)),
+            clock: ClockWidget::new(36, 0),
         }
     }
 
@@ -105,7 +108,7 @@ impl Scene for InsideScene {
             bookshelf_y,
             false,
         );
-        // TODO: BOX_SMALL_1 on top of the bookshelf, ClockWidget at world_x=36.
+        // TODO: BOX_SMALL_1 on top of the bookshelf.
     }
 
     fn update(
@@ -117,13 +120,10 @@ impl Scene for InsideScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        if buttons.was_just_pressed(Button::Menu2) {
-            self.base.behaviors.skip(ctx, &mut self.base.character);
-        }
+        self.clock.set_time(ctx.time_hours, ctx.time_minutes);
         // TODO: weather-change detection (Python re-enters scene when weather changes
         //       so clouds/precipitation rebuild — needed once weather affects the indoor sky).
         // TODO: BOX_SMALL_1 on top of the bookshelf (foreground sprite).
-        // TODO: ClockWidget at world_x=36, world_y=0 (midground custom draw).
         // TODO: first-impression behavior trigger on first enter (Python `_first_impression_behavior`).
         // TODO: on_post_draw lightning inversion — Python explicitly calls renderer.invert() in
         //       on_post_draw so the whole room flashes. Our set_invert from draw_sky already
@@ -135,10 +135,17 @@ impl Scene for InsideScene {
     }
 
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
+        if self.base.menu_active() {
+            self.base.draw_menu(renderer);
+            return;
+        }
         self.base.draw_sky(renderer, ctx);
         self.draw_window(renderer);
-        self.base.draw_layers(renderer);
+        self.base.environment.draw_layer(renderer, Layer::Background);
+        let mg_offset = self.base.environment.camera_offset(Layer::Midground);
+        self.clock.draw(renderer, mg_offset);
+        self.base.environment.draw_layer(renderer, Layer::Midground);
+        self.base.environment.draw_layer(renderer, Layer::Foreground);
         self.base.draw_character(renderer, ctx);
-        self.base.draw_dev_overlay(renderer, ctx);
     }
 }

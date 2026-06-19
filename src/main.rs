@@ -6,6 +6,7 @@ mod behavior;
 mod behaviors;
 mod board;
 mod character;
+mod clock;
 mod context;
 mod entities;
 mod environment;

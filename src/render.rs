@@ -106,10 +106,36 @@ impl Renderer {
     }
 
     pub fn draw_line(&mut self, start: Point, end: Point) {
+        self.draw_line_color(start, end, true);
+    }
+
+    /// Draw a line in either ON (`on=true`) or OFF (`on=false`) — used by the
+    /// feather render to carve gaps into the otherwise-solid quill outline.
+    pub fn draw_line_color(&mut self, start: Point, end: Point, on: bool) {
+        let color = if on { BinaryColor::On } else { BinaryColor::Off };
         Line::new(start, end)
-            .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1))
+            .into_styled(PrimitiveStyle::with_stroke(color, 1))
             .draw(&mut self.display)
             .unwrap();
+    }
+
+    /// Tiny filled disc, used by the laser dot and the string tip. Mirrors
+    /// Python's `draw_circle(..., filled=True)` for the small radii (1 / 2)
+    /// the playing behavior actually requests.
+    pub fn draw_circle_filled(&mut self, center: Point, radius: i32) {
+        let r2 = radius * radius;
+        for dy in -radius..=radius {
+            for dx in -radius..=radius {
+                if dx * dx + dy * dy <= r2 {
+                    Pixel(
+                        Point::new(center.x + dx, center.y + dy),
+                        BinaryColor::On,
+                    )
+                    .draw(&mut self.display)
+                    .ok();
+                }
+            }
+        }
     }
 
     pub fn fill_rect_off(&mut self, pos: Point, size: Size) {

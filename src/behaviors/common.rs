@@ -76,8 +76,9 @@ pub fn step_walker(
         bounced = true;
     }
     character.pos.x = nx;
-    // Face the walking direction.
-    character.mirror_h = dir < 0;
+    // Face the walking direction. Matches Python `mirror = direction > 0`
+    // where `mirror=True` flips the natively-left-facing sprite to face right.
+    character.mirror_h = dir > 0;
     bounced
 }
 

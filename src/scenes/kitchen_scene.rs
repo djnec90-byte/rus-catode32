@@ -2,9 +2,10 @@ use embedded_graphics::prelude::{Point, Size};
 
 use crate::{
     assets::furniture::FAUCET,
+    clock::ClockWidget,
     context::GameContext,
     environment::Layer,
-    input::{Button, Buttons},
+    input::Buttons,
     location_scene::LocationScene,
     render::{Renderer, SpriteOpts},
     scene::{Scene, SceneId},
@@ -21,12 +22,14 @@ const FAUCET_WORLD_X: i32 = 82;
 
 pub struct KitchenScene {
     base: LocationScene,
+    clock: ClockWidget,
 }
 
 impl KitchenScene {
     pub fn new() -> Self {
         Self {
             base: LocationScene::new(WORLD_WIDTH, Point::new(CHAR_WORLD_X, CHAR_WORLD_Y)),
+            clock: ClockWidget::new(100, 0),
         }
     }
 
@@ -70,7 +73,6 @@ impl KitchenScene {
 impl Scene for KitchenScene {
     fn enter(&mut self, ctx: &mut GameContext) {
         self.base.enter(ctx, SceneId::Kitchen);
-        // TODO: ClockWidget at world_x=100, world_y=0 (midground custom draw).
         // TODO: BOX_SMALL_1 and FOOD_BOWL items (Python adds them as foreground sprites).
         // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
         // TODO: plant surfaces (PLANT_SURFACES) once the plant system is ported.
@@ -85,21 +87,23 @@ impl Scene for KitchenScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        if buttons.was_just_pressed(Button::Menu2) {
-            self.base.behaviors.skip(ctx, &mut self.base.character);
-        }
-        // TODO: ClockWidget.set_time(hours, minutes) per frame.
+        self.clock.set_time(ctx.time_hours, ctx.time_minutes);
         // TODO: on_post_draw lightning inversion for indoor rooms with no sky drawn.
         None
     }
 
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
+        if self.base.menu_active() {
+            self.base.draw_menu(renderer);
+            return;
+        }
         // Closed room — no sky.
         self.base.environment.draw_layer(renderer, Layer::Background);
+        let mg_offset = self.base.environment.camera_offset(Layer::Midground);
+        self.clock.draw(renderer, mg_offset);
         self.base.environment.draw_layer(renderer, Layer::Midground);
         self.draw_counter(renderer);
         self.base.environment.draw_layer(renderer, Layer::Foreground);
         self.base.draw_character(renderer, ctx);
-        self.base.draw_dev_overlay(renderer, ctx);
     }
 }

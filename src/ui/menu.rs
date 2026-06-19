@@ -7,6 +7,7 @@ use crate::{
     input::{Button, Buttons},
     render::{Renderer, SpriteOpts},
     scene::SceneId,
+    ui::scrollbar::Scrollbar,
 };
 
 pub const VISIBLE_ITEMS: usize = 4;
@@ -16,8 +17,8 @@ pub const DEFAULT_SCROLLBAR_X: i32 = 126;
 const ICON_X: i32 = 2;
 const ICON_TEXT_GAP: i32 = 3;
 const ARROW_INSET_FROM_RIGHT: i32 = 10;
-const TRACK_HEIGHT: usize = 64;
-const MIN_THUMB_HEIGHT: usize = 4;
+const TRACK_HEIGHT: u32 = 64;
+const MIN_THUMB_HEIGHT: u32 = 4;
 const MAX_DEPTH: usize = 4;
 
 const CONFIRM_CHARS: usize = 14;
@@ -246,21 +247,12 @@ impl Menu {
     }
 
     fn draw_scrollbar(&self, renderer: &mut Renderer) {
-        let total = self.current.items.len();
-        if total <= VISIBLE_ITEMS {
-            return;
-        }
-        let thumb_h = ((TRACK_HEIGHT * VISIBLE_ITEMS) / total).max(MIN_THUMB_HEIGHT);
-        let scroll_range = total - VISIBLE_ITEMS;
-        let thumb_y = if scroll_range > 0 {
-            (self.current.scroll * (TRACK_HEIGHT - thumb_h)) / scroll_range
-        } else {
-            0
-        };
-        renderer.draw_rect(
-            Point::new(self.scrollbar_x, thumb_y as i32),
-            Size::new(2, thumb_h as u32),
-            true,
+        let bar = Scrollbar::new(self.scrollbar_x, 0, TRACK_HEIGHT, MIN_THUMB_HEIGHT);
+        bar.draw(
+            renderer,
+            self.current.items.len(),
+            VISIBLE_ITEMS,
+            self.current.scroll,
         );
     }
 

@@ -112,6 +112,7 @@ impl Scene for PoseScene {
             &self.anim,
             Point::new(CHAR_X, CHAR_Y),
             false,
+            None,
         );
 
         if self.show_anchors {

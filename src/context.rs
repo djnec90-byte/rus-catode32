@@ -101,6 +101,104 @@ pub enum FoodItem {
 
 pub const FOOD_ITEM_COUNT: usize = 22;
 
+impl FoodItem {
+    /// Map a specific food item to the coarse `FoodKind` used by the eating
+    /// behavior for its bonus table.
+    pub fn kind(self) -> FoodKind {
+        match self {
+            FoodItem::Kibble => FoodKind::Kibble,
+            FoodItem::Cod
+            | FoodItem::Haddock
+            | FoodItem::Trout
+            | FoodItem::Shrimp
+            | FoodItem::Herring
+            | FoodItem::Tuna
+            | FoodItem::Salmon
+            | FoodItem::FishBite => FoodKind::Fish,
+            FoodItem::Turkey
+            | FoodItem::Chicken
+            | FoodItem::Liver
+            | FoodItem::Beef
+            | FoodItem::Lamb => FoodKind::WetFood,
+            FoodItem::Treats
+            | FoodItem::ChewStick
+            | FoodItem::Nugget
+            | FoodItem::Eggs => FoodKind::Treat,
+            FoodItem::Puree
+            | FoodItem::Milk
+            | FoodItem::Pumpkin
+            | FoodItem::Carrots => FoodKind::CaughtSnack,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            FoodItem::Kibble => "Kibble",
+            FoodItem::Cod => "Cod",
+            FoodItem::Haddock => "Haddock",
+            FoodItem::Trout => "Trout",
+            FoodItem::Shrimp => "Shrimp",
+            FoodItem::Herring => "Herring",
+            FoodItem::Turkey => "Turkey",
+            FoodItem::Tuna => "Tuna",
+            FoodItem::Salmon => "Salmon",
+            FoodItem::Chicken => "Chicken",
+            FoodItem::Liver => "Liver",
+            FoodItem::Beef => "Beef",
+            FoodItem::Lamb => "Lamb",
+            FoodItem::Carrots => "Carrots",
+            FoodItem::Pumpkin => "Pumpkin",
+            FoodItem::Treats => "Treats",
+            FoodItem::FishBite => "Fish Bite",
+            FoodItem::Eggs => "Eggs",
+            FoodItem::Nugget => "Nugget",
+            FoodItem::Milk => "Milk",
+            FoodItem::ChewStick => "Chew Stick",
+            FoodItem::Puree => "Puree",
+        }
+    }
+
+    pub fn is_snack(self) -> bool {
+        matches!(
+            self,
+            FoodItem::Carrots
+                | FoodItem::Pumpkin
+                | FoodItem::Treats
+                | FoodItem::FishBite
+                | FoodItem::Eggs
+                | FoodItem::Nugget
+                | FoodItem::Milk
+                | FoodItem::ChewStick
+                | FoodItem::Puree
+        )
+    }
+}
+
+/// Per-frame snapshot of player input. LocationScene refreshes this from the
+/// current `Buttons` view before invoking the behavior layer so behaviors
+/// (currently only Playing) can read held directions and one-shot presses.
+#[derive(Clone, Copy, Default)]
+pub struct InputSnapshot {
+    pub left: bool,
+    pub right: bool,
+    pub up: bool,
+    pub down: bool,
+    pub a: bool,
+    pub b: bool,
+    pub a_just_pressed: bool,
+    pub b_just_pressed: bool,
+}
+
+/// What the eating behavior records in `recent_meals`. Mirrors Python's
+/// `context.recent_meals` (list of food-type strings) but typed so the variety
+/// penalty can compare entries cleanly.
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum MealEntry {
+    Item(FoodItem),
+    CaughtSnack,
+}
+
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(usize)]
@@ -124,6 +222,41 @@ impl ToyVariant {
             ToyVariant::Ball => 42,
             ToyVariant::Bubbles => 35,
             ToyVariant::Laser => 100,
+        }
+    }
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            ToyVariant::String_ => "String",
+            ToyVariant::Feather => "Feather",
+            ToyVariant::Mouse => "Mouse",
+            ToyVariant::Ball => "Yarn Ball",
+            ToyVariant::Bubbles => "Bubbles",
+            ToyVariant::Laser => "Laser",
+        }
+    }
+
+    pub fn icon(self) -> &'static [u8] {
+        use crate::assets::icons;
+        match self {
+            ToyVariant::String_ => icons::STRING_ICON,
+            ToyVariant::Feather => icons::FEATHER,
+            ToyVariant::Mouse => icons::MOUSE,
+            ToyVariant::Ball => icons::TOYS,
+            ToyVariant::Bubbles => icons::BUBBLES,
+            ToyVariant::Laser => icons::LASER,
+        }
+    }
+
+    pub fn to_play_variant(self) -> crate::behavior::PlayVariant {
+        use crate::behavior::PlayVariant;
+        match self {
+            ToyVariant::String_ => PlayVariant::String,
+            ToyVariant::Feather => PlayVariant::Feather,
+            ToyVariant::Mouse => PlayVariant::Mouse,
+            ToyVariant::Ball => PlayVariant::Ball,
+            ToyVariant::Bubbles => PlayVariant::Bubbles,
+            ToyVariant::Laser => PlayVariant::Laser,
         }
     }
 }
@@ -210,6 +343,9 @@ pub struct GameContext {
     pub tools: [bool; TOOL_COUNT],
     pub fertilizer: u8,
     pub medicine: u8,
+    /// Set when the player administers a dose; cleared by a sleep/nap cycle.
+    /// Drives the healing tick during the next rest.
+    pub medicine_pending: bool,
 
     pub zoomies_high_score: i32,
     pub maze_best_time: i32,
@@ -242,6 +378,15 @@ pub struct GameContext {
     pub scene_x_max: i32,
     pub cat_bed_x: Option<i32>,
     pub in_cat_bed: bool,
+    /// Foreground-layer camera offset, refreshed by LocationScene each frame
+    /// so behaviors can convert character world-x into screen-x without
+    /// plumbing the environment through every call.
+    pub scene_camera_x: i32,
+
+    /// Per-frame input view set by the active scene before behavior updates
+    /// so behaviors (currently only Playing) can react to held directions
+    /// and one-shot B/A presses.
+    pub input: InputSnapshot,
 
     // RNG seed used by the behavior layer.
     pub rng: u32,
@@ -276,8 +421,9 @@ pub struct GameContext {
     pub fav_location: Option<SceneId>,
     pub least_fav_location: Option<SceneId>,
 
-    // TODO(meal_system): used by eating for variety penalty.
-    pub recent_meals: Vec<FoodKind, RECENT_HISTORY>,
+    /// Last few meals (per-item granularity). Drives the eating-behavior
+    /// variety penalty and the snack-streak sickness ramp.
+    pub recent_meals: Vec<MealEntry, RECENT_HISTORY>,
 
     // First-run tutorial state.
     pub first_impressions: bool,
@@ -325,18 +471,20 @@ impl GameContext {
             tools: [false; TOOL_COUNT],
             fertilizer: 0,
             medicine: 0,
+            medicine_pending: false,
             zoomies_high_score: 0,
             maze_best_time: 0,
             snake_high_score: 0,
             memory_best_score: -1,
             hanjie_best_time: -1,
 
-            time_hours: 0,
+            time_hours: 12,
             time_minutes: 0,
             day_number: 0,
             // TODO: derive season_offset from ctx.pet_seed once the personality system is ported.
-            season_offset: 0,
-            season: Season::Winter,
+            // Matches Python default: all pets start in late spring.
+            season_offset: 120,
+            season: Season::Spring,
             moon_phase: 2,
             weather: Weather::Clear,
             temperature: 20.0,
@@ -354,6 +502,8 @@ impl GameContext {
             scene_x_max: 118,
             cat_bed_x: None,
             in_cat_bed: false,
+            scene_camera_x: 0,
+            input: InputSnapshot::default(),
 
             rng: 0xC0FFEEu32,
             hw_rng: Rng::new(),
@@ -473,12 +623,11 @@ impl GameContext {
         let _ = self.recent_behaviors.insert(0, id);
     }
 
-    /// TODO(meal_system): used by eating for variety penalty.
-    pub fn record_meal(&mut self, kind: FoodKind) {
+    pub fn record_meal(&mut self, entry: MealEntry) {
         if self.recent_meals.is_full() {
             self.recent_meals.pop();
         }
-        let _ = self.recent_meals.insert(0, kind);
+        let _ = self.recent_meals.insert(0, entry);
     }
 
     /// Recency index of `id` in the recent-behaviors ring, or None.

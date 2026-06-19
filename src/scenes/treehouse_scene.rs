@@ -4,7 +4,7 @@ use crate::{
     assets::{furniture::CAT_BED_SIDE, nature::COBWEB},
     context::GameContext,
     environment::Layer,
-    input::{Button, Buttons},
+    input::Buttons,
     location_scene::LocationScene,
     render::{Renderer, SpriteOpts},
     scene::{Scene, SceneId},
@@ -106,9 +106,6 @@ impl Scene for TreehouseScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        if buttons.was_just_pressed(Button::Menu2) {
-            self.base.behaviors.skip(ctx, &mut self.base.character);
-        }
         // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
         // TODO: context.cat_bed_x tracking for sleep-in-bed pose adjustments.
         // TODO: espnow.start() when WiFi is wired up and not currently visiting.
@@ -118,6 +115,10 @@ impl Scene for TreehouseScene {
     }
 
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
+        if self.base.menu_active() {
+            self.base.draw_menu(renderer);
+            return;
+        }
         // Open-air — sky visible.
         self.base.draw_sky(renderer, ctx);
         self.base.environment.draw_layer(renderer, Layer::Background);
@@ -127,6 +128,5 @@ impl Scene for TreehouseScene {
         self.draw_platform_fg(renderer);
         self.base.draw_character(renderer, ctx);
         self.draw_cat_bed_rim(renderer);
-        self.base.draw_dev_overlay(renderer, ctx);
     }
 }

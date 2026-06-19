@@ -126,11 +126,11 @@ impl ActiveBehavior {
             NextBehavior::Mischief => ActiveBehavior::Mischief(MischiefBehavior::new()),
             NextBehavior::Hiding => ActiveBehavior::Hiding(HidingBehavior::new()),
             NextBehavior::Meandering => ActiveBehavior::Meandering(MeanderingBehavior::new()),
-            NextBehavior::Hearing => ActiveBehavior::Hearing(HearingBehavior::new(None)),
+            NextBehavior::Hearing(icon) => ActiveBehavior::Hearing(HearingBehavior::new(icon)),
             NextBehavior::Playing(variant) => {
                 ActiveBehavior::Playing(PlayingBehavior::new(variant))
             }
-            NextBehavior::Eating(food) => ActiveBehavior::Eating(EatingBehavior::new(food)),
+            NextBehavior::Eating(source) => ActiveBehavior::Eating(EatingBehavior::new(source)),
             NextBehavior::GiftBringing(gift) => {
                 ActiveBehavior::GiftBringing(GiftBringingBehavior::new(gift))
             }

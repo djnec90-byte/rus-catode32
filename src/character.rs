@@ -193,6 +193,7 @@ pub fn draw_pose(
     anim: &PoseAnim,
     pos: Point,
     mirror_h: bool,
+    eye_override: Option<usize>,
 ) {
     let layout = pose_layout(pose, pos, mirror_h);
     let body_frame = frame_index(anim.body, pose.body.sprite.frames.len(), pose.body.extra_frames);
@@ -200,7 +201,10 @@ pub fn draw_pose(
     let tail_frame = frame_index(anim.tail, pose.tail.sprite.frames.len(), pose.tail.extra_frames);
     let eye_frame = pose
         .eyes
-        .map(|e| frame_index(anim.eyes, e.sprite.frames.len(), e.extra_frames));
+        .map(|e| match eye_override {
+            Some(ov) => ov.min(e.sprite.frames.len().saturating_sub(1)),
+            None => frame_index(anim.eyes, e.sprite.frames.len(), e.extra_frames),
+        });
 
     let opts = |frame: usize| SpriteOpts {
         frame,

@@ -1,8 +1,8 @@
 use crate::{
     assets::character::PoseId,
-    behavior::{Behavior, BehaviorId, BehaviorState, GiftKind, NextBehavior},
+    behavior::{Behavior, BehaviorId, BehaviorState, EatingSource, GiftKind, NextBehavior},
     behaviors::common,
-    context::{FoodKind, GameContext, StatId},
+    context::{GameContext, StatId},
     entities::character::Character,
     rand,
 };
@@ -146,7 +146,7 @@ impl Behavior for HuntingBehavior {
         }
         // Hungry → eat the catch. Otherwise present it as a gift.
         if ctx.fullness < 40.0 {
-            Some(NextBehavior::Eating(FoodKind::CaughtSnack))
+            Some(NextBehavior::Eating(EatingSource::CaughtSnack))
         } else {
             Some(NextBehavior::GiftBringing(GiftKind::Mouse))
         }

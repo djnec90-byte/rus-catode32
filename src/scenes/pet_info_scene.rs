@@ -15,7 +15,7 @@ use crate::{
         character::{PoseId, ALL_POSES},
         icons,
     },
-    context::{FavWeather, FoodItem, FoodKind, GameContext, ToyVariant, PET_NAME_MAX},
+    context::{FavWeather, FoodItem, FoodKind, GameContext, MealEntry, ToyVariant, PET_NAME_MAX},
     input::{Button, Buttons},
     pet_seed::{PetGender, StarSign, Temperament},
     render::{Renderer, SpriteOpts},
@@ -564,7 +564,13 @@ fn recent_meal_dominance(ctx: &GameContext) -> u8 {
         FoodKind::Fish,
         FoodKind::CaughtSnack,
     ] {
-        let count = meals.iter().filter(|m| **m == kind).count() as u8;
+        let count = meals
+            .iter()
+            .filter(|m| match **m {
+                MealEntry::Item(item) => item.kind() == kind,
+                MealEntry::CaughtSnack => kind == FoodKind::CaughtSnack,
+            })
+            .count() as u8;
         if count > best {
             best = count;
         }

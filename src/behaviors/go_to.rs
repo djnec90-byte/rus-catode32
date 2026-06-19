@@ -45,7 +45,7 @@ impl Behavior for GoToBehavior {
 
     fn enter(&mut self, _ctx: &mut GameContext, character: &mut Character) {
         self.pose_id = PoseId::WalkingSideDetermined;
-        character.mirror_h = character.pos.x > self.params.target_x;
+        character.mirror_h = self.params.target_x > character.pos.x;
     }
 
     fn update(

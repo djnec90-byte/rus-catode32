@@ -3,10 +3,22 @@ use embedded_graphics::prelude::Point;
 use crate::{
     assets::character::PoseId,
     behaviors::{auto_select, ActiveBehavior},
-    context::{FoodKind, GameContext},
+    context::{FoodItem, GameContext},
     entities::character::Character,
     render::Renderer,
 };
+
+/// Where an Eating behavior was kicked off from. `Item` is player-fed food
+/// (decremented from inventory at trigger time) and looks up the full
+/// per-item FOOD_CONFIG. `CaughtSnack` is the post-hunt nibble that uses a
+/// MOUSE_TOY sprite and a cut-down bonus table.
+#[allow(dead_code)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum EatingSource {
+    Item(FoodItem),
+    CaughtSnack,
+}
+
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum BehaviorId {
@@ -167,14 +179,14 @@ pub enum NextBehavior {
     Mischief,
     Hiding,
     Meandering,
-    Hearing,
+    Hearing(Option<&'static str>),
     Startled,
     Greeting,
     Playing(PlayVariant),
     Affection(AffectionVariant),
     Attention(AttentionVariant),
     BeingGroomed,
-    Eating(FoodKind),
+    Eating(EatingSource),
     GiftBringing(GiftKind),
     Training(TrainingKind),
     GoTo(GoToParams),
@@ -256,6 +268,13 @@ pub trait Behavior {
 
     /// Wind down quickly on wake-from-sleep. Only sleeping / napping override.
     fn mark_almost_done(&mut self) {}
+
+    /// True if this behavior steals the d-pad while it's running. The location
+    /// scene uses this to suppress camera panning so the player can steer the
+    /// active toy instead. Only PlayingBehavior overrides today.
+    fn captures_dpad(&self) -> bool {
+        false
+    }
 }
 
 pub struct BehaviorManager {
@@ -328,6 +347,10 @@ impl BehaviorManager {
 
     pub fn current_eye_frame_override(&self) -> Option<usize> {
         self.current.as_dyn().eye_frame_override()
+    }
+
+    pub fn current_captures_dpad(&self) -> bool {
+        self.current.as_dyn().captures_dpad()
     }
 
     pub fn draw_overlay(

@@ -439,10 +439,10 @@ impl AdoptionScene {
         let pos = Point::new(self.moment_x as i32, 55);
         match self.moment_phase {
             MomentPhase::Walking => {
-                draw_pose(renderer, self.moment_pose.data(), &self.moment_anim, pos, true);
+                draw_pose(renderer, self.moment_pose.data(), &self.moment_anim, pos, true, None);
             }
             MomentPhase::Sitting => {
-                draw_pose(renderer, self.moment_pose.data(), &self.moment_anim, pos, false);
+                draw_pose(renderer, self.moment_pose.data(), &self.moment_anim, pos, false, None);
                 bubble::draw_above_char(
                     renderer,
                     BubbleIcon::Exclaim,

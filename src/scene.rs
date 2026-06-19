@@ -20,6 +20,7 @@ pub enum SceneId {
     Adoption,
     PetInfo,
     Credits,
+    DebugBehaviors,
     Stub(&'static str),
 }
 

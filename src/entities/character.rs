@@ -13,6 +13,9 @@ pub struct Character {
     pub mirror_h: bool,
     pub pose_id: PoseId,
     pub anim: PoseAnim,
+    /// Override for the per-frame eye sprite index; behaviors (currently only
+    /// Playing) use this to lock the cat's gaze onto a moving toy.
+    pub eye_override: Option<usize>,
 }
 
 impl Character {
@@ -23,6 +26,7 @@ impl Character {
             mirror_h: false,
             pose_id: PoseId::SittingSideNeutral,
             anim: PoseAnim::new(1),
+            eye_override: None,
         }
     }
 
@@ -53,6 +57,7 @@ impl Character {
             &self.anim,
             screen_pos,
             self.mirror_h,
+            self.eye_override,
         );
     }
 }

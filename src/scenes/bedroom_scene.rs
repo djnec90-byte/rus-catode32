@@ -7,7 +7,7 @@ use crate::{
     },
     context::GameContext,
     environment::Layer,
-    input::{Button, Buttons},
+    input::Buttons,
     location_scene::LocationScene,
     render::{Renderer, SpriteOpts},
     scene::{Scene, SceneId},
@@ -115,9 +115,6 @@ impl Scene for BedroomScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        if buttons.was_just_pressed(Button::Menu2) {
-            self.base.behaviors.skip(ctx, &mut self.base.character);
-        }
         // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
         // TODO: context.cat_bed_x tracking (Python sets context.cat_bed_x to position the
         //       cat in the bed; behaviors check this to play "sleeping in bed" pose adjustments).
@@ -127,6 +124,10 @@ impl Scene for BedroomScene {
     }
 
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
+        if self.base.menu_active() {
+            self.base.draw_menu(renderer);
+            return;
+        }
         // Closed room — no sky.
         self.base.environment.draw_layer(renderer, Layer::Background);
         self.draw_lamp(renderer);
@@ -136,6 +137,5 @@ impl Scene for BedroomScene {
         self.base.draw_character(renderer, ctx);
         // Cat bed rim drawn AFTER the character so the cat appears nestled inside.
         self.draw_cat_bed_rim(renderer);
-        self.base.draw_dev_overlay(renderer, ctx);
     }
 }

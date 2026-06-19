@@ -9,7 +9,7 @@ use crate::{
         jumper::{JumperEntity, JumperKind},
     },
     environment::Layer,
-    input::{Button, Buttons},
+    input::Buttons,
     location_scene::LocationScene,
     rand::{rand_bool, rand_range_f32, rand_range_u32},
     render::Renderer,
@@ -205,9 +205,6 @@ impl Scene for OutsideScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        if buttons.was_just_pressed(Button::Menu2) {
-            self.base.behaviors.skip(ctx, &mut self.base.character);
-        }
         self.update_critters(dt * ctx.time_speed);
         // TODO: weather-change detection — Python re-enters the scene when weather changes
         //       so clouds/precipitation rebuild and critters re-roll.
@@ -217,11 +214,14 @@ impl Scene for OutsideScene {
     }
 
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
+        if self.base.menu_active() {
+            self.base.draw_menu(renderer);
+            return;
+        }
         self.base.draw_sky(renderer, ctx);
         self.base.draw_layers(renderer);
         self.draw_grass(renderer);
         self.draw_critters(renderer);
         self.base.draw_character(renderer, ctx);
-        self.base.draw_dev_overlay(renderer, ctx);
     }
 }
