@@ -1,5 +1,6 @@
 pub mod adoption_scene;
 pub mod bedroom_scene;
+pub mod credits_scene;
 pub mod forecast_scene;
 pub mod inside_scene;
 pub mod kitchen_scene;
@@ -16,6 +17,7 @@ use crate::scene::{Scene, SceneId};
 
 use adoption_scene::AdoptionScene;
 use bedroom_scene::BedroomScene;
+use credits_scene::CreditsScene;
 use forecast_scene::ForecastScene;
 use inside_scene::InsideScene;
 use kitchen_scene::KitchenScene;
@@ -41,6 +43,7 @@ pub enum ActiveScene {
     Store(StoreScene),
     Adoption(AdoptionScene),
     PetInfo(PetInfoScene),
+    Credits(CreditsScene),
     Stub(StubScene),
 }
 
@@ -59,6 +62,7 @@ impl ActiveScene {
             SceneId::Store => ActiveScene::Store(StoreScene::new()),
             SceneId::Adoption => ActiveScene::Adoption(AdoptionScene::new()),
             SceneId::PetInfo => ActiveScene::PetInfo(PetInfoScene::new()),
+            SceneId::Credits => ActiveScene::Credits(CreditsScene::new()),
             SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
@@ -77,6 +81,7 @@ impl ActiveScene {
             ActiveScene::Store(s) => s,
             ActiveScene::Adoption(s) => s,
             ActiveScene::PetInfo(s) => s,
+            ActiveScene::Credits(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
@@ -95,6 +100,7 @@ impl ActiveScene {
             ActiveScene::Store(s) => s,
             ActiveScene::Adoption(s) => s,
             ActiveScene::PetInfo(s) => s,
+            ActiveScene::Credits(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }

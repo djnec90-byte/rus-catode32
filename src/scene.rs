@@ -19,6 +19,7 @@ pub enum SceneId {
     Store,
     Adoption,
     PetInfo,
+    Credits,
     Stub(&'static str),
 }
 
