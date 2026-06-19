@@ -54,6 +54,11 @@ impl Environment {
         self.camera_x = (self.camera_x + dx).clamp(0, max_camera);
     }
 
+    pub fn set_camera(&mut self, x: i32) {
+        let max_camera = (self.world_width - DISPLAY_WIDTH).max(0);
+        self.camera_x = x.clamp(0, max_camera);
+    }
+
     pub fn camera_offset(&self, layer: Layer) -> i32 {
         (self.camera_x as f32 * PARALLAX[layer as usize]) as i32
     }

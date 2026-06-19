@@ -16,6 +16,8 @@ use crate::{
 };
 
 const PAN_SPEED: i32 = 4;
+const DISPLAY_WIDTH: i32 = 128;
+const FOLLOW_MARGIN: i32 = 32;
 
 pub struct LocationScene {
     pub environment: Environment,
@@ -51,6 +53,8 @@ impl LocationScene {
         ctx.scene_x_min = 10;
         ctx.scene_x_max = (self.environment.world_width - 10).max(10);
         self.character.reseed_anim();
+        self.environment
+            .set_camera(self.character.pos.x - DISPLAY_WIDTH / 2);
         self.behaviors.start(ctx, &mut self.character);
     }
 
@@ -75,12 +79,28 @@ impl LocationScene {
 
         // World ticks regardless of menu state — matches Python's MainScene.
         self.sky.update(ctx, dt);
+        let prev_x = self.character.pos.x;
         self.behaviors.update(ctx, &mut self.character, dt);
         let pose = self.behaviors.current_pose();
         self.character.set_pose(pose);
         self.character.animate(dt);
         self.character.eye_override = self.behaviors.current_eye_frame_override();
         self.burst.update(dt);
+
+        // Auto-follow: when the cat moves on its own, nudge the camera so it
+        // stays within FOLLOW_MARGIN of the screen edges. Suppressed while the
+        // player is actively panning (mirrors Python's main_scene).
+        let panning = buttons.is_pressed(Button::Left) || buttons.is_pressed(Button::Right);
+        if !panning && self.character.pos.x != prev_x {
+            let screen_x = self.character.pos.x - self.environment.camera_x;
+            if screen_x < FOLLOW_MARGIN {
+                self.environment
+                    .set_camera(self.character.pos.x - FOLLOW_MARGIN);
+            } else if screen_x > DISPLAY_WIDTH - FOLLOW_MARGIN {
+                self.environment
+                    .set_camera(self.character.pos.x - (DISPLAY_WIDTH - FOLLOW_MARGIN));
+            }
+        }
 
         if self.menu_active {
             return self.handle_menu_input(ctx, buttons);
