@@ -22,6 +22,8 @@ pub enum SceneId {
     Credits,
     DebugBehaviors,
     DebugEnv,
+    DebugStats,
+    DebugTime,
     Stub(&'static str),
 }
 

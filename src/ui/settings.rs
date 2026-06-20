@@ -9,7 +9,7 @@ use crate::{
     ui::scrollbar::Scrollbar,
 };
 
-pub const MAX_ITEMS: usize = 8;
+pub const MAX_ITEMS: usize = 24;
 const VISIBLE_ITEMS: usize = 4;
 const ROW_HEIGHT: i32 = 16;
 const CONTENT_WIDTH: i32 = 124;
@@ -24,6 +24,15 @@ pub enum SettingValue {
         max: i32,
         step: i32,
     },
+    /// Fixed-point numeric: `value`, `min`, `max`, `step` are all stored in
+    /// units of `1/divisor`. e.g. divisor=10, value=15 -> displayed as "1.5".
+    Fixed {
+        value: i32,
+        min: i32,
+        max: i32,
+        step: i32,
+        divisor: i32,
+    },
     Choice {
         index: usize,
         options: &'static [&'static str],
@@ -34,6 +43,9 @@ impl SettingValue {
     fn cycle_next(&mut self) {
         match self {
             SettingValue::Int { value, max, step, .. } => {
+                *value = (*value + *step).min(*max);
+            }
+            SettingValue::Fixed { value, max, step, .. } => {
                 *value = (*value + *step).min(*max);
             }
             SettingValue::Choice { index, options } => {
@@ -49,6 +61,9 @@ impl SettingValue {
             SettingValue::Int { value, min, step, .. } => {
                 *value = (*value - *step).max(*min);
             }
+            SettingValue::Fixed { value, min, step, .. } => {
+                *value = (*value - *step).max(*min);
+            }
             SettingValue::Choice { index, options } => {
                 if !options.is_empty() {
                     *index = (*index + options.len() - 1) % options.len();
@@ -62,6 +77,26 @@ impl SettingValue {
         match self {
             SettingValue::Int { value, .. } => {
                 let _ = write!(&mut s, "{}", value);
+            }
+            SettingValue::Fixed { value, divisor, .. } => {
+                let d = (*divisor).max(1);
+                let whole = value / d;
+                let frac = (value % d).abs();
+                let mut frac_digits = 0;
+                let mut m = d - 1;
+                while m > 0 {
+                    frac_digits += 1;
+                    m /= 10;
+                }
+                let sign = if *value < 0 && whole == 0 { "-" } else { "" };
+                let _ = write!(
+                    &mut s,
+                    "{}{}.{:0width$}",
+                    sign,
+                    whole,
+                    frac,
+                    width = frac_digits.max(1)
+                );
             }
             SettingValue::Choice { index, options } => {
                 if let Some(label) = options.get(*index) {
@@ -84,6 +119,20 @@ impl SettingItem {
         Self {
             label,
             value: SettingValue::Int { value, min, max, step },
+        }
+    }
+
+    pub const fn fixed(
+        label: &'static str,
+        value: i32,
+        min: i32,
+        max: i32,
+        step: i32,
+        divisor: i32,
+    ) -> Self {
+        Self {
+            label,
+            value: SettingValue::Fixed { value, min, max, step, divisor },
         }
     }
 
