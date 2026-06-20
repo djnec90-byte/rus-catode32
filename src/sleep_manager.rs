@@ -11,11 +11,6 @@
 //!   - On wake, set `ctx.pending_wake_greeting` so the pet greets the
 //!     returning player on its next behavior pick.
 //!
-//! TODO(scene_transitions): the Python flow wraps sleep entry/exit in a
-//! fade-out → enter_sleep → fade-in transition (see `_on_sleep_midpoint`
-//! in `micropython/src/main.py`). Re-add once the transition system is
-//! ported.
-//!
 //! TODO(deep_sleep): port the "deep" mode (true MCU light/deep sleep with
 //! GPIO IRQ wake) from the Python sleep manager once esp-hal's sleep APIs
 //! are wired up.

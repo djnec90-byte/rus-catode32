@@ -18,6 +18,7 @@ use crate::{
     scene::{SceneId, SceneManager},
     sleep_manager::{wait_buttons_stable_released_mask, SleepManager},
     time_system::TimeSystem,
+    transition::{TransitionManager, TransitionStep},
 };
 
 const DEEP_WAKE_BUTTONS: [Button; 4] = [Button::A, Button::B, Button::Menu1, Button::Menu2];
@@ -39,6 +40,19 @@ pub struct Game {
     scene_manager: SceneManager,
     time_system: TimeSystem,
     sleep_manager: SleepManager,
+    transition: TransitionManager,
+    /// Scene swap waiting on the current transition's midpoint.
+    pending_scene: Option<SceneId>,
+    /// True while a transition-out is playing pre-sleep. Mirrors Python
+    /// `_sleep_pending` in `micropython/src/main.py`.
+    sleep_pending: bool,
+    /// True while a transition-out is playing before deep sleep. Deep sleep
+    /// is one-way (device resets on wake), so there is no `in_only` reveal
+    /// to play afterwards.
+    deep_sleep_pending: bool,
+    /// True on the first frame after a sleep-wake transition was started, so
+    /// the frame-timer can be reset and we don't apply a huge dt spike.
+    just_woke: bool,
     last_dt_ms: u64,
 }
 
@@ -63,6 +77,11 @@ impl Game {
             scene_manager,
             time_system: TimeSystem::new(),
             sleep_manager: SleepManager::new(),
+            transition: TransitionManager::new(),
+            pending_scene: None,
+            sleep_pending: false,
+            deep_sleep_pending: false,
+            just_woke: false,
             last_dt_ms: 0,
         }
     }
@@ -98,18 +117,22 @@ impl Game {
                 while wait_start.elapsed() < remaining {}
             }
 
-            // Enter basic sleep if idle long enough. Blocks here until a
-            // button press wakes the device; on return, reset the frame
-            // timer so the next iteration doesn't see a huge dt spike
-            // (the sleep loop already advanced time_system internally).
-            if self.sleep_manager.should_sleep() {
-                self.sleep_manager.enter_sleep(
-                    &mut self.renderer,
-                    &mut self.buttons,
-                    &mut self.context,
-                    &mut self.scene_manager,
-                    &mut self.time_system,
-                );
+            // Begin a sleep transition if idle long enough. The actual sleep
+            // happens at the transition midpoint inside `update`; the
+            // in-only reveal then plays automatically on wake.
+            if !self.transition.is_active()
+                && !self.sleep_pending
+                && self.sleep_manager.should_sleep()
+            {
+                self.sleep_pending = true;
+                self.transition.start();
+            }
+
+            // Sleep ran inside `update` at the transition midpoint — reset
+            // the frame timer so the next iteration doesn't see the entire
+            // sleep duration as one dt.
+            if self.just_woke {
+                self.just_woke = false;
                 last_frame = Instant::now();
             }
         }
@@ -117,8 +140,48 @@ impl Game {
 
     fn update(&mut self, dt: f32) {
         self.time_system.advance(&mut self.context, dt);
-        self.scene_manager
+        let requested = self
+            .scene_manager
             .update(&mut self.context, &mut self.buttons, dt);
+
+        // Stash a scene swap behind the transition. Requests that arrive
+        // while another transition is already running are dropped — matches
+        // Python `TransitionManager.start` returning False.
+        if !self.transition.is_active() {
+            if let Some(next) = requested {
+                self.pending_scene = Some(next);
+                self.transition.start();
+            }
+        }
+
+        match self.transition.update(dt) {
+            TransitionStep::Midpoint => {
+                if let Some(next) = self.pending_scene.take() {
+                    self.scene_manager.swap_to(&mut self.context, next);
+                }
+                if self.sleep_pending {
+                    self.sleep_pending = false;
+                    self.sleep_manager.enter_sleep(
+                        &mut self.renderer,
+                        &mut self.buttons,
+                        &mut self.context,
+                        &mut self.scene_manager,
+                        &mut self.time_system,
+                    );
+                    // Replace the auto-advanced `In` phase with a fresh
+                    // in-only reveal so the wake fade plays from full black.
+                    self.transition.start_in_only();
+                    self.just_woke = true;
+                }
+                if self.deep_sleep_pending {
+                    // One-way: enter_deep_sleep never returns. The screen is
+                    // already fully black from the out phase, so no reveal
+                    // is needed (and would never play — device resets on wake).
+                    self.enter_deep_sleep();
+                }
+            }
+            TransitionStep::Active | TransitionStep::Inactive => {}
+        }
     }
 
     fn draw(&mut self) {
@@ -127,6 +190,7 @@ impl Game {
         self.renderer.set_invert(false);
         self.scene_manager
             .draw(&self.context, &mut self.renderer, self.last_dt_ms);
+        self.transition.draw(&mut self.renderer);
         self.renderer.flush();
     }
 
@@ -138,15 +202,27 @@ impl Game {
             }
             PowerAction::LightSleep => {
                 println!("[Power] Light sleep (basic mode)");
-                self.sleep_manager.enter_sleep(
-                    &mut self.renderer,
-                    &mut self.buttons,
-                    &mut self.context,
-                    &mut self.scene_manager,
-                    &mut self.time_system,
-                );
+                // Defer to the transition path so the screen fades out
+                // before the sleep loop blocks.
+                if !self.transition.is_active() && !self.sleep_pending {
+                    self.sleep_pending = true;
+                    self.transition.start();
+                }
             }
-            PowerAction::DeepSleep => self.enter_deep_sleep(),
+            PowerAction::DeepSleep => {
+                // Defer to the transition path so the screen fades out
+                // before the (one-way) deep sleep. If a transition is
+                // already active, fall through to an immediate cut.
+                if !self.transition.is_active()
+                    && !self.sleep_pending
+                    && !self.deep_sleep_pending
+                {
+                    self.deep_sleep_pending = true;
+                    self.transition.start();
+                } else {
+                    self.enter_deep_sleep();
+                }
+            }
         }
     }
 

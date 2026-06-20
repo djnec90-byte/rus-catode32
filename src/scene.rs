@@ -54,12 +54,26 @@ impl SceneManager {
         Self { current }
     }
 
-    pub fn update(&mut self, ctx: &mut GameContext, buttons: &mut Buttons, dt: f32) {
-        if let Some(next) = self.current.as_scene_mut().update(ctx, buttons, dt) {
-            self.current.as_scene_mut().exit(ctx);
-            self.current = ActiveScene::from_id(next);
-            self.current.as_scene_mut().enter(ctx);
-        }
+    /// Tick the current scene and report any swap it requested.
+    ///
+    /// The swap is no longer applied inline — the caller (`Game`) defers it
+    /// until the screen transition reaches its midpoint, so the player sees
+    /// the fade-out → fade-in rather than an instant cut.
+    pub fn update(
+        &mut self,
+        ctx: &mut GameContext,
+        buttons: &mut Buttons,
+        dt: f32,
+    ) -> Option<SceneId> {
+        self.current.as_scene_mut().update(ctx, buttons, dt)
+    }
+
+    /// Apply a deferred scene swap. Called from `Game` at the transition
+    /// midpoint while the screen is fully black.
+    pub fn swap_to(&mut self, ctx: &mut GameContext, next: SceneId) {
+        self.current.as_scene_mut().exit(ctx);
+        self.current = ActiveScene::from_id(next);
+        self.current.as_scene_mut().enter(ctx);
     }
 
     /// Minimal scene tick used by `SleepManager` while the screen is off.

@@ -24,6 +24,7 @@ mod sky;
 mod sleep_manager;
 mod temperature_system;
 mod time_system;
+mod transition;
 mod ui;
 mod weather_system;
 
