@@ -16,6 +16,7 @@ pub mod stats_scene;
 pub mod store_scene;
 pub mod stub_scene;
 pub mod treehouse_scene;
+pub mod zoomies_scene;
 
 use crate::scene::{Scene, SceneId};
 
@@ -37,6 +38,7 @@ use stats_scene::StatsScene;
 use store_scene::StoreScene;
 use stub_scene::StubScene;
 use treehouse_scene::TreehouseScene;
+use zoomies_scene::ZoomiesScene;
 
 pub enum ActiveScene {
     Inside(InsideScene),
@@ -56,6 +58,7 @@ pub enum ActiveScene {
     DebugEnv(DebugEnvScene),
     DebugStats(DebugStatsScene),
     DebugTime(DebugTimeScene),
+    Zoomies(ZoomiesScene),
     Stub(StubScene),
 }
 
@@ -79,6 +82,7 @@ impl ActiveScene {
             SceneId::DebugEnv => ActiveScene::DebugEnv(DebugEnvScene::new()),
             SceneId::DebugStats => ActiveScene::DebugStats(DebugStatsScene::new()),
             SceneId::DebugTime => ActiveScene::DebugTime(DebugTimeScene::new()),
+            SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
             SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
@@ -102,6 +106,7 @@ impl ActiveScene {
             ActiveScene::DebugEnv(s) => s,
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
+            ActiveScene::Zoomies(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
@@ -125,6 +130,7 @@ impl ActiveScene {
             ActiveScene::DebugEnv(s) => s,
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
+            ActiveScene::Zoomies(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }

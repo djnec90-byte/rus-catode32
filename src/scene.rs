@@ -24,6 +24,7 @@ pub enum SceneId {
     DebugEnv,
     DebugStats,
     DebugTime,
+    Zoomies,
     Stub(&'static str),
 }
 

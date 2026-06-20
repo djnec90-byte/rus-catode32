@@ -16,7 +16,7 @@ const LOCATIONS: &[MenuItem] = &[
 ];
 
 const MINIGAMES: &[MenuItem] = &[
-    MenuItem { label: "Zoomies",   icon: Some(icons::ZOOMIES),    submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("zoomies"))),   confirm: None },
+    MenuItem { label: "Zoomies",   icon: Some(icons::ZOOMIES),    submenu: None, action: Some(MenuAction::Scene(SceneId::Zoomies)),         confirm: None },
     MenuItem { label: "Breakout",  icon: Some(icons::BREAKOUT),   submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("breakout"))),  confirm: None },
     MenuItem { label: "Snake",     icon: Some(icons::SNAKE),      submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("snake"))),     confirm: None },
     MenuItem { label: "Hunter",    icon: Some(icons::PLATFORMER), submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("platformer"))), confirm: None },
