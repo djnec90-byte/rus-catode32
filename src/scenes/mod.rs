@@ -1,5 +1,6 @@
 pub mod adoption_scene;
 pub mod bedroom_scene;
+pub mod breakout_scene;
 pub mod credits_scene;
 pub mod debug_behaviors_scene;
 pub mod debug_env_scene;
@@ -22,6 +23,7 @@ use crate::scene::{Scene, SceneId};
 
 use adoption_scene::AdoptionScene;
 use bedroom_scene::BedroomScene;
+use breakout_scene::BreakoutScene;
 use credits_scene::CreditsScene;
 use debug_behaviors_scene::DebugBehaviorsScene;
 use debug_env_scene::DebugEnvScene;
@@ -59,6 +61,7 @@ pub enum ActiveScene {
     DebugStats(DebugStatsScene),
     DebugTime(DebugTimeScene),
     Zoomies(ZoomiesScene),
+    Breakout(BreakoutScene),
     Stub(StubScene),
 }
 
@@ -83,6 +86,7 @@ impl ActiveScene {
             SceneId::DebugStats => ActiveScene::DebugStats(DebugStatsScene::new()),
             SceneId::DebugTime => ActiveScene::DebugTime(DebugTimeScene::new()),
             SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
+            SceneId::Breakout => ActiveScene::Breakout(BreakoutScene::new()),
             SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
@@ -107,6 +111,7 @@ impl ActiveScene {
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
             ActiveScene::Zoomies(s) => s,
+            ActiveScene::Breakout(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
@@ -131,6 +136,7 @@ impl ActiveScene {
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
             ActiveScene::Zoomies(s) => s,
+            ActiveScene::Breakout(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
