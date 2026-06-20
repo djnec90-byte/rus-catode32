@@ -7,7 +7,7 @@ use esp_hal::{
     Blocking,
 };
 
-use crate::input::Buttons;
+use crate::{input::Buttons, led::Led};
 
 pub const DISPLAY_WIDTH: u16 = 128;
 pub const DISPLAY_HEIGHT: u16 = 64;
@@ -17,6 +17,7 @@ pub struct Board {
     pub i2c: I2c<'static, Blocking>,
     pub buttons: Buttons,
     pub rng: Rng,
+    pub led: Led,
 }
 
 pub fn init(peripherals: Peripherals) -> Board {
@@ -38,9 +39,12 @@ pub fn init(peripherals: Peripherals) -> Board {
         Input::new(peripherals.GPIO2, input_config),
     ]);
 
+    let led = Led::new(peripherals.RMT, peripherals.GPIO8);
+
     Board {
         i2c,
         buttons,
         rng: Rng::new(),
+        led,
     }
 }

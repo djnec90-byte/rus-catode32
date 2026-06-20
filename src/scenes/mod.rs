@@ -4,6 +4,8 @@ pub mod breakout_scene;
 pub mod credits_scene;
 pub mod debug_behaviors_scene;
 pub mod debug_env_scene;
+pub mod debug_led_scene;
+pub mod debug_power_scene;
 pub mod debug_stats_scene;
 pub mod debug_time_scene;
 pub mod forecast_scene;
@@ -27,6 +29,8 @@ use breakout_scene::BreakoutScene;
 use credits_scene::CreditsScene;
 use debug_behaviors_scene::DebugBehaviorsScene;
 use debug_env_scene::DebugEnvScene;
+use debug_led_scene::DebugLedScene;
+use debug_power_scene::DebugPowerScene;
 use debug_stats_scene::DebugStatsScene;
 use debug_time_scene::DebugTimeScene;
 use forecast_scene::ForecastScene;
@@ -58,6 +62,8 @@ pub enum ActiveScene {
     Credits(CreditsScene),
     DebugBehaviors(DebugBehaviorsScene),
     DebugEnv(DebugEnvScene),
+    DebugLed(DebugLedScene),
+    DebugPower(DebugPowerScene),
     DebugStats(DebugStatsScene),
     DebugTime(DebugTimeScene),
     Zoomies(ZoomiesScene),
@@ -83,6 +89,8 @@ impl ActiveScene {
             SceneId::Credits => ActiveScene::Credits(CreditsScene::new()),
             SceneId::DebugBehaviors => ActiveScene::DebugBehaviors(DebugBehaviorsScene::new()),
             SceneId::DebugEnv => ActiveScene::DebugEnv(DebugEnvScene::new()),
+            SceneId::DebugLed => ActiveScene::DebugLed(DebugLedScene::new()),
+            SceneId::DebugPower => ActiveScene::DebugPower(DebugPowerScene::new()),
             SceneId::DebugStats => ActiveScene::DebugStats(DebugStatsScene::new()),
             SceneId::DebugTime => ActiveScene::DebugTime(DebugTimeScene::new()),
             SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
@@ -108,6 +116,8 @@ impl ActiveScene {
             ActiveScene::Credits(s) => s,
             ActiveScene::DebugBehaviors(s) => s,
             ActiveScene::DebugEnv(s) => s,
+            ActiveScene::DebugLed(s) => s,
+            ActiveScene::DebugPower(s) => s,
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
             ActiveScene::Zoomies(s) => s,
@@ -133,6 +143,8 @@ impl ActiveScene {
             ActiveScene::Credits(s) => s,
             ActiveScene::DebugBehaviors(s) => s,
             ActiveScene::DebugEnv(s) => s,
+            ActiveScene::DebugLed(s) => s,
+            ActiveScene::DebugPower(s) => s,
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
             ActiveScene::Zoomies(s) => s,

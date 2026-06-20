@@ -4,6 +4,7 @@ use esp_hal::rng::Rng;
 
 use crate::{
     behavior::BehaviorId,
+    led::Led,
     pet_seed::{PetGender, StarSign},
     scene::SceneId,
     time_system::{Season, Weather},
@@ -46,6 +47,13 @@ impl StatId {
                 | StatId::Focus
         )
     }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PowerAction {
+    Reboot,
+    LightSleep,
+    DeepSleep,
 }
 
 #[allow(dead_code)]
@@ -396,9 +404,14 @@ pub struct GameContext {
     // plumbing a separate parameter.
     pub hw_rng: Rng,
 
+    /// On-board WS2812 RGB LED handle (GPIO8). Stored on the context so the
+    /// LED debug scene can drive it without a separate plumbing path.
+    pub led: Led,
+
     // Cross-scene signals.
     pub pending_scene: Option<SceneId>,
     pub pending_popup_icon: Option<&'static str>,
+    pub pending_power: Option<PowerAction>,
 
     // TODO(plant_system): drive from real plant inventory once ported.
     pub scene_plant_health: i8,
@@ -436,7 +449,7 @@ pub struct GameContext {
 }
 
 impl GameContext {
-    pub fn new() -> Self {
+    pub fn new(led: Led) -> Self {
         Self {
             health: 50.0,
             fullness: 50.0,
@@ -507,9 +520,11 @@ impl GameContext {
 
             rng: 0xC0FFEEu32,
             hw_rng: Rng::new(),
+            led,
 
             pending_scene: None,
             pending_popup_icon: None,
+            pending_power: None,
 
             scene_plant_health: 0,
             in_familiar_location: true,

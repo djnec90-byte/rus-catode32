@@ -40,11 +40,33 @@ use esp_println::println;
 
 use crate::{
     context::GameContext,
-    input::Buttons,
+    input::{Button, Buttons},
     render::Renderer,
     scene::SceneManager,
     time_system::TimeSystem,
 };
+
+/// Spin until none of the given buttons (or `Button::ALL` if `mask` is empty)
+/// has been pressed for `stable` continuously. Any press resets the timer.
+pub fn wait_buttons_stable_released(buttons: &Buttons, stable: Duration) {
+    wait_buttons_stable_released_mask(buttons, &Button::ALL, stable);
+}
+
+pub fn wait_buttons_stable_released_mask(
+    buttons: &Buttons,
+    watch: &[Button],
+    stable: Duration,
+) {
+    let mut released_since = Instant::now();
+    loop {
+        let any_pressed = watch.iter().any(|&b| buttons.is_pressed(b));
+        if any_pressed {
+            released_since = Instant::now();
+        } else if released_since.elapsed() >= stable {
+            return;
+        }
+    }
+}
 
 /// Seconds of inactivity before sleeping. Matches Python `SLEEP_TIMEOUT_SEC`.
 pub const SLEEP_TIMEOUT: Duration = Duration::from_secs(900);
@@ -101,6 +123,12 @@ impl SleepManager {
         println!("[Sleep] Entering basic sleep");
         self.sleeping = true;
         renderer.power_off();
+
+        // Wait until all buttons have been released for a stable period
+        // before arming the wake check. Without this, the A-press that
+        // triggered an explicit sleep (or its release bounce) is read as
+        // an instant wake.
+        wait_buttons_stable_released(buttons, Duration::from_millis(500));
 
         let mut last_tick = Instant::now();
         while !buttons.any_pressed() {

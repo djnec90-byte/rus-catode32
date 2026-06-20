@@ -48,9 +48,8 @@ const DEBUG: &[MenuItem] = &[
     MenuItem { label: "Plants",      icon: Some(icons::TREES),  submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("debug_plants"))),         confirm: None },
     MenuItem { label: "Vacations",   icon: Some(icons::SUN),    submenu: Some(VACATIONS),  action: None,                                                           confirm: None },
     MenuItem { label: "Time Speed",  icon: Some(icons::WRENCH), submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugTime)),                    confirm: None },
-    MenuItem { label: "Memory",      icon: Some(icons::WRENCH), submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("debug_memory"))),         confirm: None },
-    MenuItem { label: "RGB LED",     icon: Some(icons::WRENCH), submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("debug_led"))),            confirm: None },
-    MenuItem { label: "Power",       icon: Some(icons::POWER),  submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("debug_power"))),          confirm: None },
+    MenuItem { label: "RGB LED",     icon: Some(icons::WRENCH), submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugLed)),                     confirm: None },
+    MenuItem { label: "Power",       icon: Some(icons::POWER),  submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugPower)),                   confirm: None },
     MenuItem { label: "Context",     icon: Some(icons::WRENCH), submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("debug_context"))),        confirm: None },
     MenuItem { label: "Wireless",    icon: Some(icons::WIFI),   submenu: Some(WIRELESS),   action: None,                                                           confirm: None },
 ];
