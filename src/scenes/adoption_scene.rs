@@ -75,6 +75,10 @@ pub struct AdoptionScene {
     bubble_prog: f32,
     moment_pose: PoseId,
     moment_anim: PoseAnim,
+    /// Guards the post-adoption save against repeat-firing while the
+    /// scene-transition fade plays — `update_moment` keeps returning
+    /// `Some(Inside)` for several frames once its timer elapses.
+    saved: bool,
 }
 
 impl AdoptionScene {
@@ -90,6 +94,7 @@ impl AdoptionScene {
             moment_phase: MomentPhase::Walking,
             moment_x: 0.0,
             moment_timer: 0.0,
+            saved: false,
             bubble_prog: 0.0,
             moment_pose: PoseId::WalkingSideNeutral,
             moment_anim: PoseAnim::new(1),
@@ -475,7 +480,19 @@ impl Scene for AdoptionScene {
             State::Profile => self.input_profile(buttons),
             State::Confirm => self.input_confirm(buttons),
             State::Naming => self.input_naming(buttons, ctx),
-            State::Moment => self.update_moment(dt),
+            State::Moment => {
+                let next = self.update_moment(dt);
+                // Persist the newly-adopted pet the moment the bonding
+                // sequence finishes, so a power cycle immediately after
+                // adoption doesn't lose them. `update_moment` keeps
+                // returning `Some(Inside)` until the transition midpoint
+                // actually swaps the scene; `saved` makes this idempotent.
+                if next == Some(SceneId::Inside) && !self.saved {
+                    crate::save::save(ctx);
+                    self.saved = true;
+                }
+                next
+            }
         }
     }
 
@@ -578,6 +595,7 @@ fn food_label(item: crate::context::FoodItem) -> &'static str {
         Liver => "liver",
         Beef => "beef",
         Lamb => "lamb",
+        Mackerel => "mackerel",
         Carrots => "carrots",
         Pumpkin => "pumpkin",
         Treats => "treats",

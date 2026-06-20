@@ -1,5 +1,5 @@
 use embedded_graphics::prelude::{Point, Size};
-use heapless::{String, Vec};
+use heapless::Vec;
 
 use crate::{
     assets::icons,
@@ -7,7 +7,10 @@ use crate::{
     input::{Button, Buttons},
     render::{Renderer, SpriteOpts},
     scene::SceneId,
-    ui::scrollbar::Scrollbar,
+    ui::{
+        confirm::{Confirm, ConfirmResult},
+        scrollbar::Scrollbar,
+    },
 };
 
 pub const VISIBLE_ITEMS: usize = 4;
@@ -20,11 +23,6 @@ const ARROW_INSET_FROM_RIGHT: i32 = 10;
 const TRACK_HEIGHT: u32 = 64;
 const MIN_THUMB_HEIGHT: u32 = 4;
 const MAX_DEPTH: usize = 4;
-
-const CONFIRM_CHARS: usize = 14;
-const CONFIRM_LINE_LEN: usize = 16;
-const CONFIRM_VISIBLE: usize = 3;
-const CONFIRM_MAX_LINES: usize = 8;
 
 #[derive(Clone, Copy)]
 pub struct MenuItem {
@@ -74,18 +72,14 @@ struct Frame {
     scroll: usize,
 }
 
-struct ConfirmState {
-    action: MenuAction,
-    lines: Vec<String<CONFIRM_LINE_LEN>, CONFIRM_MAX_LINES>,
-    scroll: usize,
-}
-
 pub struct Menu {
     current: Frame,
     stack: Vec<Frame, MAX_DEPTH>,
     content_width: i32,
     scrollbar_x: i32,
-    confirm: Option<ConfirmState>,
+    confirm: Confirm,
+    /// Action that fires once the open `Confirm` returns `Confirmed`.
+    pending_action: Option<MenuAction>,
 }
 
 impl Menu {
@@ -103,7 +97,8 @@ impl Menu {
             stack: Vec::new(),
             content_width,
             scrollbar_x,
-            confirm: None,
+            confirm: Confirm::new(),
+            pending_action: None,
         }
     }
 
@@ -111,28 +106,23 @@ impl Menu {
     pub fn reset_to(&mut self, items: &'static [MenuItem]) {
         self.current = Frame { items, selected: 0, scroll: 0 };
         self.stack.clear();
-        self.confirm = None;
+        self.confirm.close();
+        self.pending_action = None;
     }
 
     pub fn handle_input(&mut self, buttons: &mut Buttons) -> MenuResult {
-        if let Some(confirm) = self.confirm.as_mut() {
-            if buttons.was_just_pressed(Button::A) {
-                let action = confirm.action;
-                self.confirm = None;
-                return MenuResult::Action(action);
-            }
-            if buttons.was_just_pressed(Button::B) {
-                self.confirm = None;
-                return MenuResult::Continue;
-            }
-            let max_scroll = confirm.lines.len().saturating_sub(CONFIRM_VISIBLE);
-            if buttons.was_just_pressed(Button::Up) && confirm.scroll > 0 {
-                confirm.scroll -= 1;
-            }
-            if buttons.was_just_pressed(Button::Down) && confirm.scroll < max_scroll {
-                confirm.scroll += 1;
-            }
-            return MenuResult::Continue;
+        if self.confirm.is_open() {
+            return match self.confirm.handle_input(buttons) {
+                ConfirmResult::Pending => MenuResult::Continue,
+                ConfirmResult::Confirmed => match self.pending_action.take() {
+                    Some(action) => MenuResult::Action(action),
+                    None => MenuResult::Continue,
+                },
+                ConfirmResult::Cancelled => {
+                    self.pending_action = None;
+                    MenuResult::Continue
+                }
+            };
         }
 
         if buttons.was_just_pressed(Button::Menu1) || buttons.was_just_pressed(Button::Menu2) {
@@ -197,10 +187,7 @@ impl Menu {
             self.draw_item(renderer, item, y, selected);
         }
         self.draw_scrollbar(renderer);
-
-        if let Some(confirm) = self.confirm.as_ref() {
-            draw_confirm_dialog(renderer, confirm);
-        }
+        self.confirm.draw(renderer);
     }
 
     fn draw_item(&self, renderer: &mut Renderer, item: &MenuItem, y: i32, selected: bool) {
@@ -276,89 +263,7 @@ impl Menu {
     }
 
     fn open_confirm(&mut self, action: MenuAction, text: &str) {
-        let mut state = ConfirmState {
-            action,
-            lines: Vec::new(),
-            scroll: 0,
-        };
-        wrap_text(text, CONFIRM_CHARS, &mut state.lines);
-        self.confirm = Some(state);
+        self.pending_action = Some(action);
+        self.confirm.open(text);
     }
-}
-
-fn wrap_text(
-    text: &str,
-    chars_per_line: usize,
-    lines: &mut Vec<String<CONFIRM_LINE_LEN>, CONFIRM_MAX_LINES>,
-) {
-    let chars_per_line = chars_per_line.min(CONFIRM_LINE_LEN);
-    for paragraph in text.split('\n') {
-        let mut current: String<CONFIRM_LINE_LEN> = String::new();
-        for word in paragraph.split(' ') {
-            let needs_space = !current.is_empty();
-            let extra = (if needs_space { 1 } else { 0 }) + word.len();
-            if current.len() + extra <= chars_per_line {
-                if needs_space {
-                    let _ = current.push(' ');
-                }
-                let _ = current.push_str(word);
-            } else {
-                if !current.is_empty() {
-                    if lines.push(current.clone()).is_err() {
-                        return;
-                    }
-                    current.clear();
-                }
-                let _ = current.push_str(&word[..word.len().min(CONFIRM_LINE_LEN)]);
-            }
-        }
-        if lines.push(current).is_err() {
-            return;
-        }
-    }
-}
-
-fn draw_confirm_dialog(renderer: &mut Renderer, confirm: &ConfirmState) {
-    // Outer border + filled-off interior to mirror Python's dialog
-    // (rect at 4,12 size 120x40; inner fill at 5,13 size 118x38).
-    renderer.fill_rect_off(Point::new(5, 13), Size::new(118, 38));
-    renderer.draw_rect(Point::new(4, 12), Size::new(120, 40), false);
-
-    let total = confirm.lines.len();
-    let can_scroll = total > CONFIRM_VISIBLE;
-    let visible = total.min(CONFIRM_VISIBLE);
-    let y_start = if can_scroll {
-        14
-    } else {
-        14 + (28 - visible as i32 * 8) / 2
-    };
-
-    let end = (confirm.scroll + CONFIRM_VISIBLE).min(total);
-    for (i, line) in confirm.lines[confirm.scroll..end].iter().enumerate() {
-        renderer.draw_text(line.as_str(), Point::new(8, y_start + i as i32 * 8));
-    }
-
-    if can_scroll {
-        let icon_x = 116;
-        if confirm.scroll > 0 {
-            renderer.draw_sprite_raw(
-                icons::UP_ARROW,
-                icons::ARROW_W,
-                icons::ARROW_H,
-                Point::new(icon_x, 14),
-                SpriteOpts::default(),
-            );
-        }
-        if confirm.scroll + CONFIRM_VISIBLE < total {
-            renderer.draw_sprite_raw(
-                icons::DOWN_ARROW,
-                icons::ARROW_W,
-                icons::ARROW_H,
-                Point::new(icon_x, 32),
-                SpriteOpts::default(),
-            );
-        }
-    }
-
-    renderer.draw_text("[A]Yes [B]No", Point::new(20, 42));
 }

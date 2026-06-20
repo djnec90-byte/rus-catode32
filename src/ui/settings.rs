@@ -37,6 +37,11 @@ pub enum SettingValue {
         index: usize,
         options: &'static [&'static str],
     },
+    /// Action item — no value to cycle. Pressing A while it's selected
+    /// closes the value-edit loop with `SettingsResult::Activated(index)`
+    /// so the caller can do something custom (open a sub-screen, fire a
+    /// destructive op, etc).
+    Action,
 }
 
 impl SettingValue {
@@ -53,6 +58,7 @@ impl SettingValue {
                     *index = (*index + 1) % options.len();
                 }
             }
+            SettingValue::Action => {}
         }
     }
 
@@ -69,6 +75,7 @@ impl SettingValue {
                     *index = (*index + options.len() - 1) % options.len();
                 }
             }
+            SettingValue::Action => {}
         }
     }
 
@@ -103,6 +110,7 @@ impl SettingValue {
                     let _ = s.push_str(label);
                 }
             }
+            SettingValue::Action => {}
         }
         s
     }
@@ -146,11 +154,22 @@ impl SettingItem {
             value: SettingValue::Choice { index, options },
         }
     }
+
+    pub const fn action(label: &'static str) -> Self {
+        Self {
+            label,
+            value: SettingValue::Action,
+        }
+    }
 }
 
 pub enum SettingsResult {
     Continue,
     Closed,
+    /// User pressed A on a `SettingValue::Action` row at this index. The
+    /// settings panel stays open; the caller decides what to do next
+    /// (e.g. open a confirm screen, fire a side effect, etc).
+    Activated(usize),
 }
 
 /// Reusable settings component: a vertical list of editable items where each
@@ -212,6 +231,14 @@ impl Settings {
         if buttons.was_just_pressed(Button::Left) {
             if let Some(item) = self.items.get_mut(self.selected) {
                 item.value.cycle_prev();
+            }
+        }
+
+        if buttons.was_just_pressed(Button::A) {
+            if let Some(item) = self.items.get(self.selected) {
+                if matches!(item.value, SettingValue::Action) {
+                    return SettingsResult::Activated(self.selected);
+                }
             }
         }
 

@@ -131,7 +131,7 @@ impl Scene for DebugStatsScene {
         _dt: f32,
     ) -> Option<SceneId> {
         match self.settings.handle_input(buttons) {
-            SettingsResult::Continue => None,
+            SettingsResult::Continue | SettingsResult::Activated(_) => None,
             SettingsResult::Closed => {
                 for (i, entry) in ENTRIES.iter().enumerate() {
                     if let Some(SettingValue::Int { value, .. }) = self.settings.value(i) {

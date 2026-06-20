@@ -15,6 +15,7 @@ use crate::{
     input::{Button, Buttons},
     led::Led,
     render::Renderer,
+    save,
     scene::{SceneId, SceneManager},
     sleep_manager::{wait_buttons_stable_released_mask, SleepManager},
     time_system::TimeSystem,
@@ -22,13 +23,6 @@ use crate::{
 };
 
 const DEEP_WAKE_BUTTONS: [Button; 4] = [Button::A, Button::B, Button::Menu1, Button::Menu2];
-
-/// Stubbed save-file check. Always returns `false` until the save/load layer
-/// is ported — the boot path therefore always lands in the adoption flow.
-/// TODO(save_load): consult the persisted save file once that layer exists.
-fn has_save() -> bool {
-    false
-}
 
 const FPS: u64 = 12;
 const FRAME_TIME_MS: u64 = 1000 / FPS;
@@ -64,7 +58,8 @@ impl Game {
         let seed = rng.random();
         context.rng = if seed == 0 { 1 } else { seed };
         context.hw_rng = rng;
-        let start = if has_save() {
+        let loaded = save::has_save() && save::load(&mut context);
+        let start = if loaded {
             SceneId::Inside
         } else {
             SceneId::Adoption
@@ -198,6 +193,10 @@ impl Game {
         match action {
             PowerAction::Reboot => {
                 println!("[Power] Software reset");
+                // Persist state before the user-initiated reset so progress
+                // isn't lost. The reboot itself is the explicit action; the
+                // save is incidental.
+                save::save(&mut self.context);
                 software_reset();
             }
             PowerAction::LightSleep => {

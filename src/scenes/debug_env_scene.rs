@@ -124,7 +124,7 @@ impl Scene for DebugEnvScene {
         _dt: f32,
     ) -> Option<SceneId> {
         match self.settings.handle_input(buttons) {
-            SettingsResult::Continue => None,
+            SettingsResult::Continue | SettingsResult::Activated(_) => None,
             SettingsResult::Closed => {
                 self.apply_values(ctx);
                 Some(ctx.last_main_scene)

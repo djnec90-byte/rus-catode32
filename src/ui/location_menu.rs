@@ -580,7 +580,7 @@ fn build_page(
             push_item(items, "Sociability", Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Sociability)), None, None);
         }
         Page::Feed => {
-            let has_meals = (0..FoodItem::Lamb as usize + 1)
+            let has_meals = (0..FoodItem::Mackerel as usize + 1)
                 .any(|i| ctx.food_stock[i] > 0);
             let has_snacks = (FoodItem::Carrots as usize..FoodItem::Puree as usize + 1)
                 .any(|i| ctx.food_stock[i] > 0);
@@ -890,6 +890,7 @@ const MEAL_ORDER: &[FoodItem] = &[
     FoodItem::Beef,
     FoodItem::Lamb,
     FoodItem::Liver,
+    FoodItem::Mackerel,
     FoodItem::Kibble,
 ];
 
@@ -927,6 +928,7 @@ fn food_icon(item: FoodItem) -> &'static [u8] {
         | FoodItem::Herring
         | FoodItem::Tuna
         | FoodItem::Salmon
+        | FoodItem::Mackerel
         | FoodItem::FishBite => icons::FISH,
         FoodItem::Beef | FoodItem::Lamb | FoodItem::Liver => icons::MEAL,
         FoodItem::Kibble => icons::KIBBLE,

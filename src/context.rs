@@ -1,6 +1,6 @@
 use heapless::Vec;
 
-use esp_hal::rng::Rng;
+use esp_hal::{rng::Rng, time::Instant};
 
 use crate::{
     assets::plants::{PlantStage, PotKind},
@@ -97,6 +97,7 @@ pub enum FoodItem {
     Liver,
     Beef,
     Lamb,
+    Mackerel,
     // Snacks
     Carrots,
     Pumpkin,
@@ -109,7 +110,7 @@ pub enum FoodItem {
     Puree,
 }
 
-pub const FOOD_ITEM_COUNT: usize = 22;
+pub const FOOD_ITEM_COUNT: usize = 23;
 
 impl FoodItem {
     /// Map a specific food item to the coarse `FoodKind` used by the eating
@@ -124,6 +125,7 @@ impl FoodItem {
             | FoodItem::Herring
             | FoodItem::Tuna
             | FoodItem::Salmon
+            | FoodItem::Mackerel
             | FoodItem::FishBite => FoodKind::Fish,
             FoodItem::Turkey
             | FoodItem::Chicken
@@ -156,6 +158,7 @@ impl FoodItem {
             FoodItem::Liver => "Liver",
             FoodItem::Beef => "Beef",
             FoodItem::Lamb => "Lamb",
+            FoodItem::Mackerel => "Mackerel",
             FoodItem::Carrots => "Carrots",
             FoodItem::Pumpkin => "Pumpkin",
             FoodItem::Treats => "Treats",
@@ -554,6 +557,10 @@ pub struct GameContext {
     pub milestone_played: bool,
     pub milestone_groomed: bool,
     pub milestone_store: bool,
+
+    /// Instant of the most recent successful save. `None` until the first
+    /// save (or load — load also stamps this). Drives `save::save_if_needed`.
+    pub last_save_time: Option<Instant>,
 }
 
 impl GameContext {
@@ -668,11 +675,74 @@ impl GameContext {
             milestone_played: false,
             milestone_groomed: false,
             milestone_store: false,
+
+            last_save_time: None,
         }
     }
 
     pub fn meteor_shower_happening(&self) -> bool {
         self.meteor_shower_timer > 0.0
+    }
+
+    /// Reset every numeric stat to its default baseline. Personality traits
+    /// fall back to `50 + seed-derived offset` so pet identity survives;
+    /// nothing else (inventory, plants, favorites, name, scores) is touched.
+    /// Surfaced by the debug-context scene.
+    pub fn reset_stats_to_defaults(&mut self) {
+        self.fullness = 50.0;
+        self.energy = 50.0;
+        self.comfort = 50.0;
+        self.playfulness = 50.0;
+        self.focus = 50.0;
+        self.fulfillment = 50.0;
+        self.cleanliness = 50.0;
+        self.intelligence = 50.0;
+        self.maturity = 50.0;
+        self.affection = 50.0;
+        self.fitness = 50.0;
+        self.serenity = 50.0;
+        let offsets = crate::pet_seed::derive_trait_offsets(self.pet_seed);
+        self.courage = 50.0 + offsets[0] as f32;
+        self.loyalty = 50.0 + offsets[1] as f32;
+        self.mischievousness = 50.0 + offsets[2] as f32;
+        self.curiosity = 50.0 + offsets[3] as f32;
+        self.sociability = 50.0 + offsets[4] as f32;
+        self.sickness = 0.0;
+        self.medicine_pending = false;
+        self.recompute_health();
+    }
+
+    /// Apply a new pet seed and re-derive every field that depends on it
+    /// (gender, star sign, favorites, personality offsets). Stats, inventory,
+    /// plants, and name are untouched.
+    pub fn reseed(&mut self, new_seed: u64) {
+        self.pet_seed = new_seed;
+        let favs = crate::pet_seed::derive_favorites(new_seed);
+        self.pet_gender = Some(favs.pet_gender);
+        self.star_sign = Some(favs.star_sign);
+        self.fav_weather = Some(favs.fav_weather);
+        self.fav_meal = Some(favs.fav_meal);
+        self.least_fav_meal = Some(favs.least_fav_meal);
+        self.fav_snack = Some(favs.fav_snack);
+        self.least_fav_snack = Some(favs.least_fav_snack);
+        self.fav_toy = Some(favs.fav_toy);
+        self.least_fav_toy = Some(favs.least_fav_toy);
+        self.fav_location = Some(favs.fav_location);
+        self.least_fav_location = Some(favs.least_fav_location);
+        let offsets = crate::pet_seed::derive_trait_offsets(new_seed);
+        self.courage = 50.0 + offsets[0] as f32;
+        self.loyalty = 50.0 + offsets[1] as f32;
+        self.mischievousness = 50.0 + offsets[2] as f32;
+        self.curiosity = 50.0 + offsets[3] as f32;
+        self.sociability = 50.0 + offsets[4] as f32;
+    }
+
+    /// Replace the player's plants with the developer starter set. Surfaced
+    /// by the debug-context scene's "Reset Plants" action.
+    pub fn reset_plants_to_starter(&mut self) {
+        self.plants = starter_plants();
+        self.next_plant_id = STARTER_PLANT_COUNT as u32;
+        self.last_plant_tick_hour = None;
     }
 
     pub fn recompute_health(&mut self) {

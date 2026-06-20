@@ -47,7 +47,7 @@ impl Scene for DebugTimeScene {
         _dt: f32,
     ) -> Option<SceneId> {
         match self.settings.handle_input(buttons) {
-            SettingsResult::Continue => None,
+            SettingsResult::Continue | SettingsResult::Activated(_) => None,
             SettingsResult::Closed => {
                 if let Some(SettingValue::Fixed { value, divisor, .. }) = self.settings.value(0) {
                     ctx.time_speed = *value as f32 / *divisor as f32;

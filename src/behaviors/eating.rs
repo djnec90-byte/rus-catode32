@@ -498,6 +498,21 @@ fn food_cfg(source: EatingSource) -> EatCfg {
                     b
                 },
             },
+            // Mackerel has no entry in Python's FOOD_CONFIG (see
+            // `eating.py` FOOD_CONFIG dict), so it falls through to
+            // DEFAULT_FOOD_CONFIG: fullness 8, eating_speed 0.4, appeal 0.5.
+            // Matched here exactly.
+            FoodItem::Mackerel => EatCfg {
+                sprite: &FOOD_BOWL,
+                eating_speed: 0.4,
+                appeal: 0.5,
+                is_snack: false,
+                bonus_table: || {
+                    let mut b: Bonus = heapless::Vec::new();
+                    let _ = b.push((StatId::Fullness, 8.0));
+                    b
+                },
+            },
             FoodItem::Carrots => EatCfg {
                 sprite: &CHEW_STICKS,
                 eating_speed: 1.0,

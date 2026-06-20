@@ -603,6 +603,7 @@ fn food_display(item: Option<FoodItem>) -> &'static str {
         Some(Liver) => "liver",
         Some(Beef) => "beef",
         Some(Lamb) => "lamb",
+        Some(Mackerel) => "mackerel",
         Some(Carrots) => "carrots",
         Some(Pumpkin) => "pumpkin",
         Some(Treats) => "treats",

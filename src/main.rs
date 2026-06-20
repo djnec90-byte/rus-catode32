@@ -21,10 +21,12 @@ mod plant_renderer;
 mod plant_system;
 mod rand;
 mod render;
+mod save;
 mod scene;
 mod scenes;
 mod sky;
 mod sleep_manager;
+mod storage;
 mod temperature_system;
 mod time_system;
 mod transition;
@@ -44,6 +46,7 @@ fn main() -> ! {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
     let board = board::init(peripherals);
+    storage::init(board.flash);
     let renderer = Renderer::new(board.i2c);
 
     println!("catode32 v0.10.0 — behavior framework");

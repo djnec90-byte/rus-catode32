@@ -1,7 +1,7 @@
 use esp_hal::{
     gpio::{Input, InputConfig, Pull},
     i2c::master::{Config, I2c},
-    peripherals::Peripherals,
+    peripherals::{Peripherals, FLASH},
     rng::Rng,
     time::Rate,
     Blocking,
@@ -18,6 +18,7 @@ pub struct Board {
     pub buttons: Buttons,
     pub rng: Rng,
     pub led: Led,
+    pub flash: FLASH<'static>,
 }
 
 pub fn init(peripherals: Peripherals) -> Board {
@@ -46,5 +47,6 @@ pub fn init(peripherals: Peripherals) -> Board {
         buttons,
         rng: Rng::new(),
         led,
+        flash: peripherals.FLASH,
     }
 }

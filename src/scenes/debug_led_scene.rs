@@ -72,7 +72,7 @@ impl Scene for DebugLedScene {
         let result = self.settings.handle_input(buttons);
         self.apply(ctx);
         match result {
-            SettingsResult::Continue => None,
+            SettingsResult::Continue | SettingsResult::Activated(_) => None,
             SettingsResult::Closed => Some(ctx.last_main_scene),
         }
     }

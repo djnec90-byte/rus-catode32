@@ -27,6 +27,7 @@ pub enum SceneId {
     DebugLed,
     DebugPlants,
     DebugPower,
+    DebugContext,
     Zoomies,
     Breakout,
     VacationPark,

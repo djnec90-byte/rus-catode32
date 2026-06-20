@@ -3,6 +3,7 @@ pub mod bedroom_scene;
 pub mod breakout_scene;
 pub mod credits_scene;
 pub mod debug_behaviors_scene;
+pub mod debug_context_scene;
 pub mod debug_env_scene;
 pub mod debug_led_scene;
 pub mod debug_plants_scene;
@@ -34,6 +35,7 @@ use bedroom_scene::BedroomScene;
 use breakout_scene::BreakoutScene;
 use credits_scene::CreditsScene;
 use debug_behaviors_scene::DebugBehaviorsScene;
+use debug_context_scene::DebugContextScene;
 use debug_env_scene::DebugEnvScene;
 use debug_led_scene::DebugLedScene;
 use debug_plants_scene::DebugPlantsScene;
@@ -72,6 +74,7 @@ pub enum ActiveScene {
     PetInfo(PetInfoScene),
     Credits(CreditsScene),
     DebugBehaviors(DebugBehaviorsScene),
+    DebugContext(DebugContextScene),
     DebugEnv(DebugEnvScene),
     DebugLed(DebugLedScene),
     DebugPlants(DebugPlantsScene),
@@ -104,6 +107,7 @@ impl ActiveScene {
             SceneId::PetInfo => ActiveScene::PetInfo(PetInfoScene::new()),
             SceneId::Credits => ActiveScene::Credits(CreditsScene::new()),
             SceneId::DebugBehaviors => ActiveScene::DebugBehaviors(DebugBehaviorsScene::new()),
+            SceneId::DebugContext => ActiveScene::DebugContext(DebugContextScene::new()),
             SceneId::DebugEnv => ActiveScene::DebugEnv(DebugEnvScene::new()),
             SceneId::DebugLed => ActiveScene::DebugLed(DebugLedScene::new()),
             SceneId::DebugPlants => ActiveScene::DebugPlants(DebugPlantsScene::new()),
@@ -138,6 +142,7 @@ impl ActiveScene {
             ActiveScene::PetInfo(s) => s,
             ActiveScene::Credits(s) => s,
             ActiveScene::DebugBehaviors(s) => s,
+            ActiveScene::DebugContext(s) => s,
             ActiveScene::DebugEnv(s) => s,
             ActiveScene::DebugLed(s) => s,
             ActiveScene::DebugPlants(s) => s,
@@ -170,6 +175,7 @@ impl ActiveScene {
             ActiveScene::PetInfo(s) => s,
             ActiveScene::Credits(s) => s,
             ActiveScene::DebugBehaviors(s) => s,
+            ActiveScene::DebugContext(s) => s,
             ActiveScene::DebugEnv(s) => s,
             ActiveScene::DebugLed(s) => s,
             ActiveScene::DebugPlants(s) => s,
