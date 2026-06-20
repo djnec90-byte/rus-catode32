@@ -45,7 +45,7 @@ const DEBUG: &[MenuItem] = &[
     MenuItem { label: "Poses",       icon: Some(icons::CAT),    submenu: None,             action: Some(MenuAction::Scene(SceneId::PoseViewer)),                   confirm: None },
     MenuItem { label: "Behaviors",   icon: Some(icons::CAT),    submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugBehaviors)),               confirm: None },
     MenuItem { label: "Stats",       icon: Some(icons::CAT),    submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugStats)),                   confirm: None },
-    MenuItem { label: "Plants",      icon: Some(icons::TREES),  submenu: None,             action: Some(MenuAction::Scene(SceneId::Stub("debug_plants"))),         confirm: None },
+    MenuItem { label: "Plants",      icon: Some(icons::TREES),  submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugPlants)),                  confirm: None },
     MenuItem { label: "Vacations",   icon: Some(icons::SUN),    submenu: Some(VACATIONS),  action: None,                                                           confirm: None },
     MenuItem { label: "Time Speed",  icon: Some(icons::WRENCH), submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugTime)),                    confirm: None },
     MenuItem { label: "RGB LED",     icon: Some(icons::WRENCH), submenu: None,             action: Some(MenuAction::Scene(SceneId::DebugLed)),                     confirm: None },

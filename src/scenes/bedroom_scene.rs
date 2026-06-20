@@ -7,11 +7,21 @@ use crate::{
     },
     context::GameContext,
     environment::Layer,
+    gardening_ui::PlantSurface,
     input::Buttons,
     location_scene::LocationScene,
+    plant_system::PlantLayer,
     render::{Renderer, SpriteOpts},
     scene::{Scene, SceneId},
 };
+
+const PLANT_SURFACES: &[PlantSurface] = &[
+    PlantSurface { y_snap: 63, layer: PlantLayer::Foreground, x_min: 34,  x_max: 182 },
+    PlantSurface { y_snap: 15, layer: PlantLayer::Foreground, x_min: 0,   x_max: 33 },
+    PlantSurface { y_snap: 60, layer: PlantLayer::Midground,  x_min: 34,  x_max: 90 },
+    PlantSurface { y_snap: 16, layer: PlantLayer::Midground,  x_min: 184, x_max: 188 },
+    PlantSurface { y_snap: 56, layer: PlantLayer::Background, x_min: 34,  x_max: 80 },
+];
 
 const WORLD_WIDTH: i32 = 256;
 const CHAR_WORLD_X: i32 = 64;
@@ -92,7 +102,7 @@ impl BedroomScene {
 
 impl Scene for BedroomScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::Bedroom);
+        self.base.enter(ctx, SceneId::Bedroom, PLANT_SURFACES);
         let bookshelf_y = 63 - BOOKSHELF.height as i32;
         self.base.environment.add_object(
             Layer::Foreground,
@@ -131,11 +141,15 @@ impl Scene for BedroomScene {
         // Closed room — no sky.
         self.base.environment.draw_layer(renderer, Layer::Background);
         self.draw_lamp(renderer);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Background);
         self.base.environment.draw_layer(renderer, Layer::Midground);
         self.draw_bed(renderer);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Midground);
         self.base.environment.draw_layer(renderer, Layer::Foreground);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Foreground);
         self.base.draw_character(renderer, ctx);
         // Cat bed rim drawn AFTER the character so the cat appears nestled inside.
         self.draw_cat_bed_rim(renderer);
+        self.base.draw_overlay(ctx, renderer);
     }
 }

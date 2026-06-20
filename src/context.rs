@@ -3,9 +3,11 @@ use heapless::Vec;
 use esp_hal::rng::Rng;
 
 use crate::{
+    assets::plants::{PlantStage, PotKind},
     behavior::BehaviorId,
     led::Led,
     pet_seed::{PetGender, StarSign},
+    plant_system::{Plant, PlantLayer},
     scene::SceneId,
     time_system::{Season, Weather},
 };
@@ -311,6 +313,93 @@ pub const TOOL_COUNT: usize = 2;
 
 pub const RECENT_HISTORY: usize = 5;
 
+/// Global cap on live plants across every scene. Mirrors the Python design
+/// memo's "16 pots per scene" guideline summed across 5 plantable scenes.
+pub const MAX_PLANTS: usize = 80;
+
+/// Pending cross-scene move request. Set when the player picks "Move to <scene>"
+/// in the Tend menu; consumed when the destination scene's enter() fires.
+#[derive(Clone, Copy)]
+pub struct PendingGardeningMove {
+    pub plant_id: u32,
+    pub dest_scene: SceneId,
+}
+
+/// Number of plants populated by `starter_plants()`. Drives the initial value
+/// of `next_plant_id` so the first player-placed plant uses a fresh id.
+pub const STARTER_PLANT_COUNT: usize = 8;
+
+/// Developer-seeded plants placed in each room on first boot. Mirrors
+/// `reset_context._make_starter_plants` in the Python tree so the world feels
+/// inhabited without immediately demanding player attention.
+pub fn starter_plants() -> Vec<Plant, MAX_PLANTS> {
+    use crate::plant_system::Plant as P;
+    let mut v: Vec<Plant, MAX_PLANTS> = Vec::new();
+    let mut id: u32 = 0;
+    let mut push = |seed: Option<crate::context::SeedKind>,
+                    scene: SceneId,
+                    layer: PlantLayer,
+                    x: i32,
+                    y_snap: i32,
+                    pot: PotKind,
+                    stage: PlantStage,
+                    age_hours: u32,
+                    mirror: bool|
+     -> Plant {
+        let plant = P {
+            id,
+            seed,
+            scene,
+            layer,
+            x,
+            y_snap,
+            pot,
+            stage,
+            age_hours,
+            water_debt: 0.0,
+            fertilizer: 0.0,
+            planted_day: Some(0),
+            mirror,
+            aged: false,
+        };
+        id += 1;
+        plant
+    };
+    let _ = v.push(push(
+        Some(SeedKind::Rose), SceneId::Inside, PlantLayer::Midground,
+        110, 29, PotKind::Small, PlantStage::Growing, 200, false,
+    ));
+    let _ = v.push(push(
+        Some(SeedKind::CatGrass), SceneId::Kitchen, PlantLayer::Midground,
+        130, 24, PotKind::Medium, PlantStage::Mature, 160, false,
+    ));
+    let _ = v.push(push(
+        Some(SeedKind::CatGrass), SceneId::Outside, PlantLayer::Foreground,
+        10, 63, PotKind::Small, PlantStage::Growing, 160, false,
+    ));
+    let _ = v.push(push(
+        Some(SeedKind::Sunflower), SceneId::Outside, PlantLayer::Midground,
+        130, 61, PotKind::Ground, PlantStage::Mature, 360, true,
+    ));
+    let _ = v.push(push(
+        Some(SeedKind::CatGrass), SceneId::Outside, PlantLayer::Midground,
+        40, 61, PotKind::Ground, PlantStage::Thriving, 150, false,
+    ));
+    let _ = v.push(push(
+        Some(SeedKind::CatGrass), SceneId::Outside, PlantLayer::Background,
+        110, 56, PotKind::Ground, PlantStage::Thriving, 320, false,
+    ));
+    let _ = v.push(push(
+        Some(SeedKind::Rose), SceneId::Treehouse, PlantLayer::Foreground,
+        15, 63, PotKind::Small, PlantStage::Young, 72, false,
+    ));
+    let _ = v.push(push(
+        Some(SeedKind::Freesia), SceneId::Treehouse, PlantLayer::Midground,
+        120, 59, PotKind::Medium, PlantStage::Thriving, 88, true,
+    ));
+    v
+}
+
 #[allow(dead_code)]
 pub struct GameContext {
     pub health: f32,
@@ -413,9 +502,21 @@ pub struct GameContext {
     pub pending_popup_icon: Option<&'static str>,
     pub pending_power: Option<PowerAction>,
 
-    // TODO(plant_system): drive from real plant inventory once ported.
+    /// Aggregate plant-health score for the current scene. Recomputed every
+    /// frame by LocationScene from `ctx.plants` (thriving +2, healthy +1,
+    /// wilted/dormant -1, dead -2). Behaviors read it during completion
+    /// bonuses instead of walking `ctx.plants` themselves.
     pub scene_plant_health: i8,
     pub in_familiar_location: bool,
+
+    // --- Plant / gardening state ---
+    pub plants: Vec<Plant, MAX_PLANTS>,
+    pub next_plant_id: u32,
+    /// Absolute in-game hour index (day_number * 24 + time_hours) at the last
+    /// plant tick. None on cold boot — first tick anchors instead of catching
+    /// up so saved water_debt remains authoritative.
+    pub last_plant_tick_hour: Option<u32>,
+    pub pending_gardening_move: Option<PendingGardeningMove>,
 
     // Pet identity — set during the adoption scene from a 64-bit seed.
     pub pet_seed: u64,
@@ -471,7 +572,7 @@ impl GameContext {
             sociability: 50.0,
             sickness: 0.0,
             time_speed: 1.0,
-            coins: 50,
+            coins: 150,
             food_stock: {
                 let mut s = [0u8; FOOD_ITEM_COUNT];
                 s[FoodItem::Kibble as usize] = 5;
@@ -528,6 +629,11 @@ impl GameContext {
 
             scene_plant_health: 0,
             in_familiar_location: true,
+
+            plants: starter_plants(),
+            next_plant_id: STARTER_PLANT_COUNT as u32,
+            last_plant_tick_hour: None,
+            pending_gardening_move: None,
 
             pet_seed: 0,
             pet_name: heapless::String::new(),

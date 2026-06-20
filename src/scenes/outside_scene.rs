@@ -9,13 +9,21 @@ use crate::{
         jumper::{JumperEntity, JumperKind},
     },
     environment::Layer,
+    gardening_ui::PlantSurface,
     input::Buttons,
     location_scene::LocationScene,
+    plant_system::PlantLayer,
     rand::{rand_bool, rand_range_f32, rand_range_u32},
     render::Renderer,
     scene::{Scene, SceneId},
     time_system::Season,
 };
+
+const PLANT_SURFACES: &[PlantSurface] = &[
+    PlantSurface { y_snap: 63, layer: PlantLayer::Foreground, x_min: 0, x_max: 0 },
+    PlantSurface { y_snap: 61, layer: PlantLayer::Midground,  x_min: 0, x_max: 0 },
+    PlantSurface { y_snap: 56, layer: PlantLayer::Background, x_min: 0, x_max: 0 },
+];
 
 const WORLD_WIDTH: i32 = 256;
 const CHAR_WORLD_X: i32 = 64;
@@ -186,7 +194,7 @@ fn make_critter(kind: CritterKind, world_width: i32, rng: &mut u32) -> Critter {
 
 impl Scene for OutsideScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::Outside);
+        self.base.enter(ctx, SceneId::Outside, PLANT_SURFACES);
         // Seed the scene's RNG from the system clock so each entry rolls a fresh world.
         self.rng = (Instant::now().duration_since_epoch().as_micros() as u32).max(1);
         self.spawn_critters(ctx);
@@ -219,9 +227,15 @@ impl Scene for OutsideScene {
             return;
         }
         self.base.draw_sky(renderer, ctx);
-        self.base.draw_layers(renderer);
+        self.base.environment.draw_layer(renderer, Layer::Background);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Background);
+        self.base.environment.draw_layer(renderer, Layer::Midground);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Midground);
+        self.base.environment.draw_layer(renderer, Layer::Foreground);
         self.draw_grass(renderer);
         self.draw_critters(renderer);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Foreground);
         self.base.draw_character(renderer, ctx);
+        self.base.draw_overlay(ctx, renderer);
     }
 }

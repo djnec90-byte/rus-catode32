@@ -1,4 +1,5 @@
 pub mod character;
+pub mod effects;
 pub mod furniture;
 pub mod icons;
 pub mod items;

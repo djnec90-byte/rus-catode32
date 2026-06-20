@@ -4,11 +4,18 @@ use crate::{
     assets::{furniture::CAT_BED_SIDE, nature::COBWEB},
     context::GameContext,
     environment::Layer,
+    gardening_ui::PlantSurface,
     input::Buttons,
     location_scene::LocationScene,
+    plant_system::PlantLayer,
     render::{Renderer, SpriteOpts},
     scene::{Scene, SceneId},
 };
+
+const PLANT_SURFACES: &[PlantSurface] = &[
+    PlantSurface { y_snap: 63, layer: PlantLayer::Foreground, x_min: 0, x_max: 0 },
+    PlantSurface { y_snap: 59, layer: PlantLayer::Midground,  x_min: 0, x_max: 0 },
+];
 
 const WORLD_WIDTH: i32 = 256;
 const CHAR_WORLD_X: i32 = 64;
@@ -94,7 +101,7 @@ impl TreehouseScene {
 
 impl Scene for TreehouseScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::Treehouse);
+        self.base.enter(ctx, SceneId::Treehouse, PLANT_SURFACES);
     }
 
     fn update(
@@ -124,9 +131,12 @@ impl Scene for TreehouseScene {
         self.base.environment.draw_layer(renderer, Layer::Background);
         self.base.environment.draw_layer(renderer, Layer::Midground);
         self.draw_platform_mid(renderer);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Midground);
         self.base.environment.draw_layer(renderer, Layer::Foreground);
         self.draw_platform_fg(renderer);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Foreground);
         self.base.draw_character(renderer, ctx);
         self.draw_cat_bed_rim(renderer);
+        self.base.draw_overlay(ctx, renderer);
     }
 }

@@ -5,11 +5,19 @@ use crate::{
     clock::ClockWidget,
     context::GameContext,
     environment::Layer,
+    gardening_ui::PlantSurface,
     input::Buttons,
     location_scene::LocationScene,
+    plant_system::PlantLayer,
     render::{Renderer, SpriteOpts},
     scene::{Scene, SceneId},
 };
+
+const PLANT_SURFACES: &[PlantSurface] = &[
+    PlantSurface { y_snap: 63, layer: PlantLayer::Foreground, x_min: 0,  x_max: 180 },
+    PlantSurface { y_snap: 60, layer: PlantLayer::Midground,  x_min: 0,  x_max: 16 },
+    PlantSurface { y_snap: 24, layer: PlantLayer::Midground,  x_min: 25, x_max: 160 },
+];
 
 const WORLD_WIDTH: i32 = 192;
 const CHAR_WORLD_X: i32 = 64;
@@ -72,7 +80,7 @@ impl KitchenScene {
 
 impl Scene for KitchenScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::Kitchen);
+        self.base.enter(ctx, SceneId::Kitchen, PLANT_SURFACES);
         // TODO: BOX_SMALL_1 and FOOD_BOWL items (Python adds them as foreground sprites).
         // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
         // TODO: plant surfaces (PLANT_SURFACES) once the plant system is ported.
@@ -99,11 +107,15 @@ impl Scene for KitchenScene {
         }
         // Closed room — no sky.
         self.base.environment.draw_layer(renderer, Layer::Background);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Background);
         let mg_offset = self.base.environment.camera_offset(Layer::Midground);
         self.clock.draw(renderer, mg_offset);
         self.base.environment.draw_layer(renderer, Layer::Midground);
         self.draw_counter(renderer);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Midground);
         self.base.environment.draw_layer(renderer, Layer::Foreground);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Foreground);
         self.base.draw_character(renderer, ctx);
+        self.base.draw_overlay(ctx, renderer);
     }
 }

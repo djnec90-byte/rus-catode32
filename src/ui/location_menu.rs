@@ -1,8 +1,8 @@
 //! Pet interaction menu opened with Menu2 on any location scene. Mirrors the
 //! Python `MainScene._build_menu_items` tree: Affection / Train / Feed / Play
-//! and (TODO) Gardening. Items, counts and toy availability are recomputed
-//! every time the player navigates, so labels like "Tuna (3)" stay accurate
-//! and out-of-stock entries disappear.
+//! / Gardening. Items, counts and inventory are recomputed every time the
+//! player navigates a page so labels like "Tuna (3)" and "Small pot (2)" stay
+//! accurate and out-of-stock entries disappear.
 
 use core::fmt::Write as _;
 
@@ -10,17 +10,22 @@ use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
 
 use crate::{
-    assets::icons,
+    assets::{
+        icons,
+        plants::{PlantStage, PotKind},
+    },
     behavior::{AffectionVariant, AttentionVariant, PlayVariant, TrainingKind},
-    context::{FoodItem, GameContext, ToyVariant},
+    context::{FoodItem, GameContext, PotSize, SeedKind},
     input::{Button, Buttons},
+    plant_system::{self, Plant},
     render::{Renderer, SpriteOpts},
+    scene::SceneId,
     ui::scrollbar::Scrollbar,
 };
 
 const LABEL_LEN: usize = 20;
 const MAX_PAGE_ITEMS: usize = 16;
-const MAX_DEPTH: usize = 3;
+const MAX_DEPTH: usize = 4;
 const VISIBLE_ITEMS: usize = 4;
 const ROW_HEIGHT: i32 = 16;
 const CONTENT_WIDTH: i32 = 120;
@@ -45,6 +50,35 @@ enum Page {
     FeedMeals,
     FeedSnacks,
     Play,
+    Gardening,
+    GardeningPlacePot,
+    GardeningPlantSeed,
+    GardeningPlantSeedInPot,
+    GardeningPlantSeedInGround,
+    /// Per-plant submenu shown after the player selects a plant via the
+    /// PlantSelectionMode cursor. Uses `self.tend_plant_id`.
+    GardeningTend,
+    GardeningRepot,
+    GardeningMove,
+    GardeningInspect,
+}
+
+#[derive(Clone, Copy)]
+pub enum GardeningAction {
+    PlacePot(PotKind),
+    PlantSeedInPot(SeedKind),
+    PlantSeedInGround(SeedKind),
+    /// Open the tend cursor — LocationScene starts `PlantSelectionMode` and
+    /// re-opens this menu on a dynamic Tend page once the player picks one.
+    StartTend,
+    Water(u32),
+    Fertilize(u32),
+    Pluck(u32),
+    Repot(u32, PotKind),
+    MoveHere(u32),
+    MoveTo(u32, SceneId),
+    /// No-op: closing the inspect submenu line just dismisses the menu.
+    InspectDismiss,
 }
 
 #[derive(Clone, Copy)]
@@ -57,6 +91,7 @@ pub enum LocationAction {
     Play(PlayVariant),
     Medicine,
     GoToStore,
+    Gardening(GardeningAction),
 }
 
 pub enum LocationMenuResult {
@@ -93,6 +128,15 @@ pub struct LocationMenu {
     scroll: usize,
     stack: Vec<StackFrame, MAX_DEPTH>,
     confirm: Option<ConfirmState>,
+    /// Set by the host scene before opening a tend page so dynamic per-plant
+    /// builders know which plant to introspect.
+    tend_plant_id: Option<u32>,
+    /// Scene that supports plant placement (current scene). Used to filter
+    /// the Move submenu so the player can't move to the scene they're in.
+    current_scene: Option<SceneId>,
+    /// True when the current scene has any PLANT_SURFACES defined; controls
+    /// whether the Gardening root entry is shown.
+    has_plant_surfaces: bool,
 }
 
 impl LocationMenu {
@@ -104,13 +148,30 @@ impl LocationMenu {
             scroll: 0,
             stack: Vec::new(),
             confirm: None,
+            tend_plant_id: None,
+            current_scene: None,
+            has_plant_surfaces: false,
         }
     }
 
-    pub fn open(&mut self, ctx: &GameContext) {
+    pub fn open(&mut self, ctx: &GameContext, scene: SceneId, has_surfaces: bool) {
         self.stack.clear();
         self.confirm = None;
+        self.tend_plant_id = None;
+        self.current_scene = Some(scene);
+        self.has_plant_surfaces = has_surfaces;
         self.set_page(Page::Root, ctx);
+    }
+
+    /// Open directly on the Tend page for a specific plant — used by
+    /// LocationScene after the PlantSelectionMode confirms a selection.
+    pub fn open_tend(&mut self, ctx: &GameContext, scene: SceneId, plant_id: u32) {
+        self.stack.clear();
+        self.confirm = None;
+        self.tend_plant_id = Some(plant_id);
+        self.current_scene = Some(scene);
+        self.has_plant_surfaces = true;
+        self.set_page(Page::GardeningTend, ctx);
     }
 
     pub fn handle_input(
@@ -220,7 +281,14 @@ impl LocationMenu {
         self.selected = 0;
         self.scroll = 0;
         self.items.clear();
-        build_page(page, ctx, &mut self.items);
+        build_page(
+            page,
+            ctx,
+            self.current_scene,
+            self.has_plant_surfaces,
+            self.tend_plant_id,
+            &mut self.items,
+        );
     }
 
     fn push_page(&mut self, page: Page, ctx: &GameContext) {
@@ -410,15 +478,67 @@ fn push_count(
     });
 }
 
-fn build_page(page: Page, ctx: &GameContext, items: &mut Vec<Item, MAX_PAGE_ITEMS>) {
+fn pot_label(p: PotSize) -> &'static str {
+    match p {
+        PotSize::Small => "Small pot",
+        PotSize::Medium => "Medium pot",
+        PotSize::Large => "Large pot",
+        PotSize::Planter => "Planter box",
+    }
+}
+
+fn seed_label(s: SeedKind) -> &'static str {
+    match s {
+        SeedKind::CatGrass => "Cat Grass",
+        SeedKind::Freesia => "Freesia",
+        SeedKind::Rose => "Rose",
+        SeedKind::Sunflower => "Sunflower",
+    }
+}
+
+fn scene_label(s: SceneId) -> &'static str {
+    match s {
+        SceneId::Inside => "To Inside",
+        SceneId::Outside => "To Outside",
+        SceneId::Bedroom => "To Bedroom",
+        SceneId::Kitchen => "To Kitchen",
+        SceneId::Treehouse => "To Treehouse",
+        _ => "To ???",
+    }
+}
+
+const ALL_POTS: &[PotSize] = &[PotSize::Small, PotSize::Medium, PotSize::Large, PotSize::Planter];
+const ALL_SEEDS: &[SeedKind] = &[
+    SeedKind::CatGrass,
+    SeedKind::Sunflower,
+    SeedKind::Rose,
+    SeedKind::Freesia,
+];
+const PLANTABLE_SCENES: &[SceneId] = &[
+    SceneId::Inside,
+    SceneId::Outside,
+    SceneId::Bedroom,
+    SceneId::Kitchen,
+    SceneId::Treehouse,
+];
+
+fn build_page(
+    page: Page,
+    ctx: &GameContext,
+    current_scene: Option<SceneId>,
+    has_surfaces: bool,
+    tend_plant_id: Option<u32>,
+    items: &mut Vec<Item, MAX_PAGE_ITEMS>,
+) {
     match page {
         Page::Root => {
             push_item(items, "Affection", Some(icons::HEART), None, Some(Page::Affection), None);
             push_item(items, "Train", Some(icons::HAND), None, Some(Page::Train), None);
             push_item(items, "Feed", Some(icons::MEAL), None, Some(Page::Feed), None);
             push_item(items, "Play", Some(icons::TOYS), None, Some(Page::Play), None);
-            // TODO(plant_system): add a "Gardening" submenu (Tend / Place Pot /
-            // Plant Seed / Store...) once plants are ported.
+            if has_surfaces {
+                push_item(items, "Gardening", Some(icons::TREES), None, Some(Page::Gardening), None);
+            }
         }
         Page::Affection => {
             push_item(items, "Pets", Some(icons::HAND), Some(LocationAction::Affection(AffectionVariant::Pets)), None, None);
@@ -480,6 +600,254 @@ fn build_page(page: Page, ctx: &GameContext, items: &mut Vec<Item, MAX_PAGE_ITEM
             }
             push_item(items, "Store...", None, Some(LocationAction::GoToStore), None, None);
         }
+        Page::Gardening => {
+            let has_any_plants = current_scene
+                .map(|s| ctx.plants.iter().any(|p| p.scene == s))
+                .unwrap_or(false);
+            let has_any_pot = ctx.pots.iter().any(|n| *n > 0);
+            let has_any_seed = ctx.seeds.iter().any(|n| *n > 0);
+            if has_any_plants {
+                push_item(items, "Tend", Some(icons::TREES),
+                          Some(LocationAction::Gardening(GardeningAction::StartTend)), None, None);
+            }
+            if has_any_pot {
+                push_item(items, "Place Pot", Some(icons::TREES), None,
+                          Some(Page::GardeningPlacePot), None);
+            }
+            if has_any_seed {
+                push_item(items, "Plant Seed", Some(icons::TREES), None,
+                          Some(Page::GardeningPlantSeed), None);
+            }
+            push_item(items, "Store...", None, Some(LocationAction::GoToStore), None, None);
+        }
+        Page::GardeningPlacePot => {
+            for &pot in ALL_POTS {
+                let count = ctx.pots[pot as usize];
+                if count == 0 {
+                    continue;
+                }
+                push_count(
+                    items,
+                    pot_label(pot),
+                    count,
+                    Some(icons::TREES),
+                    LocationAction::Gardening(GardeningAction::PlacePot(PotKind::from_pot_size(pot))),
+                );
+            }
+        }
+        Page::GardeningPlantSeed => {
+            let outside = matches!(current_scene, Some(SceneId::Outside));
+            let has_any_seed = ctx.seeds.iter().any(|n| *n > 0);
+            if has_any_seed {
+                let has_empty_pot = current_scene
+                    .map(|s| {
+                        ctx.plants
+                            .iter()
+                            .any(|p| p.scene == s && p.stage == PlantStage::EmptyPot)
+                    })
+                    .unwrap_or(false);
+                if has_empty_pot {
+                    push_item(items, "In Pot", Some(icons::TREES), None,
+                              Some(Page::GardeningPlantSeedInPot), None);
+                }
+                if outside {
+                    push_item(items, "In Ground", Some(icons::TREES), None,
+                              Some(Page::GardeningPlantSeedInGround), None);
+                }
+            }
+        }
+        Page::GardeningPlantSeedInPot => {
+            for &seed in ALL_SEEDS {
+                let count = ctx.seeds[seed as usize];
+                if count == 0 {
+                    continue;
+                }
+                push_count(
+                    items,
+                    seed_label(seed),
+                    count,
+                    Some(icons::TREES),
+                    LocationAction::Gardening(GardeningAction::PlantSeedInPot(seed)),
+                );
+            }
+        }
+        Page::GardeningPlantSeedInGround => {
+            for &seed in ALL_SEEDS {
+                let count = ctx.seeds[seed as usize];
+                if count == 0 {
+                    continue;
+                }
+                push_count(
+                    items,
+                    seed_label(seed),
+                    count,
+                    Some(icons::TREES),
+                    LocationAction::Gardening(GardeningAction::PlantSeedInGround(seed)),
+                );
+            }
+        }
+        Page::GardeningTend => {
+            let plant = tend_plant_id.and_then(|id| ctx.plants.iter().find(|p| p.id == id));
+            let plant = match plant {
+                Some(p) => p,
+                None => return,
+            };
+            build_tend_items(items, ctx, plant);
+        }
+        Page::GardeningInspect => {
+            let plant = tend_plant_id.and_then(|id| ctx.plants.iter().find(|p| p.id == id));
+            let plant = match plant {
+                Some(p) => p,
+                None => return,
+            };
+            for line in plant_system::inspect_lines(plant).iter() {
+                push_item(
+                    items,
+                    line.as_str(),
+                    None,
+                    Some(LocationAction::Gardening(GardeningAction::InspectDismiss)),
+                    None,
+                    None,
+                );
+            }
+        }
+        Page::GardeningRepot => {
+            let plant = tend_plant_id.and_then(|id| ctx.plants.iter().find(|p| p.id == id));
+            let plant = match plant {
+                Some(p) => p,
+                None => return,
+            };
+            build_repot_items(items, ctx, plant);
+        }
+        Page::GardeningMove => {
+            let plant = tend_plant_id.and_then(|id| ctx.plants.iter().find(|p| p.id == id));
+            let (plant, cur_scene) = match (plant, current_scene) {
+                (Some(p), Some(s)) => (p, s),
+                _ => return,
+            };
+            push_item(
+                items,
+                "Around Here",
+                None,
+                Some(LocationAction::Gardening(GardeningAction::MoveHere(plant.id))),
+                None,
+                None,
+            );
+            for &dest in PLANTABLE_SCENES {
+                if dest == cur_scene {
+                    continue;
+                }
+                push_item(
+                    items,
+                    scene_label(dest),
+                    None,
+                    Some(LocationAction::Gardening(GardeningAction::MoveTo(plant.id, dest))),
+                    None,
+                    None,
+                );
+            }
+        }
+    }
+}
+
+fn build_tend_items(items: &mut Vec<Item, MAX_PAGE_ITEMS>, ctx: &GameContext, plant: &Plant) {
+    push_item(items, "Inspect", None, None, Some(Page::GardeningInspect), None);
+
+    let alive = plant.stage != PlantStage::EmptyPot && !plant.stage.is_dead();
+    if alive {
+        push_item(
+            items,
+            "Water",
+            None,
+            Some(LocationAction::Gardening(GardeningAction::Water(plant.id))),
+            None,
+            None,
+        );
+        if ctx.fertilizer > 0 {
+            push_item(
+                items,
+                "Fertilize",
+                None,
+                Some(LocationAction::Gardening(GardeningAction::Fertilize(plant.id))),
+                None,
+                None,
+            );
+        }
+    }
+
+    if plant.pot != PotKind::Ground {
+        push_item(items, "Move", None, None, Some(Page::GardeningMove), None);
+    }
+
+    // Repot is available when at least one larger pot is in inventory (or, for
+    // small/young stages, any other pot).
+    if plant.pot != PotKind::Ground && repot_has_options(ctx, plant) {
+        push_item(items, "Repot", None, None, Some(Page::GardeningRepot), None);
+    }
+
+    let needs_confirm = plant.stage != PlantStage::EmptyPot && !plant.stage.is_dead();
+    push_item(
+        items,
+        "Pluck",
+        None,
+        Some(LocationAction::Gardening(GardeningAction::Pluck(plant.id))),
+        None,
+        if needs_confirm { Some("Remove plant?") } else { None },
+    );
+}
+
+fn pot_rank(p: PotKind) -> i32 {
+    match p {
+        PotKind::Small => 0,
+        PotKind::Medium => 1,
+        PotKind::Large => 2,
+        PotKind::Planter => 3,
+        PotKind::Ground => 4,
+    }
+}
+
+fn repot_has_options(ctx: &GameContext, plant: &Plant) -> bool {
+    let is_large = matches!(plant.stage, PlantStage::Mature | PlantStage::Thriving);
+    let cur_rank = pot_rank(plant.pot);
+    for &pot in ALL_POTS {
+        let kind = PotKind::from_pot_size(pot);
+        if kind == plant.pot {
+            continue;
+        }
+        let target_rank = pot_rank(kind);
+        if target_rank < cur_rank && is_large {
+            continue;
+        }
+        if ctx.pots[pot as usize] > 0 {
+            return true;
+        }
+    }
+    false
+}
+
+fn build_repot_items(items: &mut Vec<Item, MAX_PAGE_ITEMS>, ctx: &GameContext, plant: &Plant) {
+    let is_large = matches!(plant.stage, PlantStage::Mature | PlantStage::Thriving);
+    let cur_rank = pot_rank(plant.pot);
+    for &pot in ALL_POTS {
+        let kind = PotKind::from_pot_size(pot);
+        if kind == plant.pot {
+            continue;
+        }
+        let target_rank = pot_rank(kind);
+        if target_rank < cur_rank && is_large {
+            continue;
+        }
+        if ctx.pots[pot as usize] == 0 {
+            continue;
+        }
+        push_item(
+            items,
+            pot_label(pot),
+            None,
+            Some(LocationAction::Gardening(GardeningAction::Repot(plant.id, kind))),
+            None,
+            None,
+        );
     }
 }
 
@@ -539,3 +907,4 @@ fn food_icon(item: FoodItem) -> &'static [u8] {
         _ => icons::KIBBLE,
     }
 }
+

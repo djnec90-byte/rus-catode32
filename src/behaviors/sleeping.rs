@@ -155,6 +155,11 @@ impl Behavior for SleepingBehavior {
             let _ = bonus.push((StatId::Comfort, 4.0));
             let _ = bonus.push((StatId::Serenity, 0.6));
         }
+        let ph = ctx.scene_plant_health as f32;
+        if ph != 0.0 {
+            let _ = bonus.push((StatId::Serenity, ph * 0.15));
+            let _ = bonus.push((StatId::Comfort, ph * 0.1));
+        }
         for entry in bonus.iter_mut() {
             entry.1 *= progress;
         }

@@ -1,13 +1,258 @@
 #![allow(dead_code)]
 //! Sprites for the plant system (pots and plants).
 //!
-//! The `PLANT_SPRITES` lookup map in the MicroPython source is intentionally
-//! omitted here — the gardening system has not been ported to Rust yet, so
-//! there is no `PlantType`/`PlantStage` enum to key on. Wire that up alongside
-//! the plant system port; the sprite statics below are all that's needed for
-//! the minigame for now.
+//! Lookups `pot_sprite()` and `plant_sprite()` mirror the Python `POT_SPRITES`
+//! and `PLANT_SPRITES` dicts. They return `Option<&'static Sprite>` so callers
+//! can short-circuit empty / dead / dormant states the same way the Python
+//! renderer does.
 
-use crate::render::Sprite;
+use crate::{
+    context::{PotSize, SeedKind},
+    render::Sprite,
+};
+
+/// Growth stages used by the renderer to look up the right sprite. Mirrors the
+/// `_STAGES` tuple in `plant_system.py` plus the special terminal stages.
+///
+/// `*_Dead` variants only exist for art / debug-preview purposes — the live
+/// game keeps a single terminal `Dead` state. Python carries the same
+/// per-stage dead sprite keys for the debug viewer.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PlantStage {
+    EmptyPot,
+    Seedling,
+    Young,
+    Growing,
+    Mature,
+    Thriving,
+    SeedlingWilted,
+    YoungWilted,
+    GrowingWilted,
+    MatureWilted,
+    ThrivingWilted,
+    SeedlingDead,
+    YoungDead,
+    GrowingDead,
+    MatureDead,
+    ThrivingDead,
+    Dead,
+    Dormant,
+}
+
+impl PlantStage {
+    /// Strip the `_wilted` / `_dead` suffix to recover the underlying stage.
+    pub fn base(self) -> Self {
+        match self {
+            PlantStage::SeedlingWilted | PlantStage::SeedlingDead => PlantStage::Seedling,
+            PlantStage::YoungWilted | PlantStage::YoungDead => PlantStage::Young,
+            PlantStage::GrowingWilted | PlantStage::GrowingDead => PlantStage::Growing,
+            PlantStage::MatureWilted | PlantStage::MatureDead => PlantStage::Mature,
+            PlantStage::ThrivingWilted | PlantStage::ThrivingDead => PlantStage::Thriving,
+            other => other,
+        }
+    }
+
+    pub fn is_wilted(self) -> bool {
+        matches!(
+            self,
+            PlantStage::SeedlingWilted
+                | PlantStage::YoungWilted
+                | PlantStage::GrowingWilted
+                | PlantStage::MatureWilted
+                | PlantStage::ThrivingWilted
+        )
+    }
+
+    /// Any dead variant — per-stage death art or the generic terminal `Dead`.
+    pub fn is_dead(self) -> bool {
+        matches!(
+            self,
+            PlantStage::Dead
+                | PlantStage::SeedlingDead
+                | PlantStage::YoungDead
+                | PlantStage::GrowingDead
+                | PlantStage::MatureDead
+                | PlantStage::ThrivingDead
+        )
+    }
+
+    /// Add the `_wilted` suffix to a healthy base stage. Returns `self` for
+    /// stages that don't have a wilted variant (e.g. EmptyPot).
+    pub fn wilted_variant(self) -> Self {
+        match self {
+            PlantStage::Seedling => PlantStage::SeedlingWilted,
+            PlantStage::Young => PlantStage::YoungWilted,
+            PlantStage::Growing => PlantStage::GrowingWilted,
+            PlantStage::Mature => PlantStage::MatureWilted,
+            PlantStage::Thriving => PlantStage::ThrivingWilted,
+            other => other,
+        }
+    }
+
+    /// Per-stage dead-art variant. Only used by the debug viewer — the live
+    /// game collapses death to the single terminal `Dead` state.
+    pub fn dead_variant(self) -> Self {
+        match self {
+            PlantStage::Seedling | PlantStage::SeedlingWilted => PlantStage::SeedlingDead,
+            PlantStage::Young | PlantStage::YoungWilted => PlantStage::YoungDead,
+            PlantStage::Growing | PlantStage::GrowingWilted => PlantStage::GrowingDead,
+            PlantStage::Mature | PlantStage::MatureWilted => PlantStage::MatureDead,
+            PlantStage::Thriving | PlantStage::ThrivingWilted => PlantStage::ThrivingDead,
+            other => other,
+        }
+    }
+
+    /// Display label used by inspect lines and the debug scene.
+    pub fn label(self) -> &'static str {
+        match self {
+            PlantStage::EmptyPot => "Empty pot",
+            PlantStage::Seedling => "Seedling",
+            PlantStage::SeedlingWilted => "Wilting seedling",
+            PlantStage::SeedlingDead => "Dead seedling",
+            PlantStage::Young => "Young",
+            PlantStage::YoungWilted => "Wilting",
+            PlantStage::YoungDead => "Dead",
+            PlantStage::Growing => "Growing",
+            PlantStage::GrowingWilted => "Wilting",
+            PlantStage::GrowingDead => "Dead",
+            PlantStage::Mature => "Mature",
+            PlantStage::MatureWilted => "Wilting",
+            PlantStage::MatureDead => "Dead",
+            PlantStage::Thriving => "Thriving",
+            PlantStage::ThrivingWilted => "Wilting",
+            PlantStage::ThrivingDead => "Dead",
+            PlantStage::Dead => "Dead",
+            PlantStage::Dormant => "Dormant",
+        }
+    }
+}
+
+/// Pot size used by the renderer — extends `PotSize` with the synthetic
+/// `Ground` value (which has no sprite).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum PotKind {
+    Small,
+    Medium,
+    Large,
+    Planter,
+    Ground,
+}
+
+impl PotKind {
+    pub fn from_pot_size(p: PotSize) -> Self {
+        match p {
+            PotSize::Small => PotKind::Small,
+            PotSize::Medium => PotKind::Medium,
+            PotSize::Large => PotKind::Large,
+            PotSize::Planter => PotKind::Planter,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            PotKind::Small => "Small",
+            PotKind::Medium => "Medium",
+            PotKind::Large => "Large",
+            PotKind::Planter => "Planter",
+            PotKind::Ground => "Ground",
+        }
+    }
+}
+
+/// Look up a pot sprite by kind. Returns None for ground plants.
+pub fn pot_sprite(kind: PotKind) -> Option<&'static Sprite> {
+    match kind {
+        PotKind::Small => Some(&PLANTER1),
+        PotKind::Medium => Some(&POT_MEDIUM),
+        PotKind::Large => Some(&POT_LARGE),
+        PotKind::Planter => Some(&PLANTER_SMALL_1),
+        PotKind::Ground => None,
+    }
+}
+
+/// Look up a plant sprite by (seed type, stage). Returns None for stages that
+/// intentionally render nothing (EmptyPot, generic terminal Dead, Dormant).
+/// The per-stage `*_Dead` variants return real corpse art so a plant that
+/// died at e.g. Mature renders `MATURE_DEAD` rather than disappearing.
+pub fn plant_sprite(seed: SeedKind, stage: PlantStage) -> Option<&'static Sprite> {
+    match stage {
+        PlantStage::EmptyPot | PlantStage::Dead | PlantStage::Dormant => None,
+        _ => Some(match seed {
+            SeedKind::CatGrass => match stage {
+                PlantStage::Seedling => &GRASS_SEEDLING,
+                PlantStage::SeedlingWilted => &GRASS_SEEDLING_WILTED,
+                PlantStage::SeedlingDead => &GRASS_SEEDLING_DEAD,
+                PlantStage::Young => &GRASS_YOUNG,
+                PlantStage::YoungWilted => &GRASS_YOUNG_WILTED,
+                PlantStage::YoungDead => &GRASS_YOUNG_DEAD,
+                PlantStage::Growing => &GRASS_GROWING,
+                PlantStage::GrowingWilted => &GRASS_GROWING_WILTED,
+                PlantStage::GrowingDead => &GRASS_GROWING_DEAD,
+                PlantStage::Mature => &GRASS_MATURE,
+                PlantStage::MatureWilted => &GRASS_MATURE_WILTED,
+                PlantStage::MatureDead => &GRASS_MATURE_DEAD,
+                PlantStage::Thriving => &GRASS_THRIVING,
+                PlantStage::ThrivingWilted => &GRASS_THRIVING_WILTED,
+                PlantStage::ThrivingDead => &GRASS_THRIVING_DEAD,
+                _ => return None,
+            },
+            SeedKind::Freesia => match stage {
+                PlantStage::Seedling => &PLANT_SEEDLING,
+                PlantStage::SeedlingWilted => &PLANT_SEEDLING_WILTED,
+                PlantStage::SeedlingDead => &PLANT_SEEDLING_DEAD,
+                PlantStage::Young => &FREESIA_YOUNG,
+                PlantStage::YoungWilted => &FREESIA_YOUNG_WILTED,
+                PlantStage::YoungDead => &FREESIA_YOUNG_DEAD,
+                PlantStage::Growing => &FREESIA_GROWING,
+                PlantStage::GrowingWilted => &FREESIA_GROWING_WILTED,
+                PlantStage::GrowingDead => &FREESIA_GROWING_DEAD,
+                PlantStage::Mature => &FREESIA_MATURE,
+                PlantStage::MatureWilted => &FREESIA_MATURE_WILTED,
+                PlantStage::MatureDead => &FREESIA_MATURE_DEAD,
+                PlantStage::Thriving => &FREESIA_THRIVING,
+                PlantStage::ThrivingWilted => &FREESIA_THRIVING_WILTED,
+                PlantStage::ThrivingDead => &FREESIA_THRIVING_DEAD,
+                _ => return None,
+            },
+            SeedKind::Sunflower => match stage {
+                PlantStage::Seedling => &PLANT_SEEDLING,
+                PlantStage::SeedlingWilted => &PLANT_SEEDLING_WILTED,
+                PlantStage::SeedlingDead => &PLANT_SEEDLING_DEAD,
+                PlantStage::Young => &SUNFLOWER_YOUNG,
+                PlantStage::YoungWilted => &SUNFLOWER_YOUNG_WILTED,
+                PlantStage::YoungDead => &SUNFLOWER_YOUNG_DEAD,
+                PlantStage::Growing => &SUNFLOWER_GROWING,
+                PlantStage::GrowingWilted => &SUNFLOWER_GROWING_WILTED,
+                PlantStage::GrowingDead => &SUNFLOWER_GROWING_DEAD,
+                PlantStage::Mature => &SUNFLOWER_MATURE,
+                PlantStage::MatureWilted => &SUNFLOWER_MATURE_WILTED,
+                PlantStage::MatureDead => &SUNFLOWER_MATURE_DEAD,
+                PlantStage::Thriving => &SUNFLOWER_THRIVING,
+                PlantStage::ThrivingWilted => &SUNFLOWER_THRIVING_WILTED,
+                PlantStage::ThrivingDead => &SUNFLOWER_THRIVING_DEAD,
+                _ => return None,
+            },
+            SeedKind::Rose => match stage {
+                PlantStage::Seedling => &PLANT_SEEDLING,
+                PlantStage::SeedlingWilted => &PLANT_SEEDLING_WILTED,
+                PlantStage::SeedlingDead => &PLANT_SEEDLING_DEAD,
+                PlantStage::Young => &ROSE_YOUNG,
+                PlantStage::YoungWilted => &ROSE_YOUNG_WILTED,
+                PlantStage::YoungDead => &ROSE_YOUNG_DEAD,
+                PlantStage::Growing => &ROSE_GROWING,
+                PlantStage::GrowingWilted => &ROSE_GROWING_WILTED,
+                PlantStage::GrowingDead => &ROSE_GROWING_DEAD,
+                PlantStage::Mature => &ROSE_MATURE,
+                PlantStage::MatureWilted => &ROSE_MATURE_WILTED,
+                PlantStage::MatureDead => &ROSE_MATURE_DEAD,
+                PlantStage::Thriving => &ROSE_THRIVING,
+                PlantStage::ThrivingWilted => &ROSE_THRIVING_WILTED,
+                PlantStage::ThrivingDead => &ROSE_THRIVING_DEAD,
+                _ => return None,
+            },
+        }),
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Pot sprites

@@ -5,11 +5,19 @@ use crate::{
     clock::ClockWidget,
     context::GameContext,
     environment::Layer,
+    gardening_ui::PlantSurface,
     input::Buttons,
     location_scene::LocationScene,
+    plant_system::PlantLayer,
     render::Renderer,
     scene::{Scene, SceneId},
 };
+
+const PLANT_SURFACES: &[PlantSurface] = &[
+    PlantSurface { y_snap: 63, layer: PlantLayer::Foreground, x_min: 26, x_max: 182 },
+    PlantSurface { y_snap: 60, layer: PlantLayer::Midground,  x_min: 26, x_max: 150 },
+    PlantSurface { y_snap: 29, layer: PlantLayer::Midground,  x_min: 95, x_max: 150 },
+];
 
 const WORLD_WIDTH: i32 = 192;
 const CHAR_WORLD_X: i32 = 64;
@@ -99,7 +107,7 @@ impl InsideScene {
 
 impl Scene for InsideScene {
     fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::Inside);
+        self.base.enter(ctx, SceneId::Inside, PLANT_SURFACES);
         let bookshelf_y = 63 - BOOKSHELF.height as i32;
         self.base.environment.add_object(
             Layer::Foreground,
@@ -142,10 +150,14 @@ impl Scene for InsideScene {
         self.base.draw_sky(renderer, ctx);
         self.draw_window(renderer);
         self.base.environment.draw_layer(renderer, Layer::Background);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Background);
         let mg_offset = self.base.environment.camera_offset(Layer::Midground);
         self.clock.draw(renderer, mg_offset);
         self.base.environment.draw_layer(renderer, Layer::Midground);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Midground);
         self.base.environment.draw_layer(renderer, Layer::Foreground);
+        self.base.draw_plants(ctx, renderer, PlantLayer::Foreground);
         self.base.draw_character(renderer, ctx);
+        self.base.draw_overlay(ctx, renderer);
     }
 }

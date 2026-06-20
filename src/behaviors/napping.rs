@@ -139,12 +139,17 @@ impl Behavior for NappingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 6> = heapless::Vec::new();
+        let mut bonus: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
         let _ = bonus.push((StatId::Energy, 18.0));
         let _ = bonus.push((StatId::Comfort, 6.0));
         let _ = bonus.push((StatId::Focus, 6.0));
         let _ = bonus.push((StatId::Serenity, 0.6));
         let _ = bonus.push((StatId::Fullness, -3.0));
+        let ph = ctx.scene_plant_health as f32;
+        if ph != 0.0 {
+            let _ = bonus.push((StatId::Serenity, ph * 0.1));
+            let _ = bonus.push((StatId::Comfort, ph * 0.1));
+        }
         for entry in bonus.iter_mut() {
             entry.1 *= progress;
         }
