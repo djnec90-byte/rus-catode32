@@ -92,6 +92,9 @@ pub enum LocationAction {
     Medicine,
     GoToStore,
     Gardening(GardeningAction),
+    /// Vacation scenes inject this as the top menu item; selecting it (with
+    /// the "Ready to go home?" confirm) returns the player to the inside scene.
+    GoHome,
 }
 
 pub enum LocationMenuResult {
@@ -137,6 +140,8 @@ pub struct LocationMenu {
     /// True when the current scene has any PLANT_SURFACES defined; controls
     /// whether the Gardening root entry is shown.
     has_plant_surfaces: bool,
+    /// True on vacation scenes; injects the "Go home" item at the top of Root.
+    is_vacation: bool,
 }
 
 impl LocationMenu {
@@ -151,15 +156,23 @@ impl LocationMenu {
             tend_plant_id: None,
             current_scene: None,
             has_plant_surfaces: false,
+            is_vacation: false,
         }
     }
 
-    pub fn open(&mut self, ctx: &GameContext, scene: SceneId, has_surfaces: bool) {
+    pub fn open(
+        &mut self,
+        ctx: &GameContext,
+        scene: SceneId,
+        has_surfaces: bool,
+        is_vacation: bool,
+    ) {
         self.stack.clear();
         self.confirm = None;
         self.tend_plant_id = None;
         self.current_scene = Some(scene);
         self.has_plant_surfaces = has_surfaces;
+        self.is_vacation = is_vacation;
         self.set_page(Page::Root, ctx);
     }
 
@@ -171,6 +184,7 @@ impl LocationMenu {
         self.tend_plant_id = Some(plant_id);
         self.current_scene = Some(scene);
         self.has_plant_surfaces = true;
+        self.is_vacation = false;
         self.set_page(Page::GardeningTend, ctx);
     }
 
@@ -286,6 +300,7 @@ impl LocationMenu {
             ctx,
             self.current_scene,
             self.has_plant_surfaces,
+            self.is_vacation,
             self.tend_plant_id,
             &mut self.items,
         );
@@ -527,11 +542,22 @@ fn build_page(
     ctx: &GameContext,
     current_scene: Option<SceneId>,
     has_surfaces: bool,
+    is_vacation: bool,
     tend_plant_id: Option<u32>,
     items: &mut Vec<Item, MAX_PAGE_ITEMS>,
 ) {
     match page {
         Page::Root => {
+            if is_vacation {
+                push_item(
+                    items,
+                    "Go home",
+                    Some(icons::HOUSE),
+                    Some(LocationAction::GoHome),
+                    None,
+                    Some("Ready to go home?"),
+                );
+            }
             push_item(items, "Affection", Some(icons::HEART), None, Some(Page::Affection), None);
             push_item(items, "Train", Some(icons::HAND), None, Some(Page::Train), None);
             push_item(items, "Feed", Some(icons::MEAL), None, Some(Page::Feed), None);

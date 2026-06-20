@@ -40,6 +40,10 @@ impl VocalizingBehavior {
     }
 
     pub fn can_trigger(ctx: &GameContext) -> bool {
+        // Vacation overstay always allows a vocalize so the pet can ask to go home.
+        if ctx.wants_to_go_home {
+            return true;
+        }
         const NEED: f32 = 60.0;
         let happy = ctx.energy > 35.0 && ctx.playfulness > 40.0;
         let needs_unmet = ctx.fullness < NEED
@@ -59,6 +63,10 @@ impl VocalizingBehavior {
     }
 
     pub fn priority(ctx: &GameContext, rng: &mut u32) -> u32 {
+        // Wants-to-go-home wins most selection rounds (Python parity).
+        if ctx.wants_to_go_home {
+            return rand::rand_range_f32(rng, 2.0, 8.0).max(0.0) as u32;
+        }
         // Outdoor weather complaint.
         if common::is_outdoor(ctx.last_main_scene) {
             let weather_bad = matches!(
@@ -121,9 +129,11 @@ impl Behavior for VocalizingBehavior {
         self.total = rand::rand_range_f32(&mut ctx.rng, 5.0, 9.0);
         self.pose_id = PoseId::SittingForwardNeutral;
 
-        // Hint icon for the speech bubble. Mirrors Python: low-fullness → meal,
-        // weather complaint → sun, low-affection → heart.
-        ctx.pending_popup_icon = if ctx.fullness < 30.0 {
+        // Hint icon for the speech bubble. Mirrors Python: vacation overstay →
+        // home, low-fullness → meal, weather complaint → sun, low-affection → heart.
+        ctx.pending_popup_icon = if ctx.wants_to_go_home {
+            Some("home")
+        } else if ctx.fullness < 30.0 {
             Some("hunger")
         } else if matches!(ctx.weather, Weather::Rain | Weather::Storm | Weather::Snow)
             && common::is_outdoor(ctx.last_main_scene)

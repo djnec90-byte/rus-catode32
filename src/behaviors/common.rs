@@ -106,6 +106,10 @@ pub fn is_outdoor(scene: SceneId) -> bool {
 }
 
 pub fn auto_select_scene_exit(ctx: &mut GameContext) -> Option<NextBehavior> {
+    // Pet stays put on vacation — the player explicitly chooses "Go home".
+    if ctx.on_vacation {
+        return None;
+    }
     let current = ctx.last_main_scene;
     let options = transitions_for(current);
     if options.is_empty() {

@@ -509,6 +509,13 @@ pub struct GameContext {
     pub scene_plant_health: i8,
     pub in_familiar_location: bool,
 
+    /// True while the player is on a vacation scene. Suppresses the
+    /// behavior-layer's auto-pick scene exit so the pet stays put.
+    pub on_vacation: bool,
+    /// Set by the active vacation scene once the enjoyment cap is reached;
+    /// drives the vocalizing behavior to surface a "home" bubble icon.
+    pub wants_to_go_home: bool,
+
     // --- Plant / gardening state ---
     pub plants: Vec<Plant, MAX_PLANTS>,
     pub next_plant_id: u32,
@@ -629,6 +636,9 @@ impl GameContext {
 
             scene_plant_health: 0,
             in_familiar_location: true,
+
+            on_vacation: false,
+            wants_to_go_home: false,
 
             plants: starter_plants(),
             next_plant_id: STARTER_PLANT_COUNT as u32,

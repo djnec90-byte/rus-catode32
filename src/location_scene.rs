@@ -235,8 +235,12 @@ impl LocationScene {
             return Some(SceneId::Menu);
         }
         if buttons.was_just_pressed(Button::Menu2) {
-            self.menu
-                .open(ctx, self.scene_id, !self.plant_surfaces.is_empty());
+            self.menu.open(
+                ctx,
+                self.scene_id,
+                !self.plant_surfaces.is_empty(),
+                ctx.on_vacation,
+            );
             self.menu_active = true;
             return None;
         }
@@ -454,6 +458,7 @@ impl LocationScene {
             }
             LocationAction::GoToStore => return Some(SceneId::Store),
             LocationAction::Gardening(action) => return self.apply_gardening_action(ctx, action),
+            LocationAction::GoHome => return Some(SceneId::Inside),
         }
         None
     }

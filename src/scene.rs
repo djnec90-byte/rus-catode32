@@ -29,6 +29,10 @@ pub enum SceneId {
     DebugPower,
     Zoomies,
     Breakout,
+    VacationPark,
+    VacationForest,
+    VacationAquarium,
+    VacationBeach,
     Stub(&'static str),
 }
 

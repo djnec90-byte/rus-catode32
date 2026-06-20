@@ -29,10 +29,10 @@ const MINIGAMES: &[MenuItem] = &[
 ];
 
 const VACATIONS: &[MenuItem] = &[
-    MenuItem { label: "Park",     icon: Some(icons::TREES), submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("vacation_park"))),     confirm: None },
-    MenuItem { label: "Forest",   icon: Some(icons::TREES), submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("vacation_forest"))),   confirm: None },
-    MenuItem { label: "Aquarium", icon: Some(icons::FISH),  submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("vacation_aquarium"))), confirm: None },
-    MenuItem { label: "Beach",    icon: Some(icons::SUN),   submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("vacation_beach"))),    confirm: None },
+    MenuItem { label: "Park",     icon: Some(icons::TREES), submenu: None, action: Some(MenuAction::Scene(SceneId::VacationPark)),     confirm: None },
+    MenuItem { label: "Forest",   icon: Some(icons::TREES), submenu: None, action: Some(MenuAction::Scene(SceneId::VacationForest)),   confirm: None },
+    MenuItem { label: "Aquarium", icon: Some(icons::FISH),  submenu: None, action: Some(MenuAction::Scene(SceneId::VacationAquarium)), confirm: None },
+    MenuItem { label: "Beach",    icon: Some(icons::SUN),   submenu: None, action: Some(MenuAction::Scene(SceneId::VacationBeach)),    confirm: None },
 ];
 
 const WIRELESS: &[MenuItem] = &[

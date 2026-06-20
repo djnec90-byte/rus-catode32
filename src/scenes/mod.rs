@@ -20,6 +20,11 @@ pub mod stats_scene;
 pub mod store_scene;
 pub mod stub_scene;
 pub mod treehouse_scene;
+pub mod vacation_aquarium_scene;
+pub mod vacation_base;
+pub mod vacation_beach_scene;
+pub mod vacation_forest_scene;
+pub mod vacation_park_scene;
 pub mod zoomies_scene;
 
 use crate::scene::{Scene, SceneId};
@@ -46,6 +51,10 @@ use stats_scene::StatsScene;
 use store_scene::StoreScene;
 use stub_scene::StubScene;
 use treehouse_scene::TreehouseScene;
+use vacation_aquarium_scene::VacationAquariumScene;
+use vacation_beach_scene::VacationBeachScene;
+use vacation_forest_scene::VacationForestScene;
+use vacation_park_scene::VacationParkScene;
 use zoomies_scene::ZoomiesScene;
 
 pub enum ActiveScene {
@@ -71,6 +80,10 @@ pub enum ActiveScene {
     DebugTime(DebugTimeScene),
     Zoomies(ZoomiesScene),
     Breakout(BreakoutScene),
+    VacationPark(VacationParkScene),
+    VacationForest(VacationForestScene),
+    VacationAquarium(VacationAquariumScene),
+    VacationBeach(VacationBeachScene),
     Stub(StubScene),
 }
 
@@ -99,6 +112,12 @@ impl ActiveScene {
             SceneId::DebugTime => ActiveScene::DebugTime(DebugTimeScene::new()),
             SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
             SceneId::Breakout => ActiveScene::Breakout(BreakoutScene::new()),
+            SceneId::VacationPark => ActiveScene::VacationPark(VacationParkScene::new()),
+            SceneId::VacationForest => ActiveScene::VacationForest(VacationForestScene::new()),
+            SceneId::VacationAquarium => {
+                ActiveScene::VacationAquarium(VacationAquariumScene::new())
+            }
+            SceneId::VacationBeach => ActiveScene::VacationBeach(VacationBeachScene::new()),
             SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
@@ -127,6 +146,10 @@ impl ActiveScene {
             ActiveScene::DebugTime(s) => s,
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
+            ActiveScene::VacationPark(s) => s,
+            ActiveScene::VacationForest(s) => s,
+            ActiveScene::VacationAquarium(s) => s,
+            ActiveScene::VacationBeach(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }
@@ -155,6 +178,10 @@ impl ActiveScene {
             ActiveScene::DebugTime(s) => s,
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
+            ActiveScene::VacationPark(s) => s,
+            ActiveScene::VacationForest(s) => s,
+            ActiveScene::VacationAquarium(s) => s,
+            ActiveScene::VacationBeach(s) => s,
             ActiveScene::Stub(s) => s,
         }
     }

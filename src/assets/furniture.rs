@@ -47,3 +47,25 @@ pub static FAUCET: Sprite = Sprite {
     frames: FAUCET_FRAMES,
     fill_frames: None,
 };
+
+const STREET_LAMP_FRAMES: &[&[u8]] = &[
+    b"\x10\x7c\xfe\x44\x44\x44\x54\x44\x7c\x38\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x10\x38\x10\x38\x38\x38\x38\x38\x38\x7c\xfe\xfe",
+];
+
+pub static STREET_LAMP: Sprite = Sprite {
+    width: 7,
+    height: 37,
+    frames: STREET_LAMP_FRAMES,
+    fill_frames: None,
+};
+
+const PARK_BENCH_FRAMES: &[&[u8]] = &[
+    b"\x20\x00\x80\x7f\xff\xc0\xff\xff\xe0\x20\x00\x80\xff\xff\xe0\xff\xff\xe0\x20\x00\x80\x7f\xff\xf0\x10\x00\x40\x10\x00\x40\x38\x00\xe0",
+];
+
+pub static PARK_BENCH: Sprite = Sprite {
+    width: 20,
+    height: 11,
+    frames: PARK_BENCH_FRAMES,
+    fill_frames: None,
+};

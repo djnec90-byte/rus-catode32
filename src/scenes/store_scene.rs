@@ -116,47 +116,33 @@ const SERVICE: &[MenuItem] = &[
     },
 ];
 
-// TODO: replace these Stub trip destinations with real vacation scenes once
-// they're ported. The purchase still deducts coins and changes scene.
 const TRIPS: &[MenuItem] = &[
     MenuItem {
         label: "Park",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTrip(
-            SceneId::Stub("vacation_park"),
-            15,
-        ))),
+        action: Some(MenuAction::Store(StoreAction::BuyTrip(SceneId::VacationPark, 15))),
         confirm: Some("Trip: park 15c"),
     },
     MenuItem {
         label: "Forest",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTrip(
-            SceneId::Stub("vacation_forest"),
-            25,
-        ))),
+        action: Some(MenuAction::Store(StoreAction::BuyTrip(SceneId::VacationForest, 25))),
         confirm: Some("Trip: forest 25c"),
     },
     MenuItem {
         label: "Aqua.",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTrip(
-            SceneId::Stub("vacation_aquarium"),
-            50,
-        ))),
+        action: Some(MenuAction::Store(StoreAction::BuyTrip(SceneId::VacationAquarium, 50))),
         confirm: Some("Trip: aquarium 50c"),
     },
     MenuItem {
         label: "Beach",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTrip(
-            SceneId::Stub("vacation_beach"),
-            100,
-        ))),
+        action: Some(MenuAction::Store(StoreAction::BuyTrip(SceneId::VacationBeach, 100))),
         confirm: Some("Trip: beach 100c"),
     },
 ];
