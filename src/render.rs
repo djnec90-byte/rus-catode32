@@ -226,6 +226,83 @@ impl Renderer {
         self.display.draw_iter(pixels).ok();
     }
 
+    /// Rotate a 1-bpp packed sprite around its center and draw it.
+    ///
+    /// `pos` is the top-left of the *unrotated* sprite, matching `draw_sprite_raw`.
+    /// The rotated sprite's bounding box is centered on the same point, so the
+    /// visual center doesn't drift as the angle changes. Heapless: pixels are
+    /// back-mapped from destination to source and streamed straight to the
+    /// display via `draw_iter`, so there is no intermediate buffer.
+    pub fn draw_sprite_raw_rotated(
+        &mut self,
+        data: &[u8],
+        width: u16,
+        height: u16,
+        pos: Point,
+        angle_deg: f32,
+        opts: SpriteOpts,
+    ) {
+        use micromath::F32Ext;
+        if angle_deg == 0.0 {
+            self.draw_sprite_raw(data, width, height, pos, opts);
+            return;
+        }
+        let w_f = width as f32;
+        let h_f = height as f32;
+        let cx_src = w_f * 0.5;
+        let cy_src = h_f * 0.5;
+        let theta = angle_deg * core::f32::consts::PI / 180.0;
+        let cos_t = theta.cos();
+        let sin_t = theta.sin();
+        let abs_cos = cos_t.abs();
+        let abs_sin = sin_t.abs();
+        let new_w = (w_f * abs_cos + h_f * abs_sin).ceil() as i32;
+        let new_h = (w_f * abs_sin + h_f * abs_cos).ceil() as i32;
+        let cx_dst = new_w as f32 * 0.5;
+        let cy_dst = new_h as f32 * 0.5;
+        let row_bytes = (width as usize + 7) / 8;
+        let origin_x = pos.x - (new_w - width as i32) / 2;
+        let origin_y = pos.y - (new_h - height as i32) / 2;
+        let w_usize = width as usize;
+        let h_usize = height as usize;
+        let pixels = (0..new_h).flat_map(move |dy| {
+            (0..new_w).filter_map(move |dx| {
+                let rx = dx as f32 + 0.5 - cx_dst;
+                let ry = dy as f32 + 0.5 - cy_dst;
+                let sx_f = cos_t * rx + sin_t * ry + cx_src;
+                let sy_f = -sin_t * rx + cos_t * ry + cy_src;
+                if sx_f < 0.0 || sy_f < 0.0 {
+                    return None;
+                }
+                let mut sx = sx_f as usize;
+                let mut sy = sy_f as usize;
+                if sx >= w_usize || sy >= h_usize {
+                    return None;
+                }
+                if opts.mirror_h {
+                    sx = w_usize - 1 - sx;
+                }
+                if opts.mirror_v {
+                    sy = h_usize - 1 - sy;
+                }
+                let byte = data[sy * row_bytes + sx / 8];
+                let bit = 7 - (sx % 8);
+                let mut on = (byte >> bit) & 1 == 1;
+                if opts.invert {
+                    on = !on;
+                }
+                if opts.transparent && on == opts.transparent_color {
+                    return None;
+                }
+                Some(Pixel(
+                    Point::new(origin_x + dx, origin_y + dy),
+                    if on { BinaryColor::On } else { BinaryColor::Off },
+                ))
+            })
+        });
+        self.display.draw_iter(pixels).ok();
+    }
+
     pub fn draw_sprite(&mut self, sprite: &Sprite, pos: Point, opts: SpriteOpts) {
         if let Some(fill_frames) = sprite.fill_frames {
             let fill_idx = opts.frame.min(fill_frames.len().saturating_sub(1));

@@ -4,7 +4,7 @@ use heapless::Vec;
 use micromath::F32Ext;
 
 use crate::{
-    assets::nature::{CLOUD1, CLOUD2, CLOUD3, HOT_AIR_BALLOON, MOON, PLANE_TINY, SUN},
+    assets::nature::{CLOUD1, CLOUD2, CLOUD3, HOT_AIR_BALLOON, MOON, PLANE_TINY, SUN, SUN_HOT},
     context::GameContext,
     render::{Renderer, Sprite, SpriteOpts},
     time_system::{Season, Weather},
@@ -426,11 +426,11 @@ pub struct SkyRenderer {
     lightning_timer: f32,
     lightning_invert: bool,
     rng: u32,
+    star_seed: u32,
 }
 
 impl SkyRenderer {
     pub fn new(world_width: i32) -> Self {
-        // TODO: per-pet seeding (Python: star_seed = (pet_seed ^ STAR_SEED) & 0xFFFFFFFF).
         let mut seed = Instant::now().duration_since_epoch().as_micros() as u32;
         seed ^= 0xdead_beef;
         if seed == 0 {
@@ -457,7 +457,21 @@ impl SkyRenderer {
             lightning_timer: 0.0,
             lightning_invert: false,
             rng: seed,
+            star_seed: STAR_SEED,
         }
+    }
+
+    /// Regenerate the star field from a pet seed so each pet has a unique but
+    /// stable starscape. Mirrors Python's
+    /// `star_seed = (pet_seed ^ (pet_seed >> 32)) & 0xFFFFFFFF`.
+    pub fn reseed_stars(&mut self, pet_seed: u64) {
+        let folded = ((pet_seed ^ (pet_seed >> 32)) & 0xFFFF_FFFF) as u32;
+        let s = if folded == 0 { STAR_SEED } else { folded };
+        if s == self.star_seed {
+            return;
+        }
+        self.star_seed = s;
+        self.stars = generate_stars(s);
     }
 
     pub fn lightning_invert(&self) -> bool {
@@ -728,7 +742,7 @@ impl SkyRenderer {
             self.draw_stars(renderer, ctx, bg_offset);
         }
         self.draw_moon(renderer, ctx.moon_phase, hours_f, bg_offset);
-        self.draw_sun(renderer, hours_f, bg_offset);
+        self.draw_sun(renderer, hours_f, bg_offset, ctx.temperature);
         if let Some(ss) = &self.shooting_star {
             ss.draw(renderer);
         }
@@ -849,19 +863,19 @@ impl SkyRenderer {
         );
     }
 
-    fn draw_sun(&self, renderer: &mut Renderer, hours_f: f32, camera_offset: i32) {
+    fn draw_sun(&self, renderer: &mut Renderer, hours_f: f32, camera_offset: i32, temperature: f32) {
         let t = (hours_f - SUN_RISE) / (SUN_SET - SUN_RISE);
         let x = (SUN_X_START + t * (SUN_X_END - SUN_X_START)) as i32;
         let y = (SUN_Y_HORIZON - (SUN_Y_HORIZON - SUN_Y_PEAK) * 4.0 * t * (1.0 - t)) as i32;
 
+        let sprite: &Sprite = if temperature > 30.0 { &SUN_HOT } else { &SUN };
         let screen_x = x - camera_offset;
-        if screen_x + SUN.width as i32 <= 0 || screen_x >= DISPLAY_WIDTH {
+        if screen_x + sprite.width as i32 <= 0 || screen_x >= DISPLAY_WIDTH {
             return;
         }
-        // TODO: SUN_HOT sprite when temperature > 30°C (Stage 4 will set temperature).
 
         renderer.draw_sprite(
-            &SUN,
+            sprite,
             Point::new(screen_x, y),
             SpriteOpts {
                 frame: self.sun_anim_frame,

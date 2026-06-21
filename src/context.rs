@@ -607,7 +607,6 @@ impl GameContext {
             time_hours: 12,
             time_minutes: 0,
             day_number: 0,
-            // TODO: derive season_offset from ctx.pet_seed once the personality system is ported.
             // Matches Python default: all pets start in late spring.
             season_offset: 120,
             season: Season::Spring,

@@ -1,4 +1,6 @@
-use crate::{context::GameContext, weather_system::WeatherSystem};
+use crate::{
+    context::GameContext, temperature_system::get_temperature, weather_system::WeatherSystem,
+};
 
 // Matches Python's production override in main.py: game_minutes_per_second = 1/15.
 // That gives ~15 real minutes per in-game hour and ~6 real hours per in-game day.
@@ -82,8 +84,6 @@ impl Weather {
 pub struct TimeSystem {
     accumulator: f32,
     last_temp_hour: i8,
-    // TODO: set from ctx.pet_seed once the personality system is ported.
-    pub pet_seed: u64,
     weather_system: WeatherSystem,
 }
 
@@ -92,7 +92,6 @@ impl TimeSystem {
         Self {
             accumulator: 0.0,
             last_temp_hour: -1,
-            pet_seed: 0,
             weather_system: WeatherSystem::new(),
         }
     }
@@ -121,8 +120,13 @@ impl TimeSystem {
         let current_hour = ctx.time_hours as i8;
         if current_hour != self.last_temp_hour {
             self.last_temp_hour = current_hour;
-            // TODO: port temperature_system.get_temperature using
-            // pet_seed + day + offset + hour + weather.
+            ctx.temperature = get_temperature(
+                ctx.day_number,
+                ctx.season_offset,
+                ctx.time_hours,
+                ctx.weather,
+                ctx.pet_seed as u32,
+            );
         }
 
         self.weather_system.update(mins_to_add, ctx);

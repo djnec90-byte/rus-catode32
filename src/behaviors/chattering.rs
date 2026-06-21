@@ -31,7 +31,7 @@ impl ChatteringBehavior {
             phase_timer: 0.0,
             elapsed: 0.0,
             total: 6.0,
-            pose_id: PoseId::SittingForwardShocked,
+            pose_id: PoseId::SittingSillySideAnnoyed,
             chatter_t: 0.0,
         }
     }
@@ -53,7 +53,7 @@ impl Behavior for ChatteringBehavior {
         self.phase_timer = 0.0;
         self.elapsed = 0.0;
         self.total = rand::rand_range_f32(&mut ctx.rng, 5.0, 9.0);
-        self.pose_id = PoseId::YellingForwardLiftAndYell;
+        self.pose_id = PoseId::SittingSillySideAnnoyed;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
@@ -64,7 +64,7 @@ impl Behavior for ChatteringBehavior {
             Phase::Chattering if self.phase_timer >= self.total - 1.5 => {
                 self.phase = Phase::Settling;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingForwardAloof;
+                self.pose_id = PoseId::SittingSideAloof;
             }
             Phase::Settling if self.phase_timer >= 1.5 => return BehaviorState::Completed,
             _ => {}
@@ -87,17 +87,24 @@ impl Behavior for ChatteringBehavior {
         ctx.apply_stat_changes(&bonus);
     }
 
-    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, _: bool) {
+    fn draw(&self, renderer: &mut Renderer, _ctx: &GameContext, char_screen: Point, mirror_h: bool) {
+        use micromath::F32Ext;
         if self.phase != Phase::Chattering {
             return;
         }
-        // Three stacked pulsing "ek!" texts above the head.
-        let pulse = ((self.chatter_t * 6.0) as i32) % 3;
-        for i in 0..(pulse + 1) {
-            renderer.draw_text(
-                "ek!",
-                Point::new(char_screen.x - 10, char_screen.y - 18 - i * 8),
-            );
+        // Three stacked "ek" texts on the side the cat is facing, each blinking
+        // on/off on a 1.2s cycle with 0.3s phase offsets. Mirrors
+        // `ChatteringBehavior.draw` in the MicroPython source.
+        const CYCLE: f32 = 1.2;
+        const ON_DURATION: f32 = 0.8;
+        let base_x = char_screen.x + if mirror_h { 16 } else { -36 };
+        let base_y = char_screen.y - 10;
+        for i in 0..3 {
+            let raw = self.phase_timer - i as f32 * 0.3;
+            let age = raw - (raw / CYCLE).floor() * CYCLE;
+            if age < ON_DURATION {
+                renderer.draw_text("ek", Point::new(base_x, base_y - i * 9));
+            }
         }
     }
 }

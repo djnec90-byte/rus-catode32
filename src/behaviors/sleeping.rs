@@ -175,19 +175,24 @@ impl Behavior for SleepingBehavior {
         renderer: &mut Renderer,
         _ctx: &GameContext,
         char_screen: Point,
-        _mirror_h: bool,
+        mirror_h: bool,
     ) {
+        use micromath::F32Ext;
         if self.phase != Phase::Sleeping {
             return;
         }
-        // Four animated wavy Z's drifting up.
-        let t = self.z_timer;
+        let base_x = char_screen.x + if mirror_h { 20 } else { -20 };
+        let base_y = char_screen.y - 35;
+        const WAVE_SPEED: f32 = 3.0;
+        const WAVE_AMP: f32 = 3.0;
+        const SPACING_X: i32 = 8;
+        const SPACING_Y: i32 = -2;
         for i in 0..4 {
-            let phase = t + i as f32 * 0.6;
-            let dx = ((phase * 2.0) as i32) % 6 - 3;
-            let dy = (phase * 8.0) as i32 % 24;
-            let pos = Point::new(char_screen.x - 6 + dx, char_screen.y - 16 - dy);
-            renderer.draw_text("z", pos);
+            let phase_offset = i as f32 * 0.8;
+            let wave = (self.z_timer * WAVE_SPEED - phase_offset).sin() * WAVE_AMP;
+            let x = base_x + i * SPACING_X;
+            let y = base_y + i * SPACING_Y + wave as i32;
+            renderer.draw_text("z", Point::new(x, y));
         }
     }
 

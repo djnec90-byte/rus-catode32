@@ -16,6 +16,12 @@ pub const MOUSE: &[u8] = b"\x08\x00\x14\x00\x13\x00\x20\x80\x48\x40\x80\x60\x80\
 pub const BUBBLES: &[u8] = b"\x60\xe0\x91\x10\x92\x28\x62\x08\x02\x08\x01\x10\x38\xe0\x44\x00\x8a\x60\x82\x90\x82\x90\x44\x60\x38\x00";
 pub const STRING_ICON: &[u8] = b"\x3c\x00\x40\x00\x80\xf0\x81\x08\x86\x08\x88\x08\x70\x08\x00\x10\x00\xe0\x0f\x00\x10\x00\x10\x18\x0f\xe0";
 
+// 8x16 exclamation mark sprite, drifting above the cat during the Startled
+// behavior. Port of `EXCLAIM` in `micropython/src/assets/icons.py`.
+pub const EXCLAIM_W: u16 = 8;
+pub const EXCLAIM_H: u16 = 16;
+pub const EXCLAIM: &[u8] = b"\x20\x70\xf8\xf8\xf8\x7c\x7c\x3c\x3c\x1c\x08\x00\x06\x0f\x0f\x06";
+
 // Small 7x7 burst sprite frames (used by BurstEffect with `play_bursts(HEAL)`).
 pub const HEAL_W: u16 = 7;
 pub const HEAL_H: u16 = 7;

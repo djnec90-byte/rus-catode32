@@ -198,8 +198,6 @@ impl Scene for OutsideScene {
         // Seed the scene's RNG from the system clock so each entry rolls a fresh world.
         self.rng = (Instant::now().duration_since_epoch().as_micros() as u32).max(1);
         self.spawn_critters(ctx);
-        // TODO: character.set_pose("sitting.forward.neutral") on enter — Python overrides
-        //       the behavior's chosen pose. We currently leave the pose to the behavior.
         // TODO: espnow.start() when WiFi is wired up and not currently visiting.
         // TODO: first-impression behavior trigger on first enter (Python `_first_impression_behavior`).
     }

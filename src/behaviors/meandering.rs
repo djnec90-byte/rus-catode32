@@ -32,7 +32,7 @@ impl MeanderingBehavior {
             phase_timer: 0.0,
             elapsed: 0.0,
             total: 15.0,
-            pose_id: PoseId::WalkingSideNeutral,
+            pose_id: PoseId::SittingSideNeutral,
             dir: 1,
             speed: 6.0,
             walker_accum: 0.0,
@@ -62,7 +62,7 @@ impl Behavior for MeanderingBehavior {
         self.total = rand::rand_range_f32(&mut ctx.rng, 12.0, 22.0);
         self.dir = if rand::rand_bool(&mut ctx.rng, 0.5) { 1 } else { -1 };
         self.speed = rand::rand_range_f32(&mut ctx.rng, 5.0, 8.0);
-        self.pose_id = PoseId::WalkingSideNeutral;
+        self.pose_id = PoseId::SittingSideNeutral;
     }
 
     fn update(
@@ -77,6 +77,7 @@ impl Behavior for MeanderingBehavior {
             Phase::Starting if self.phase_timer >= 1.0 => {
                 self.phase = Phase::Pacing;
                 self.phase_timer = 0.0;
+                self.pose_id = PoseId::WalkingSideNeutral;
             }
             Phase::Pacing => {
                 let bounced = common::step_walker(
@@ -93,7 +94,7 @@ impl Behavior for MeanderingBehavior {
                 if self.phase_timer >= self.total - 1.5 {
                     self.phase = Phase::Stopping;
                     self.phase_timer = 0.0;
-                    self.pose_id = PoseId::SittingSideNeutral;
+                    self.pose_id = PoseId::SittingSideAloof;
                 }
             }
             Phase::Stopping if self.phase_timer >= 1.5 => return BehaviorState::Completed,

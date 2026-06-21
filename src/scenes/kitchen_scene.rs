@@ -82,8 +82,6 @@ impl Scene for KitchenScene {
     fn enter(&mut self, ctx: &mut GameContext) {
         self.base.enter(ctx, SceneId::Kitchen, PLANT_SURFACES);
         // TODO: BOX_SMALL_1 and FOOD_BOWL items (Python adds them as foreground sprites).
-        // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
-        // TODO: plant surfaces (PLANT_SURFACES) once the plant system is ported.
     }
 
     fn update(
@@ -96,7 +94,6 @@ impl Scene for KitchenScene {
             return Some(id);
         }
         self.clock.set_time(ctx.time_hours, ctx.time_minutes);
-        // TODO: on_post_draw lightning inversion for indoor rooms with no sky drawn.
         None
     }
 

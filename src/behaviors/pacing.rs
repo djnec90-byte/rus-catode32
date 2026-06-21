@@ -33,7 +33,7 @@ impl PacingBehavior {
             phase_timer: 0.0,
             elapsed: 0.0,
             total: 12.0,
-            pose_id: PoseId::WalkingSideDetermined,
+            pose_id: PoseId::SittingSideNeutral,
             dir: 1,
             speed: 14.0,
             walker_accum: 0.0,
@@ -74,7 +74,7 @@ impl Behavior for PacingBehavior {
         self.dir = if rand::rand_bool(&mut ctx.rng, 0.5) { 1 } else { -1 };
         self.speed = rand::rand_range_f32(&mut ctx.rng, 12.0, 18.0);
         self.flip_in = rand::rand_range_f32(&mut ctx.rng, 2.0, 4.0);
-        self.pose_id = PoseId::WalkingSideDetermined;
+        self.pose_id = PoseId::SittingSideNeutral;
     }
 
     fn update(
@@ -89,6 +89,7 @@ impl Behavior for PacingBehavior {
             Phase::Starting if self.phase_timer >= 0.5 => {
                 self.phase = Phase::Pacing;
                 self.phase_timer = 0.0;
+                self.pose_id = PoseId::WalkingSideNeutral;
             }
             Phase::Pacing => {
                 let bounced = common::step_walker(
@@ -107,7 +108,7 @@ impl Behavior for PacingBehavior {
                 if self.phase_timer >= self.total - 1.0 {
                     self.phase = Phase::Stopping;
                     self.phase_timer = 0.0;
-                    self.pose_id = PoseId::SittingSideAnnoyed;
+                    self.pose_id = PoseId::SittingSideAloof;
                 }
             }
             Phase::Stopping if self.phase_timer >= 1.0 => return BehaviorState::Completed,

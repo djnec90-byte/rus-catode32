@@ -12,9 +12,8 @@ use crate::{
 };
 
 const NAP_POSES: &[PoseId] = &[
-    PoseId::LayingSideContent,
-    PoseId::LayingSideBliss,
-    PoseId::LayingSideNeutral,
+    PoseId::SleepingSideModest,
+    PoseId::SleepingSideCrossed,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -42,7 +41,7 @@ impl NappingBehavior {
             elapsed: 0.0,
             total: 20.0,
             pose_id: PoseId::LayingSideNeutral,
-            nap_pose: PoseId::LayingSideContent,
+            nap_pose: PoseId::SleepingSideModest,
             z_timer: 0.0,
         }
     }
@@ -165,16 +164,16 @@ impl Behavior for NappingBehavior {
         renderer: &mut Renderer,
         _ctx: &GameContext,
         char_screen: Point,
-        _mirror_h: bool,
+        mirror_h: bool,
     ) {
+        use micromath::F32Ext;
         if self.phase != Phase::Napping {
             return;
         }
-        let dy = ((self.z_timer * 4.0) as i32) % 8;
-        renderer.draw_text(
-            "z",
-            Point::new(char_screen.x - 6, char_screen.y - 12 - dy),
-        );
+        let base_x = char_screen.x + if mirror_h { 18 } else { -18 };
+        let base_y = char_screen.y - 28;
+        let wave = (self.z_timer * 2.5).sin() * 2.0;
+        renderer.draw_text("z", Point::new(base_x, base_y + wave as i32));
     }
 
     fn mark_almost_done(&mut self) {

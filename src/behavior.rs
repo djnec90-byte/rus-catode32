@@ -407,10 +407,55 @@ impl BehaviorManager {
         ctx: &mut GameContext,
         character: &mut Character,
     ) {
+        ctx.in_cat_bed = false;
+        character.draw_y_offset = 0;
+        let next = maybe_redirect_to_bed(next, ctx, character);
         self.current = ActiveBehavior::from_next(next);
+        let id = self.current.as_dyn().id();
+        if matches!(id, BehaviorId::Sleeping | BehaviorId::Napping) {
+            if let Some(bx) = ctx.cat_bed_x {
+                if (character.pos.x - bx).abs() < 8 {
+                    ctx.in_cat_bed = true;
+                    character.draw_y_offset = -4;
+                }
+            }
+        }
         ctx.current_behavior_name = Some(self.current.as_dyn().name());
         self.current.as_dyn_mut().enter(ctx, character);
     }
+}
+
+// When a sleep-type behavior starts in a room with a cat bed and the cat is
+// not already near it, 60% of the time walk to the bed first and chain into
+// the original behavior on arrival. Mirrors Python `_maybe_redirect_to_bed`.
+const BED_REDIRECT_CHANCE: f32 = 0.6;
+const BED_NEAR_THRESHOLD: i32 = 64;
+
+fn maybe_redirect_to_bed(
+    next: NextBehavior,
+    ctx: &mut GameContext,
+    character: &Character,
+) -> NextBehavior {
+    let then = match next {
+        NextBehavior::Sleeping => GoToThen::Sleeping,
+        NextBehavior::Napping => GoToThen::Napping,
+        _ => return next,
+    };
+    let Some(bx) = ctx.cat_bed_x else {
+        return next;
+    };
+    if (character.pos.x - bx).abs() < BED_NEAR_THRESHOLD {
+        return next;
+    }
+    if !crate::rand::rand_bool(&mut ctx.rng, BED_REDIRECT_CHANCE) {
+        return next;
+    }
+    NextBehavior::GoTo(GoToParams {
+        target_x: bx,
+        speed: 12.0,
+        pending_scene: None,
+        then: Some(then),
+    })
 }
 
 fn apply_sickness_accumulation(ctx: &mut GameContext, completing: BehaviorId) {

@@ -100,9 +100,14 @@ impl BedroomScene {
     }
 }
 
+// Approx foreground world-x of the bed interior; sleep/nap behaviors read
+// this so the cat can walk to the bed and get the in-bed comfort bonus.
+const CAT_BED_X: i32 = 154;
+
 impl Scene for BedroomScene {
     fn enter(&mut self, ctx: &mut GameContext) {
         self.base.enter(ctx, SceneId::Bedroom, PLANT_SURFACES);
+        ctx.cat_bed_x = Some(CAT_BED_X);
         let bookshelf_y = 63 - BOOKSHELF.height as i32;
         self.base.environment.add_object(
             Layer::Foreground,
@@ -116,21 +121,17 @@ impl Scene for BedroomScene {
         self.base.environment.add_object(Layer::Midground, &YARN_BALL, 82, yarn_y, false);
     }
 
+    fn exit(&mut self, ctx: &mut GameContext) {
+        ctx.cat_bed_x = None;
+    }
+
     fn update(
         &mut self,
         ctx: &mut GameContext,
         buttons: &mut Buttons,
         dt: f32,
     ) -> Option<SceneId> {
-        if let Some(id) = self.base.update(ctx, buttons, dt) {
-            return Some(id);
-        }
-        // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
-        // TODO: context.cat_bed_x tracking (Python sets context.cat_bed_x to position the
-        //       cat in the bed; behaviors check this to play "sleeping in bed" pose adjustments).
-        // TODO: plant surfaces (PLANT_SURFACES) once the plant system is ported.
-        // TODO: on_post_draw lightning inversion for indoor rooms with no sky drawn.
-        None
+        self.base.update(ctx, buttons, dt)
     }
 
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {

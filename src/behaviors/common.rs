@@ -216,7 +216,6 @@ pub fn sick_blocks(id: BehaviorId, ctx: &GameContext) -> bool {
 }
 
 /// Used by base.apply_location_bonus — favourite-weather bonus.
-/// TODO(personality): wired to fav_weather once personality system ported.
 pub fn fav_weather_bonus(ctx: &GameContext) -> (f32, f32) {
     use crate::context::FavWeather;
     if let Some(fav) = ctx.fav_weather {

@@ -133,12 +133,6 @@ impl Scene for InsideScene {
         //       so clouds/precipitation rebuild — needed once weather affects the indoor sky).
         // TODO: BOX_SMALL_1 on top of the bookshelf (foreground sprite).
         // TODO: first-impression behavior trigger on first enter (Python `_first_impression_behavior`).
-        // TODO: on_post_draw lightning inversion — Python explicitly calls renderer.invert() in
-        //       on_post_draw so the whole room flashes. Our set_invert from draw_sky already
-        //       handles it via the window, but verify it propagates correctly across all rooms.
-        // TODO: character.set_pose("sitting.forward.neutral") on enter (Python overrides
-        //       behavior pose). Currently the behavior owns the pose.
-        // TODO: plant surfaces (PLANT_SURFACES) once the plant system is ported.
         None
     }
 

@@ -103,11 +103,13 @@ impl LocationScene {
         ctx.last_main_scene = scene_id;
         self.scene_id = scene_id;
         self.plant_surfaces = plant_surfaces;
+        self.sky.reseed_stars(ctx.pet_seed);
         // TODO(scene_bounds): pull these from per-scene constants; today every
         // scene shares the default character walkable strip.
         ctx.scene_x_min = 10;
         ctx.scene_x_max = (self.environment.world_width - 10).max(10);
         self.character.reseed_anim();
+        self.character.randomize_facing(&mut ctx.rng);
         self.environment
             .set_camera(self.character.pos.x - DISPLAY_WIDTH / 2);
         self.behaviors.start(ctx, &mut self.character);
@@ -611,6 +613,7 @@ impl LocationScene {
         );
         self.behaviors
             .draw_overlay(renderer, ctx, screen, self.character.mirror_h);
+        self.character.draw_sick_overlay(renderer, camera_offset, ctx);
         self.burst.draw(renderer, screen);
         self.plant_bursts.draw(ctx, renderer, &self.environment);
     }

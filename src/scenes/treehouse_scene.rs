@@ -99,9 +99,18 @@ impl TreehouseScene {
     }
 }
 
+// Foreground world-x of the cat bed interior; sleep/nap behaviors read this
+// so the cat can walk to the bed and get the in-bed comfort bonus.
+const CAT_BED_X: i32 = 150;
+
 impl Scene for TreehouseScene {
     fn enter(&mut self, ctx: &mut GameContext) {
         self.base.enter(ctx, SceneId::Treehouse, PLANT_SURFACES);
+        ctx.cat_bed_x = Some(CAT_BED_X);
+    }
+
+    fn exit(&mut self, ctx: &mut GameContext) {
+        ctx.cat_bed_x = None;
     }
 
     fn update(
@@ -113,11 +122,8 @@ impl Scene for TreehouseScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        // TODO: character.set_pose("sitting.forward.neutral") on enter (Python override).
-        // TODO: context.cat_bed_x tracking for sleep-in-bed pose adjustments.
         // TODO: espnow.start() when WiFi is wired up and not currently visiting.
         // TODO: weather-change detection (Python re-enters scene on weather change).
-        // TODO: plant surfaces (PLANT_SURFACES) once the plant system is ported.
         None
     }
 
