@@ -77,13 +77,11 @@ impl Behavior for ChatteringBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 3> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Focus, -2.0));
-        let _ = bonus.push((StatId::Curiosity, -1.0));
-        let _ = bonus.push((StatId::Sociability, 0.3));
-        for e in bonus.iter_mut() {
-            e.1 *= progress;
-        }
+        let bonus = [
+            (StatId::Focus, -0.15 * progress),
+            (StatId::Curiosity, -0.05 * progress),
+            (StatId::Intelligence, -0.0025 * progress),
+        ];
         ctx.apply_stat_changes(&bonus);
     }
 

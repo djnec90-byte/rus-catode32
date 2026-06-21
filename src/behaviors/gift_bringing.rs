@@ -75,14 +75,10 @@ impl Behavior for GiftBringingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let bonus_aff = match self.gift {
-            GiftKind::Fish => 7.0,
-            GiftKind::Mouse => 5.0,
-        };
         let bonus = [
-            (StatId::Sociability, 2.0 * progress),
-            (StatId::Affection, bonus_aff * progress),
-            (StatId::Loyalty, 1.5 * progress),
+            (StatId::Sociability, 0.5 * progress),
+            (StatId::Affection, 0.25 * progress),
+            (StatId::Loyalty, 0.1 * progress),
         ];
         ctx.apply_stat_changes(&bonus);
     }

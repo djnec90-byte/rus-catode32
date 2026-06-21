@@ -25,10 +25,12 @@ use crate::{
         },
     },
     behavior::{Behavior, BehaviorId, BehaviorState, NextBehavior, PlayVariant},
+    behaviors::common,
     context::{GameContext, StatId},
     entities::character::Character,
     rand,
     render::{Renderer, SpriteOpts},
+    scene::SceneId,
 };
 
 // -- Tuning constants (mirrors playing.py top-of-file constants) ---------
@@ -882,8 +884,8 @@ impl PlayingBehavior {
         }
     }
 
-    fn play_bonus_table(&self) -> heapless::Vec<(StatId, f32), 8> {
-        let mut b: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
+    fn play_bonus_table(&self) -> heapless::Vec<(StatId, f32), 10> {
+        let mut b: heapless::Vec<(StatId, f32), 10> = heapless::Vec::new();
         let (play, energy, focus, fit, ful, cour) = match self.variant {
             PlayVariant::String => (-8.0, -3.0, -1.0, 1.5, 1.5, 0.4),
             PlayVariant::Feather => (-6.0, -5.0, -1.0, 1.5, 1.5, 0.4),
@@ -1052,6 +1054,40 @@ impl Behavior for PlayingBehavior {
             return;
         }
         let mut bonus = self.play_bonus_table();
+
+        // apply_location_bonus (does NOT call super — no fav_weather)
+        if matches!(
+            ctx.last_main_scene,
+            SceneId::Outside | SceneId::Treehouse | SceneId::Inside
+        ) {
+            common::bonus_scale(&mut bonus, StatId::Energy, 0.75);
+            common::bonus_scale(&mut bonus, StatId::Playfulness, 0.75);
+            common::bonus_add(&mut bonus, StatId::Fitness, 1.0);
+        }
+        common::bonus_add(&mut bonus, StatId::Loyalty, 0.5);
+
+        // Favourite / least-favourite toy modifier (after location bonus, before
+        // progress scaling — matches Python order).
+        let fav_match = ctx
+            .fav_toy
+            .map(|tv| tv.to_play_variant() == self.variant)
+            .unwrap_or(false);
+        let least_match = ctx
+            .least_fav_toy
+            .map(|tv| tv.to_play_variant() == self.variant)
+            .unwrap_or(false);
+        if fav_match {
+            common::bonus_scale(&mut bonus, StatId::Fitness, 1.2);
+            common::bonus_scale(&mut bonus, StatId::Fulfillment, 1.2);
+            common::bonus_scale(&mut bonus, StatId::Courage, 1.2);
+            common::bonus_scale(&mut bonus, StatId::Loyalty, 1.2);
+        } else if least_match {
+            common::bonus_scale(&mut bonus, StatId::Fitness, 0.85);
+            common::bonus_scale(&mut bonus, StatId::Fulfillment, 0.85);
+            common::bonus_scale(&mut bonus, StatId::Courage, 0.85);
+            common::bonus_scale(&mut bonus, StatId::Loyalty, 0.85);
+        }
+
         for entry in bonus.iter_mut() {
             entry.1 *= progress;
         }

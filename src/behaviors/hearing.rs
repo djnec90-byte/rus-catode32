@@ -75,18 +75,22 @@ impl Behavior for HearingBehavior {
     }
 
     fn next(&self, ctx: &GameContext) -> Option<NextBehavior> {
-        let mut rng = ctx.rng;
-        let p = ctx.sociability / 200.0;
-        if rand::rand_f32(&mut rng) < p {
-            Some(NextBehavior::Vocalizing)
-        } else {
-            None
+        if ctx.sociability > 20.0 {
+            let mut p = 0.7 + (ctx.sociability - 20.0) / 267.0;
+            if p > 0.95 {
+                p = 0.95;
+            }
+            let mut rng = ctx.rng;
+            if rand::rand_f32(&mut rng) < p {
+                return Some(NextBehavior::Vocalizing);
+            }
         }
+        None
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
         ctx.apply_stat_changes(&[
-            (StatId::Sociability, 0.15 * progress),
+            (StatId::Sociability, 0.2 * progress),
         ]);
     }
 

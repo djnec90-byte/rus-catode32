@@ -9,6 +9,7 @@ use crate::{
     rand,
     render::Renderer,
     scene::SceneId,
+    time_system::Weather,
 };
 
 const SLEEP_POSES: &[PoseId] = &[
@@ -149,21 +150,100 @@ impl Behavior for SleepingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Energy, 35.0));
-        let _ = bonus.push((StatId::Comfort, 10.0));
-        let _ = bonus.push((StatId::Focus, 12.0));
-        let _ = bonus.push((StatId::Serenity, 1.2));
-        let _ = bonus.push((StatId::Fullness, -8.0));
+        let mut bonus: heapless::Vec<(StatId, f32), 14> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Energy, 35.0);
+        common::bonus_add(&mut bonus, StatId::Focus, 9.0);
+        common::bonus_add(&mut bonus, StatId::Comfort, 10.0);
+        common::bonus_add(&mut bonus, StatId::Playfulness, 15.0);
+        common::bonus_add(&mut bonus, StatId::Fullness, -5.0);
+        common::bonus_add(&mut bonus, StatId::Curiosity, 0.2);
+        common::bonus_add(&mut bonus, StatId::Cleanliness, -1.9);
+        common::bonus_add(&mut bonus, StatId::Intelligence, -0.05);
+        common::bonus_add(&mut bonus, StatId::Fitness, -0.2);
+
+        if ctx.fullness > 60.0 {
+            common::bonus_add(&mut bonus, StatId::Energy, 12.0);
+        }
+        if ctx.playfulness > 75.0 {
+            common::bonus_scale(&mut bonus, StatId::Playfulness, 0.5);
+        }
+        if ctx.focus > 75.0 {
+            common::bonus_scale(&mut bonus, StatId::Focus, 0.5);
+        } else if ctx.focus < 30.0 {
+            common::bonus_scale(&mut bonus, StatId::Focus, 3.0);
+        }
+
+        let hf = common::hungry_factor(ctx);
+        if hf > 0.0 {
+            common::bonus_add(&mut bonus, StatId::Focus, -4.0 * hf);
+            common::bonus_add(&mut bonus, StatId::Serenity, -1.5 * hf);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, -0.5 * hf);
+        }
+        let ff = common::fed_factor(ctx);
+        if ff > 0.0 {
+            common::bonus_add(&mut bonus, StatId::Focus, 3.0 * ff);
+            common::bonus_add(&mut bonus, StatId::Serenity, 1.5 * ff);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, 0.5 * ff);
+            common::bonus_add(&mut bonus, StatId::Loyalty, 0.15 * ff);
+        }
+
+        let medicine = ctx.medicine_pending;
+        let sickness = ctx.sickness;
+        if sickness >= 8.0 {
+            common::bonus_scale(&mut bonus, StatId::Energy, 0.35);
+        } else if sickness >= 5.0 {
+            common::bonus_scale(&mut bonus, StatId::Energy, 0.5);
+        } else if sickness >= 2.0 {
+            common::bonus_scale(&mut bonus, StatId::Energy, 0.7);
+        }
+        if medicine {
+            ctx.medicine_pending = false;
+        }
+        if sickness > 0.0 {
+            let recovery = if medicine { 3.0 } else { 1.0 };
+            ctx.sickness = (sickness - recovery).max(0.0);
+        }
+
+        // apply_location_bonus
+        let scene = ctx.last_main_scene;
+        if scene == SceneId::Bedroom {
+            common::bonus_scale(&mut bonus, StatId::Energy, 1.3);
+            common::bonus_scale(&mut bonus, StatId::Comfort, 1.25);
+        }
+        if matches!(scene, SceneId::Outside | SceneId::Treehouse)
+            && matches!(ctx.weather, Weather::Rain | Weather::Storm | Weather::Snow)
+        {
+            common::bonus_add(&mut bonus, StatId::Comfort, -10.0);
+        }
+        let wf = common::serenity_wellbeing_factor(ctx);
+        if ctx.in_familiar_location {
+            common::bonus_add(&mut bonus, StatId::Serenity, 2.25 * wf);
+        } else {
+            common::bonus_add(&mut bonus, StatId::Serenity, -2.0);
+            common::bonus_scale(&mut bonus, StatId::Comfort, 0.85);
+        }
+        if ctx.meteor_shower_happening() {
+            common::bonus_add(&mut bonus, StatId::Serenity, 3.0);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, 1.5);
+        }
         if ctx.in_cat_bed {
-            let _ = bonus.push((StatId::Comfort, 4.0));
-            let _ = bonus.push((StatId::Serenity, 0.6));
+            common::bonus_scale(&mut bonus, StatId::Energy, 1.15);
+            common::bonus_add(&mut bonus, StatId::Comfort, 5.0);
+            common::bonus_add(&mut bonus, StatId::Serenity, 1.5 * wf);
         }
         let ph = ctx.scene_plant_health as f32;
         if ph != 0.0 {
-            let _ = bonus.push((StatId::Serenity, ph * 0.15));
-            let _ = bonus.push((StatId::Comfort, ph * 0.1));
+            common::bonus_add(&mut bonus, StatId::Serenity, ph * 0.15);
+            common::bonus_add(&mut bonus, StatId::Comfort, ph * 0.1);
         }
+        let (fc, fs) = common::fav_weather_bonus(ctx);
+        if fc != 0.0 {
+            common::bonus_add(&mut bonus, StatId::Comfort, fc);
+        }
+        if fs != 0.0 {
+            common::bonus_add(&mut bonus, StatId::Serenity, fs);
+        }
+
         for entry in bonus.iter_mut() {
             entry.1 *= progress;
         }

@@ -116,13 +116,12 @@ impl Behavior for StartledBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Comfort, -2.5));
-        let _ = bonus.push((StatId::Energy, -1.0));
-        let _ = bonus.push((StatId::Curiosity, 0.3));
-        for e in bonus.iter_mut() {
-            e.1 *= progress;
-        }
+        let bonus = [
+            (StatId::Energy, -1.5 * progress),
+            (StatId::Comfort, -5.0 * progress),
+            (StatId::Curiosity, 1.0 * progress),
+            (StatId::Courage, -0.01 * progress),
+        ];
         ctx.apply_stat_changes(&bonus);
     }
 

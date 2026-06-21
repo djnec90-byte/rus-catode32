@@ -1,6 +1,7 @@
 use crate::{
     assets::character::PoseId,
     behavior::{Behavior, BehaviorId, BehaviorState, NextBehavior},
+    behaviors::common,
     context::{GameContext, StatId},
     entities::character::Character,
     rand,
@@ -94,12 +95,17 @@ impl Behavior for ObservingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Focus, -0.5));
-        let _ = bonus.push((StatId::Curiosity, -0.5));
-        let _ = bonus.push((StatId::Fulfillment, 0.2));
-        if ctx.scene_plant_health > 0 {
-            let _ = bonus.push((StatId::Serenity, ctx.scene_plant_health as f32 * 0.1));
+        let mut bonus: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Focus, -0.4);
+        common::bonus_add(&mut bonus, StatId::Playfulness, -0.15);
+        common::bonus_add(&mut bonus, StatId::Curiosity, -0.05);
+        common::bonus_add(&mut bonus, StatId::Maturity, 0.025);
+        common::bonus_add(&mut bonus, StatId::Serenity, -0.02);
+        let ph = ctx.scene_plant_health as f32;
+        if ph != 0.0 {
+            common::bonus_add(&mut bonus, StatId::Serenity, ph * 0.1);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, ph * 0.05);
+            common::bonus_add(&mut bonus, StatId::Curiosity, ph * 0.05);
         }
         for e in bonus.iter_mut() {
             e.1 *= progress;

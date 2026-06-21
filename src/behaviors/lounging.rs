@@ -5,6 +5,8 @@ use crate::{
     context::{GameContext, StatId},
     entities::character::Character,
     rand,
+    scene::SceneId,
+    time_system::Weather,
 };
 
 const NEUTRAL_LOUNGE: &[PoseId] = &[
@@ -123,25 +125,78 @@ impl Behavior for LoungingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Comfort, 6.0));
-        let _ = bonus.push((StatId::Serenity, 1.5));
-        let _ = bonus.push((StatId::Fulfillment, 0.4));
-        let _ = bonus.push((StatId::Energy, -1.5));
-        let _ = bonus.push((StatId::Fullness, -0.8));
-        let (c, s) = common::fav_weather_bonus(ctx);
-        if c != 0.0 {
-            let _ = bonus.push((StatId::Comfort, c));
+        let mut bonus: heapless::Vec<(StatId, f32), 14> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Fullness, -0.025);
+        common::bonus_add(&mut bonus, StatId::Energy, -0.2);
+        common::bonus_add(&mut bonus, StatId::Comfort, 1.0);
+        common::bonus_add(&mut bonus, StatId::Focus, -0.05);
+        common::bonus_add(&mut bonus, StatId::Playfulness, -0.05);
+        common::bonus_add(&mut bonus, StatId::Fulfillment, -0.02);
+        common::bonus_add(&mut bonus, StatId::Sociability, -0.025);
+        common::bonus_add(&mut bonus, StatId::Intelligence, -0.005);
+        common::bonus_add(&mut bonus, StatId::Maturity, 0.02);
+        common::bonus_add(&mut bonus, StatId::Fitness, -0.015);
+
+        let hf = common::hungry_factor(ctx);
+        if hf > 0.0 {
+            common::bonus_scale(&mut bonus, StatId::Comfort, 1.0 - 0.5 * hf);
         }
-        if s != 0.0 {
-            let _ = bonus.push((StatId::Serenity, s));
+        let ff = common::fed_factor(ctx);
+        if ff > 0.0 {
+            common::bonus_add(&mut bonus, StatId::Comfort, 0.8 * ff);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, 0.25 * ff);
+            common::bonus_add(&mut bonus, StatId::Loyalty, 0.03 * ff);
+        }
+
+        // apply_location_bonus
+        let scene = ctx.last_main_scene;
+        if matches!(scene, SceneId::Inside | SceneId::Outside | SceneId::Treehouse) {
+            common::bonus_scale(&mut bonus, StatId::Comfort, 1.3);
+        }
+        if matches!(scene, SceneId::Outside | SceneId::Treehouse)
+            && matches!(ctx.weather, Weather::Rain | Weather::Storm | Weather::Snow)
+        {
+            common::bonus_add(&mut bonus, StatId::Comfort, -6.0);
+        }
+        let wf = common::serenity_wellbeing_factor(ctx);
+        if ctx.in_familiar_location {
+            common::bonus_add(&mut bonus, StatId::Serenity, 1.5 * wf);
+            common::bonus_scale(&mut bonus, StatId::Comfort, 1.15);
+        } else {
+            common::bonus_add(&mut bonus, StatId::Serenity, -1.0);
+            common::bonus_scale(&mut bonus, StatId::Comfort, 0.9);
+        }
+        if Some(scene) == ctx.fav_location {
+            common::bonus_scale(&mut bonus, StatId::Comfort, 1.2);
+            common::bonus_scale(&mut bonus, StatId::Serenity, 1.2);
+        } else if Some(scene) == ctx.least_fav_location {
+            common::bonus_scale(&mut bonus, StatId::Comfort, 0.85);
+            common::bonus_scale(&mut bonus, StatId::Serenity, 0.85);
+        }
+        if ctx.meteor_shower_happening() {
+            common::bonus_add(&mut bonus, StatId::Serenity, 2.0);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, 1.5);
+            common::bonus_add(&mut bonus, StatId::Comfort, 3.0);
+            common::bonus_add(&mut bonus, StatId::Maturity, 0.5);
+        }
+        if ctx.in_cat_bed {
+            common::bonus_add(&mut bonus, StatId::Comfort, 5.0);
+            common::bonus_add(&mut bonus, StatId::Serenity, 2.0 * wf);
         }
         let ph = ctx.scene_plant_health as f32;
         if ph != 0.0 {
-            let _ = bonus.push((StatId::Serenity, ph * 0.2));
-            let _ = bonus.push((StatId::Comfort, ph * 0.15));
-            let _ = bonus.push((StatId::Fulfillment, ph * 0.05));
+            common::bonus_add(&mut bonus, StatId::Serenity, ph * 0.2);
+            common::bonus_add(&mut bonus, StatId::Comfort, ph * 0.15);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, ph * 0.05);
         }
+        let (fc, fs) = common::fav_weather_bonus(ctx);
+        if fc != 0.0 {
+            common::bonus_add(&mut bonus, StatId::Comfort, fc);
+        }
+        if fs != 0.0 {
+            common::bonus_add(&mut bonus, StatId::Serenity, fs);
+        }
+
         for e in bonus.iter_mut() {
             e.1 *= progress;
         }

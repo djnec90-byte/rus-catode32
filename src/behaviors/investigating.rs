@@ -95,16 +95,15 @@ impl Behavior for InvestigatingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 6> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Focus, -2.0));
-        let _ = bonus.push((StatId::Comfort, -1.0));
-        let _ = bonus.push((StatId::Playfulness, -2.0));
-        let _ = bonus.push((StatId::Curiosity, -1.0));
-        let _ = bonus.push((StatId::Maturity, 0.05));
-        let _ = bonus.push((StatId::Fulfillment, 0.3));
-        for e in bonus.iter_mut() {
-            e.1 *= progress;
-        }
+        let bonus = [
+            (StatId::Focus, -0.25 * progress),
+            (StatId::Comfort, -0.2 * progress),
+            (StatId::Playfulness, -0.25 * progress),
+            (StatId::Serenity, -0.02 * progress),
+            (StatId::Curiosity, -0.05 * progress),
+            (StatId::Maturity, 0.025 * progress),
+            (StatId::Fulfillment, 0.05 * progress),
+        ];
         ctx.apply_stat_changes(&bonus);
     }
 }

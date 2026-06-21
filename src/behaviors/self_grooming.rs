@@ -1,6 +1,7 @@
 use crate::{
     assets::character::PoseId,
     behavior::{Behavior, BehaviorId, BehaviorState},
+    behaviors::common,
     context::{GameContext, StatId},
     entities::character::Character,
     rand,
@@ -83,10 +84,21 @@ impl Behavior for SelfGroomingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Cleanliness, 12.0));
-        let _ = bonus.push((StatId::Comfort, 2.0));
-        let _ = bonus.push((StatId::Energy, -2.0));
+        let mut bonus: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Energy, -0.75);
+        common::bonus_add(&mut bonus, StatId::Comfort, 0.5);
+        common::bonus_add(&mut bonus, StatId::Focus, -0.5);
+        common::bonus_add(&mut bonus, StatId::Cleanliness, 15.0);
+        common::bonus_add(&mut bonus, StatId::Fulfillment, 0.05);
+
+        // apply_location_bonus (does NOT call super — no fav_weather)
+        if ctx.in_familiar_location {
+            common::bonus_scale(&mut bonus, StatId::Cleanliness, 1.1);
+            common::bonus_add(&mut bonus, StatId::Serenity, 0.5);
+        } else {
+            common::bonus_scale(&mut bonus, StatId::Cleanliness, 0.9);
+        }
+
         for e in bonus.iter_mut() {
             e.1 *= progress;
         }

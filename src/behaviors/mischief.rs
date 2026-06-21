@@ -136,12 +136,24 @@ impl Behavior for MischiefBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 5> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Energy, -3.5));
-        let _ = bonus.push((StatId::Playfulness, -3.0));
-        let _ = bonus.push((StatId::Mischievousness, 0.5));
-        let _ = bonus.push((StatId::Loyalty, -0.4));
-        let _ = bonus.push((StatId::Cleanliness, -1.0));
+        let mut bonus: heapless::Vec<(StatId, f32), 10> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Energy, -1.0);
+        common::bonus_add(&mut bonus, StatId::Focus, -1.0);
+        common::bonus_add(&mut bonus, StatId::Playfulness, -0.25);
+        common::bonus_add(&mut bonus, StatId::Maturity, -0.1);
+        common::bonus_add(&mut bonus, StatId::Sociability, -0.25);
+        common::bonus_add(&mut bonus, StatId::Affection, -0.02);
+        common::bonus_add(&mut bonus, StatId::Mischievousness, 0.03);
+        common::bonus_add(&mut bonus, StatId::Loyalty, -0.1);
+
+        let hf = common::hungry_factor(ctx);
+        if hf > 0.0 {
+            common::bonus_add(&mut bonus, StatId::Loyalty, -0.15 * hf);
+            common::bonus_add(&mut bonus, StatId::Focus, -0.5 * hf);
+            common::bonus_add(&mut bonus, StatId::Affection, -0.03 * hf);
+            common::bonus_add(&mut bonus, StatId::Mischievousness, 0.04 * hf);
+        }
+
         for e in bonus.iter_mut() {
             e.1 *= progress;
         }

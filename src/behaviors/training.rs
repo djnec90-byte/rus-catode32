@@ -1,10 +1,29 @@
 use crate::{
     assets::character::PoseId,
     behavior::{Behavior, BehaviorId, BehaviorState, NextBehavior, TrainingKind},
+    behaviors::common,
     context::{GameContext, StatId},
     entities::character::Character,
     rand,
 };
+
+fn rejection_chance(ctx: &GameContext) -> f32 {
+    // Mirrors Python _REJECTION_THRESHOLDS: energy 30, focus 30, courage 25, sociability 25.
+    let mut complement: f32 = 1.0;
+    let checks = [
+        (ctx.energy, 30.0_f32),
+        (ctx.focus, 30.0),
+        (ctx.courage, 25.0),
+        (ctx.sociability, 25.0),
+    ];
+    for (val, threshold) in checks {
+        if val < threshold {
+            let deficit = (threshold - val) / threshold;
+            complement *= 1.0 - deficit;
+        }
+    }
+    1.0 - complement
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Phase {
@@ -54,7 +73,8 @@ impl Behavior for TrainingBehavior {
     }
 
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
-        self.rejected = ctx.energy < 25.0 || ctx.affection < 25.0;
+        let p = rejection_chance(ctx);
+        self.rejected = rand::rand_f32(&mut ctx.rng) < p;
         self.phase = if self.rejected {
             Phase::Rejecting
         } else {
@@ -122,22 +142,67 @@ impl Behavior for TrainingBehavior {
         if self.rejected {
             return;
         }
-        // Stat tables per training_type. Mirrors Python training.py.
-        let (a, b, c, d) = match self.kind {
+        // Stat tables per training_type. Mirrors Python training.py:_BONUSES.
+        // Python uses key "couriosity" (typo) which doesn't match any attribute
+        // and is silently dropped by apply_stat_changes — we replicate that by
+        // omitting those entries entirely so balance stays 1:1 with the Python
+        // tree until the Python typo is fixed and ported over.
+        let mut bonus: heapless::Vec<(StatId, f32), 14> = heapless::Vec::new();
+        match self.kind {
             TrainingKind::Intelligence => {
-                (StatId::Intelligence, 6.0, StatId::Focus, 2.0)
+                common::bonus_add(&mut bonus, StatId::Energy, -3.0);
+                common::bonus_add(&mut bonus, StatId::Focus, -1.0);
+                common::bonus_add(&mut bonus, StatId::Playfulness, -4.0);
+                common::bonus_add(&mut bonus, StatId::Intelligence, 4.0);
+                common::bonus_add(&mut bonus, StatId::Fulfillment, 2.0);
+                common::bonus_add(&mut bonus, StatId::Maturity, 1.0);
+                common::bonus_add(&mut bonus, StatId::Courage, 1.0);
+                common::bonus_add(&mut bonus, StatId::Sociability, 0.5);
+                common::bonus_add(&mut bonus, StatId::Loyalty, 1.0);
+                common::bonus_add(&mut bonus, StatId::Mischievousness, -1.0);
             }
-            TrainingKind::Behavior => (StatId::Loyalty, 4.0, StatId::Maturity, 3.0),
-            TrainingKind::Fitness => (StatId::Fitness, 5.0, StatId::Energy, -4.0),
+            TrainingKind::Behavior => {
+                common::bonus_add(&mut bonus, StatId::Energy, -3.5);
+                common::bonus_add(&mut bonus, StatId::Focus, -2.0);
+                common::bonus_add(&mut bonus, StatId::Playfulness, -5.0);
+                common::bonus_add(&mut bonus, StatId::Loyalty, 3.5);
+                common::bonus_add(&mut bonus, StatId::Courage, 2.5);
+                common::bonus_add(&mut bonus, StatId::Maturity, 2.0);
+                common::bonus_add(&mut bonus, StatId::Sociability, 1.5);
+                common::bonus_add(&mut bonus, StatId::Fulfillment, 2.0);
+                common::bonus_add(&mut bonus, StatId::Intelligence, 1.0);
+                common::bonus_add(&mut bonus, StatId::Fitness, 0.5);
+                common::bonus_add(&mut bonus, StatId::Mischievousness, -1.5);
+            }
+            TrainingKind::Fitness => {
+                common::bonus_add(&mut bonus, StatId::Energy, -5.0);
+                common::bonus_add(&mut bonus, StatId::Focus, -3.0);
+                common::bonus_add(&mut bonus, StatId::Playfulness, -8.0);
+                common::bonus_add(&mut bonus, StatId::Fitness, 5.0);
+                common::bonus_add(&mut bonus, StatId::Courage, 2.0);
+                common::bonus_add(&mut bonus, StatId::Fulfillment, 2.0);
+                common::bonus_add(&mut bonus, StatId::Loyalty, 1.0);
+                common::bonus_add(&mut bonus, StatId::Maturity, 0.5);
+                common::bonus_add(&mut bonus, StatId::Intelligence, 0.5);
+                common::bonus_add(&mut bonus, StatId::Sociability, 0.5);
+                common::bonus_add(&mut bonus, StatId::Mischievousness, -0.5);
+            }
             TrainingKind::Sociability => {
-                (StatId::Sociability, 5.0, StatId::Affection, 2.0)
+                common::bonus_add(&mut bonus, StatId::Energy, -2.0);
+                common::bonus_add(&mut bonus, StatId::Focus, -1.0);
+                common::bonus_add(&mut bonus, StatId::Playfulness, -3.0);
+                common::bonus_add(&mut bonus, StatId::Sociability, 4.0);
+                common::bonus_add(&mut bonus, StatId::Loyalty, 2.5);
+                common::bonus_add(&mut bonus, StatId::Fulfillment, 3.0);
+                common::bonus_add(&mut bonus, StatId::Courage, 1.5);
+                common::bonus_add(&mut bonus, StatId::Intelligence, 1.0);
+                common::bonus_add(&mut bonus, StatId::Maturity, 0.5);
+                common::bonus_add(&mut bonus, StatId::Mischievousness, -0.5);
             }
-        };
-        let bonus = [
-            (a, b * progress),
-            (c, d * progress),
-            (StatId::Fulfillment, 0.6 * progress),
-        ];
+        }
+        for e in bonus.iter_mut() {
+            e.1 *= progress;
+        }
         ctx.apply_stat_changes(&bonus);
     }
 }

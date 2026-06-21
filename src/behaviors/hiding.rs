@@ -87,13 +87,12 @@ impl Behavior for HidingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Comfort, 1.0));
-        let _ = bonus.push((StatId::Sociability, -0.8));
-        let _ = bonus.push((StatId::Energy, -0.5));
-        for e in bonus.iter_mut() {
-            e.1 *= progress;
-        }
+        let bonus = [
+            (StatId::Comfort, 0.2 * progress),
+            (StatId::Sociability, -0.25 * progress),
+            (StatId::Affection, -0.1 * progress),
+            (StatId::Courage, -0.005 * progress),
+        ];
         ctx.apply_stat_changes(&bonus);
     }
 }

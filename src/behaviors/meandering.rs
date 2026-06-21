@@ -104,15 +104,18 @@ impl Behavior for MeanderingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 6> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Energy, -1.0));
-        let _ = bonus.push((StatId::Comfort, -0.3));
-        let _ = bonus.push((StatId::Curiosity, 0.2));
-        let _ = bonus.push((StatId::Fitness, 0.1));
+        let mut bonus: heapless::Vec<(StatId, f32), 10> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Energy, -0.35);
+        common::bonus_add(&mut bonus, StatId::Fullness, -0.25);
+        common::bonus_add(&mut bonus, StatId::Playfulness, -0.15);
+        common::bonus_add(&mut bonus, StatId::Comfort, -0.6);
+        common::bonus_add(&mut bonus, StatId::Intelligence, -0.0015);
+        common::bonus_add(&mut bonus, StatId::Fitness, 0.01);
+
         let ph = ctx.scene_plant_health as f32;
         if ph != 0.0 {
-            let _ = bonus.push((StatId::Comfort, ph * 0.1));
-            let _ = bonus.push((StatId::Serenity, ph * 0.1));
+            common::bonus_add(&mut bonus, StatId::Comfort, ph * 0.1);
+            common::bonus_add(&mut bonus, StatId::Serenity, ph * 0.1);
         }
         for e in bonus.iter_mut() {
             e.1 *= progress;

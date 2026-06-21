@@ -157,18 +157,18 @@ impl Behavior for IdleBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 20> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Fullness, -0.05));
-        let _ = bonus.push((StatId::Energy, -0.1));
-        let _ = bonus.push((StatId::Comfort, -0.4));
-        let _ = bonus.push((StatId::Playfulness, -0.05));
-        let _ = bonus.push((StatId::Focus, -0.05));
-        let _ = bonus.push((StatId::Fulfillment, -0.02));
-        let _ = bonus.push((StatId::Curiosity, 0.02));
-        let _ = bonus.push((StatId::Cleanliness, -0.06));
-        let _ = bonus.push((StatId::Intelligence, -0.005));
-        let _ = bonus.push((StatId::Fitness, -0.015));
-        let _ = bonus.push((StatId::Serenity, 0.0075));
+        let mut bonus: heapless::Vec<(StatId, f32), 14> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Fullness, -0.05);
+        common::bonus_add(&mut bonus, StatId::Energy, -0.1);
+        common::bonus_add(&mut bonus, StatId::Comfort, -0.4);
+        common::bonus_add(&mut bonus, StatId::Playfulness, -0.05);
+        common::bonus_add(&mut bonus, StatId::Focus, -0.05);
+        common::bonus_add(&mut bonus, StatId::Fulfillment, -0.02);
+        common::bonus_add(&mut bonus, StatId::Curiosity, 0.02);
+        common::bonus_add(&mut bonus, StatId::Cleanliness, -0.06);
+        common::bonus_add(&mut bonus, StatId::Intelligence, -0.005);
+        common::bonus_add(&mut bonus, StatId::Fitness, -0.015);
+        common::bonus_add(&mut bonus, StatId::Serenity, 0.0075);
 
         let outdoor = matches!(
             ctx.last_main_scene,
@@ -180,22 +180,24 @@ impl Behavior for IdleBehavior {
                 Weather::Rain | Weather::Storm | Weather::Snow
             )
         {
-            let _ = bonus.push((StatId::Comfort, -5.0));
+            common::bonus_add(&mut bonus, StatId::Comfort, -5.0);
         }
         if ctx.meteor_shower_happening() {
-            let _ = bonus.push((StatId::Serenity, 0.5));
-            let _ = bonus.push((StatId::Fulfillment, 0.3));
-            let _ = bonus.push((StatId::Comfort, 0.5));
+            common::bonus_add(&mut bonus, StatId::Serenity, 0.5);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, 0.3);
+            common::bonus_add(&mut bonus, StatId::Comfort, 0.5);
         }
         if ctx.scene_plant_health != 0 {
             let ph = ctx.scene_plant_health as f32;
-            let _ = bonus.push((StatId::Serenity, ph * 0.15));
-            let _ = bonus.push((StatId::Comfort, ph * 0.1));
+            common::bonus_add(&mut bonus, StatId::Serenity, ph * 0.15);
+            common::bonus_add(&mut bonus, StatId::Comfort, ph * 0.1);
         }
         let (c, s) = common::fav_weather_bonus(ctx);
-        if c != 0.0 || s != 0.0 {
-            let _ = bonus.push((StatId::Comfort, c));
-            let _ = bonus.push((StatId::Serenity, s));
+        if c != 0.0 {
+            common::bonus_add(&mut bonus, StatId::Comfort, c);
+        }
+        if s != 0.0 {
+            common::bonus_add(&mut bonus, StatId::Serenity, s);
         }
         for entry in bonus.iter_mut() {
             entry.1 *= progress;

@@ -104,9 +104,9 @@ impl Behavior for GreetingBehavior {
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
         let bonus = [
-            (StatId::Sociability, 2.5 * progress),
-            (StatId::Affection, 1.5 * progress),
-            (StatId::Serenity, 0.5 * progress),
+            (StatId::Sociability, 0.25 * progress),
+            (StatId::Affection, 0.3 * progress),
+            (StatId::Serenity, 0.1 * progress),
         ];
         ctx.apply_stat_changes(&bonus);
     }

@@ -92,13 +92,6 @@ impl Behavior for StretchingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Comfort, 4.0));
-        let _ = bonus.push((StatId::Fitness, 0.3));
-        let _ = bonus.push((StatId::Energy, -2.0));
-        for e in bonus.iter_mut() {
-            e.1 *= progress;
-        }
-        ctx.apply_stat_changes(&bonus);
+        ctx.apply_stat_changes(&[(StatId::Comfort, 3.0 * progress)]);
     }
 }

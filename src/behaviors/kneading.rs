@@ -1,6 +1,7 @@
 use crate::{
     assets::character::PoseId,
     behavior::{Behavior, BehaviorId, BehaviorState, NextBehavior},
+    behaviors::common,
     context::{GameContext, StatId},
     entities::character::Character,
     rand,
@@ -81,10 +82,26 @@ impl Behavior for KneadingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Comfort, 5.0));
-        let _ = bonus.push((StatId::Serenity, 0.5));
-        let _ = bonus.push((StatId::Energy, -1.5));
+        let mut bonus: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Comfort, 2.0);
+        common::bonus_add(&mut bonus, StatId::Focus, -0.25);
+        common::bonus_add(&mut bonus, StatId::Cleanliness, -0.1);
+        common::bonus_add(&mut bonus, StatId::Serenity, 0.05);
+
+        let ff = common::fed_factor(ctx);
+        if ff > 0.0 {
+            common::bonus_add(&mut bonus, StatId::Comfort, 1.0 * ff);
+            common::bonus_add(&mut bonus, StatId::Serenity, 0.1 * ff);
+        }
+
+        // apply_location_bonus (does NOT call super, so no fav_weather)
+        if ctx.in_familiar_location {
+            common::bonus_add(&mut bonus, StatId::Comfort, 1.0);
+            common::bonus_add(&mut bonus, StatId::Serenity, 0.15);
+        } else {
+            common::bonus_scale(&mut bonus, StatId::Comfort, 0.85);
+        }
+
         for e in bonus.iter_mut() {
             e.1 *= progress;
         }

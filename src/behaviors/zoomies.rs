@@ -123,10 +123,15 @@ impl Behavior for ZoomiesBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Energy, -15.0));
-        let _ = bonus.push((StatId::Playfulness, -10.0));
-        let _ = bonus.push((StatId::Fitness, 0.8));
+        let mut bonus: heapless::Vec<(StatId, f32), 10> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Energy, -3.5);
+        common::bonus_add(&mut bonus, StatId::Fullness, -0.5);
+        common::bonus_add(&mut bonus, StatId::Playfulness, -0.3);
+        common::bonus_add(&mut bonus, StatId::Cleanliness, -0.3);
+        common::bonus_add(&mut bonus, StatId::Maturity, -0.1);
+        common::bonus_add(&mut bonus, StatId::Comfort, -0.2);
+        common::bonus_add(&mut bonus, StatId::Intelligence, -0.005);
+        common::bonus_add(&mut bonus, StatId::Fitness, 0.02);
         for e in bonus.iter_mut() {
             e.1 *= progress;
         }

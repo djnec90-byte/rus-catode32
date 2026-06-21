@@ -152,18 +152,33 @@ impl Behavior for HuntingBehavior {
         }
     }
 
-    fn exit(&mut self, ctx: &mut GameContext, completed: bool) {
-        if completed && self.success {
-            ctx.coins = (ctx.coins + 1).min(9999);
-        }
-    }
+    fn exit(&mut self, _ctx: &mut GameContext, _completed: bool) {}
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let bonus = [
-            (StatId::Energy, -10.0 * progress),
-            (StatId::Playfulness, -6.0 * progress),
-            (StatId::Fitness, 0.7 * progress),
-        ];
+        let coins = rand::rand_range_u32(&mut ctx.rng, 1, 3) as i32;
+        ctx.coins = (ctx.coins + coins).min(9999);
+
+        let mut bonus: heapless::Vec<(StatId, f32), 14> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Fullness, -0.5);
+        common::bonus_add(&mut bonus, StatId::Energy, -2.0);
+        common::bonus_add(&mut bonus, StatId::Comfort, -0.6);
+        common::bonus_add(&mut bonus, StatId::Playfulness, -0.25);
+        common::bonus_add(&mut bonus, StatId::Fulfillment, 0.05);
+        common::bonus_add(&mut bonus, StatId::Intelligence, 0.015);
+        common::bonus_add(&mut bonus, StatId::Cleanliness, -0.3);
+        common::bonus_add(&mut bonus, StatId::Fitness, 0.02);
+        common::bonus_add(&mut bonus, StatId::Serenity, -0.05);
+        common::bonus_add(&mut bonus, StatId::Mischievousness, 0.02);
+        common::bonus_add(&mut bonus, StatId::Courage, 0.0075);
+
+        if common::is_outdoor(ctx.last_main_scene) {
+            common::bonus_scale(&mut bonus, StatId::Fitness, 1.5);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, 0.05);
+        }
+
+        for entry in bonus.iter_mut() {
+            entry.1 *= progress;
+        }
         ctx.apply_stat_changes(&bonus);
     }
 }

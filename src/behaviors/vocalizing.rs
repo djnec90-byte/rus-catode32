@@ -176,13 +176,11 @@ impl Behavior for VocalizingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Energy, -1.0));
-        let _ = bonus.push((StatId::Focus, -1.0));
-        let _ = bonus.push((StatId::Sociability, 0.4));
-        for e in bonus.iter_mut() {
-            e.1 *= progress;
-        }
+        let bonus = [
+            (StatId::Energy, -0.75 * progress),
+            (StatId::Comfort, -0.3 * progress),
+            (StatId::Serenity, -0.015 * progress),
+        ];
         ctx.apply_stat_changes(&bonus);
     }
 

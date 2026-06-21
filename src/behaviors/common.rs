@@ -1,12 +1,54 @@
 use crate::{
     assets::character::PoseId,
     behavior::{BehaviorId, NextBehavior},
-    context::GameContext,
+    context::{GameContext, StatId},
     entities::character::Character,
     rand,
     scene::SceneId,
     time_system::Weather,
 };
+
+/// Aggregate `delta` into `bonus` under `stat`, summing with any existing entry
+/// rather than appending a duplicate. Mirrors Python's `bonus.get(stat, 0) + delta`
+/// dict semantics so the final `apply_stat_changes` sees a single delta per stat
+/// (which is important — damping is non-linear and stacking duplicates would
+/// drift away from the 1:1 Python balance).
+pub fn bonus_add<const N: usize>(
+    bonus: &mut heapless::Vec<(StatId, f32), N>,
+    stat: StatId,
+    delta: f32,
+) {
+    if let Some(entry) = bonus.iter_mut().find(|e| e.0 == stat) {
+        entry.1 += delta;
+    } else {
+        let _ = bonus.push((stat, delta));
+    }
+}
+
+/// Multiply the existing entry for `stat` by `factor`. Matches Python's
+/// `bonus[stat] = bonus.get(stat, 0) * factor`: if no entry exists, the result
+/// would be 0 — and applying a 0 delta is a no-op, so we just skip.
+pub fn bonus_scale<const N: usize>(
+    bonus: &mut heapless::Vec<(StatId, f32), N>,
+    stat: StatId,
+    factor: f32,
+) {
+    if let Some(entry) = bonus.iter_mut().find(|e| e.0 == stat) {
+        entry.1 *= factor;
+    }
+}
+
+/// Penalty intensity when below the hunger floor. 0 at fullness>=30, 1 at fullness=0.
+/// Mirrors Python `max(0.0, (30 - context.fullness) / 30.0)`.
+pub fn hungry_factor(ctx: &GameContext) -> f32 {
+    ((30.0 - ctx.fullness) / 30.0).max(0.0)
+}
+
+/// Bonus intensity when above the well-fed ceiling. 0 at fullness<=90, 1 at fullness=100.
+/// Mirrors Python `max(0.0, (context.fullness - 90) / 10.0)`.
+pub fn fed_factor(ctx: &GameContext) -> f32 {
+    ((ctx.fullness - 90.0) / 10.0).max(0.0)
+}
 
 /// Shared neutral idle pose pool (also reused by lounging / startled-recovery
 /// fall-through). Mirrors Python `IdleBehavior.NEUTRAL_POSES`.

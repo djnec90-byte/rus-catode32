@@ -3,6 +3,7 @@ use embedded_graphics::prelude::Point;
 use crate::{
     assets::character::PoseId,
     behavior::{AttentionVariant, Behavior, BehaviorId, BehaviorState, NextBehavior},
+    behaviors::common,
     context::{GameContext, StatId},
     entities::character::Character,
     rand,
@@ -113,16 +114,27 @@ impl Behavior for AttentionBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
+        let mut bonus: heapless::Vec<(StatId, f32), 8> = heapless::Vec::new();
+        match self.variant {
+            AttentionVariant::Psst => {
+                common::bonus_add(&mut bonus, StatId::Curiosity, 3.0);
+                common::bonus_add(&mut bonus, StatId::Playfulness, 1.5);
+                common::bonus_add(&mut bonus, StatId::Focus, 3.0);
+                common::bonus_add(&mut bonus, StatId::Courage, 0.05);
+                common::bonus_add(&mut bonus, StatId::Intelligence, 0.5);
+            }
+            AttentionVariant::PointBird => {
+                common::bonus_add(&mut bonus, StatId::Curiosity, 5.0);
+                common::bonus_add(&mut bonus, StatId::Playfulness, 2.5);
+                common::bonus_add(&mut bonus, StatId::Focus, 2.0);
+                common::bonus_add(&mut bonus, StatId::Courage, 0.05);
+                common::bonus_add(&mut bonus, StatId::Intelligence, 0.5);
+            }
+        }
         let mult = if self.rejected { 0.5 } else { 1.0 };
-        let (aff, foc, cur) = match self.variant {
-            AttentionVariant::Psst => (4.0, 1.0, 0.5),
-            AttentionVariant::PointBird => (2.0, 2.0, 1.5),
-        };
-        let bonus = [
-            (StatId::Affection, aff * mult * progress),
-            (StatId::Focus, foc * mult * progress),
-            (StatId::Curiosity, cur * mult * progress),
-        ];
+        for e in bonus.iter_mut() {
+            e.1 *= mult * progress;
+        }
         ctx.apply_stat_changes(&bonus);
     }
 

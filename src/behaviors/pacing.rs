@@ -134,10 +134,23 @@ impl Behavior for PacingBehavior {
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {
-        let mut bonus: heapless::Vec<(StatId, f32), 4> = heapless::Vec::new();
-        let _ = bonus.push((StatId::Comfort, -2.0));
-        let _ = bonus.push((StatId::Energy, -1.5));
-        let _ = bonus.push((StatId::Fitness, 0.25));
+        let mut bonus: heapless::Vec<(StatId, f32), 10> = heapless::Vec::new();
+        common::bonus_add(&mut bonus, StatId::Cleanliness, -0.1);
+        common::bonus_add(&mut bonus, StatId::Fulfillment, -0.035);
+        common::bonus_add(&mut bonus, StatId::Affection, -0.02);
+        common::bonus_add(&mut bonus, StatId::Comfort, -1.5);
+        common::bonus_add(&mut bonus, StatId::Fitness, 0.01);
+        common::bonus_add(&mut bonus, StatId::Loyalty, -0.01);
+        common::bonus_add(&mut bonus, StatId::Mischievousness, 0.005);
+
+        let hf = common::hungry_factor(ctx);
+        if hf > 0.0 {
+            common::bonus_add(&mut bonus, StatId::Loyalty, -0.04 * hf);
+            common::bonus_add(&mut bonus, StatId::Fulfillment, -0.04 * hf);
+            common::bonus_add(&mut bonus, StatId::Affection, -0.03 * hf);
+            common::bonus_add(&mut bonus, StatId::Serenity, -0.5 * hf);
+        }
+
         for e in bonus.iter_mut() {
             e.1 *= progress;
         }
