@@ -255,3 +255,38 @@ pub const BUBBLE_POP: Sprite = Sprite {
     frames: BUBBLE_POP_FRAMES,
     fill_frames: None,
 };
+
+// --- Platformer collectibles --------------------------------------------
+
+const KEY_FRAMES: &[&[u8]] = &[
+    b"\x7c\x00\x83\xf0\xb8\x08\xaf\xe8\xb8\xa8\x82\x08\x7d\xf0",
+];
+pub const KEY: Sprite = Sprite {
+    width: 13,
+    height: 7,
+    frames: KEY_FRAMES,
+    fill_frames: None,
+};
+
+const SPIN_COIN_FRAMES: &[&[u8]] = &[
+    b"\x3c\x42\x81\x81\x81\x81\x42\x3c",
+    b"\x1c\x2e\x47\x47\x47\x47\x2e\x1c",
+    b"\x3c\x3c\x3c\x3c\x3c\x3c\x3c\x3c",
+    b"\x38\x74\xe2\xe2\xe2\xe2\x74\x38",
+];
+pub const SPIN_COIN: Sprite = Sprite {
+    width: 8,
+    height: 8,
+    frames: SPIN_COIN_FRAMES,
+    fill_frames: None,
+};
+
+const BANDAGE_FRAMES: &[&[u8]] = &[
+    b"\x1c\x0e\x00\x22\x11\x00\x41\x20\x80\x80\xc0\x40\x80\x40\x40\x80\x20\x40\x42\x90\x80\x20\x09\x00\x12\xa6\x00\x18\x02\x00\x24\xa9\x00\x42\x00\x80\x81\x28\x40\x80\x80\x40\x80\xc0\x40\x41\x20\x80\x22\x11\x00\x1c\x0e\x00",
+];
+pub const BANDAGE: Sprite = Sprite {
+    width: 18,
+    height: 18,
+    frames: BANDAGE_FRAMES,
+    fill_frames: None,
+};

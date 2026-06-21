@@ -16,6 +16,7 @@ pub mod kitchen_scene;
 pub mod menu_scene;
 pub mod outside_scene;
 pub mod pet_info_scene;
+pub mod platformer_scene;
 pub mod pose_scene;
 pub mod snake_scene;
 pub mod stats_scene;
@@ -49,6 +50,7 @@ use kitchen_scene::KitchenScene;
 use menu_scene::MenuScene;
 use outside_scene::OutsideScene;
 use pet_info_scene::PetInfoScene;
+use platformer_scene::PlatformerScene;
 use pose_scene::PoseScene;
 use snake_scene::SnakeScene;
 use stats_scene::StatsScene;
@@ -86,6 +88,7 @@ pub enum ActiveScene {
     Zoomies(ZoomiesScene),
     Breakout(BreakoutScene),
     Snake(SnakeScene),
+    Platformer(PlatformerScene),
     VacationPark(VacationParkScene),
     VacationForest(VacationForestScene),
     VacationAquarium(VacationAquariumScene),
@@ -120,6 +123,7 @@ impl ActiveScene {
             SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
             SceneId::Breakout => ActiveScene::Breakout(BreakoutScene::new()),
             SceneId::Snake => ActiveScene::Snake(SnakeScene::new()),
+            SceneId::Platformer => ActiveScene::Platformer(PlatformerScene::new()),
             SceneId::VacationPark => ActiveScene::VacationPark(VacationParkScene::new()),
             SceneId::VacationForest => ActiveScene::VacationForest(VacationForestScene::new()),
             SceneId::VacationAquarium => {
@@ -156,6 +160,7 @@ impl ActiveScene {
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
             ActiveScene::Snake(s) => s,
+            ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
             ActiveScene::VacationAquarium(s) => s,
@@ -190,6 +195,7 @@ impl ActiveScene {
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
             ActiveScene::Snake(s) => s,
+            ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
             ActiveScene::VacationAquarium(s) => s,

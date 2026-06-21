@@ -7,4 +7,6 @@ pub mod minigame_assets;
 pub mod minigame_character;
 pub mod nature;
 pub mod plants;
+pub mod platformer_levels;
+pub mod platformer_terrain;
 pub mod store;

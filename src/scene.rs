@@ -31,6 +31,7 @@ pub enum SceneId {
     Zoomies,
     Breakout,
     Snake,
+    Platformer,
     VacationPark,
     VacationForest,
     VacationAquarium,
