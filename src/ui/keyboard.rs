@@ -1,8 +1,4 @@
 //! On-screen keyboard for text/hex entry.
-//!
-//! Ported 1:1 from `micropython/src/ui_keyboard.py`. The full keyboard is an
-//! 11×4 grid with shift / backspace / OK keys; the hex keyboard is a 9×2 grid
-//! with no shift.
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;

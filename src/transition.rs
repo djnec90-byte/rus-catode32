@@ -1,12 +1,9 @@
 //! Screen transition effects between scenes and around sleep entry/exit.
 //!
-//! Port of `micropython/src/transitions.py`. Two-phase scanline-interlace
-//! fade: an `Out` phase closes the screen to black in 8 passes, then a
-//! one-frame `Midpoint` is signalled so the caller can perform the deferred
-//! work (scene swap, sleep entry), then an `In` phase opens it back up.
-//!
-//! `start_in_only` skips the `Out` phase — used on wake from sleep where
-//! the screen has been off and there is nothing to fade away from.
+//! Two-phase scanline-interlace fade: an `Out` phase closes the screen to 
+//! black in 8 passes, then a one-frame `Midpoint` is signalled so the
+//! caller can perform the deferred work (scene swap, sleep entry), then
+//! an `In` phase opens it back up.
 
 use embedded_graphics::prelude::{Point, Size};
 
@@ -29,8 +26,7 @@ pub enum TransitionStep {
     Active,
     /// Fired exactly once after the `Out` phase finishes with one fully-black
     /// frame on screen. The caller should perform any deferred work (scene
-    /// swap, sleep entry) before returning — the next `draw` call will start
-    /// the `In` phase from full black.
+    /// swap, sleep entry) before returning
     Midpoint,
 }
 
@@ -62,8 +58,6 @@ impl TransitionManager {
         self.active
     }
 
-    /// Begin the closing phase. Returns `false` if a transition is already
-    /// running (and the call is a no-op).
     pub fn start(&mut self) -> bool {
         if self.active {
             return false;
@@ -76,7 +70,7 @@ impl TransitionManager {
         true
     }
 
-    /// Begin the opening phase only — no `Out`, no midpoint signal. Used
+    /// Begin the opening phase only. No `Out`, no midpoint signal. Used
     /// after waking from sleep where the screen was already black.
     pub fn start_in_only(&mut self) {
         self.active = true;

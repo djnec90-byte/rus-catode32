@@ -1,7 +1,5 @@
 //! Maze minigame — guide the cat to the fish through a randomly generated maze.
 //!
-//! Ported 1:1 from `micropython/src/scenes/maze.py`.
-//!
 //! Maze grows with the session round: every `HARD_MODE_ROUND` rounds adds rows
 //! (vertical scroll), every `WIDE_MODE_ROUND` rounds adds columns (horizontal
 //! scroll). Even rounds carve reward rooms (3×3) with collectible diamonds.

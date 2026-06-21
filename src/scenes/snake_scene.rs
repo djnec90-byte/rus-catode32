@@ -1,6 +1,4 @@
 //! Snake minigame — guide the cat to eat spots on a 32x16 grid.
-//!
-//! Ported from `micropython/src/scenes/snake.py`.
 
 use core::fmt::Write as _;
 

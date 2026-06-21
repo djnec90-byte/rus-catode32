@@ -1,8 +1,4 @@
-//! Pet seed → personality / favorites derivation.
-//!
-//! Ports `micropython/src/reset_context.py` `_derive_trait_offsets` and
-//! `_derive_favorites` 1:1 so a given 64-bit seed yields the same pet on
-//! both implementations.
+//! Pet seed to personality / favorites derivation.
 
 use crate::{
     context::{FoodItem, ToyVariant},
@@ -130,8 +126,6 @@ impl Temperament {
     }
 }
 
-/// Mirrors Python `_FAV_WEATHERS = ('sunny', 'rainy', 'snowy', 'overcast')`.
-/// Indexed by `_next() % 4` in `_derive_favorites`.
 pub fn fav_weather_from_index(idx: u32) -> crate::context::FavWeather {
     use crate::context::FavWeather;
     match idx % 4 {
@@ -142,7 +136,6 @@ pub fn fav_weather_from_index(idx: u32) -> crate::context::FavWeather {
     }
 }
 
-/// Mirrors Python `_MEALS` (13 items, in this order).
 const MEALS: [FoodItem; 13] = [
     FoodItem::Kibble,
     FoodItem::Cod,
@@ -159,7 +152,6 @@ const MEALS: [FoodItem; 13] = [
     FoodItem::Lamb,
 ];
 
-/// Mirrors Python `_SNACKS` (9 items, in this order).
 const SNACKS: [FoodItem; 9] = [
     FoodItem::Carrots,
     FoodItem::Pumpkin,
@@ -172,8 +164,6 @@ const SNACKS: [FoodItem; 9] = [
     FoodItem::Puree,
 ];
 
-/// Mirrors Python `_TOY_VARIANTS = ('string', 'feather', 'ball', 'laser', 'mouse')`.
-/// Excludes `Bubbles` — Python never lists it as a favorite candidate.
 const TOY_VARIANTS: [ToyVariant; 5] = [
     ToyVariant::String_,
     ToyVariant::Feather,
@@ -182,7 +172,6 @@ const TOY_VARIANTS: [ToyVariant; 5] = [
     ToyVariant::Mouse,
 ];
 
-/// Mirrors Python `_LOCATIONS = ('outside', 'kitchen', 'treehouse', 'bedroom')`.
 const LOCATIONS: [SceneId; 4] = [
     SceneId::Outside,
     SceneId::Kitchen,
@@ -205,7 +194,6 @@ fn xorshift32(state: &mut u32) -> u32 {
     x
 }
 
-/// Mirrors Python `_derive_trait_offsets`.
 /// Returns five `(courage, loyalty, mischievousness, curiosity, sociability)`
 /// offsets in roughly `[-TRAIT_MAGNITUDE, +TRAIT_MAGNITUDE]`, mean-centered.
 pub fn derive_trait_offsets(seed: u64) -> [i32; PERSONALITY_TRAITS] {
@@ -241,7 +229,6 @@ pub struct DerivedFavorites {
     pub least_fav_location: SceneId,
 }
 
-/// Mirrors Python `_derive_favorites`.
 /// Uses the upper 32 bits of `seed` as the xorshift starting state, keeping
 /// derivation independent from `derive_trait_offsets` (which uses the lower).
 pub fn derive_favorites(seed: u64) -> DerivedFavorites {

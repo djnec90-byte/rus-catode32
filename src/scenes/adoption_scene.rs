@@ -1,7 +1,5 @@
 //! Adoption scene — first-run cat selection and onboarding.
 //!
-//! Ports `micropython/src/scenes/adoption.py` 1:1.
-//!
 //! States:
 //!   Grid    — 2×2 grid of candidate cats; D-pad to navigate, A to inspect
 //!   Profile — per-cat info card; B = back, A = adopt

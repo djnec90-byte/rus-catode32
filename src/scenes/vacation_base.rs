@@ -4,8 +4,6 @@
 //! the per-scene file focused on art. Each scene owns a `VacationState` and
 //! calls `tick()` from its update path; `apply_rewards_on_exit()` lands the
 //! accumulated bonuses, and `cleanup_context()` clears the cross-scene flags.
-//!
-//! Mirrors `micropython/src/scenes/vacation_scene.py`.
 
 use crate::context::{GameContext, StatId};
 

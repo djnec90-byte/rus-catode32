@@ -1,9 +1,4 @@
 //! Prowl — platformer minigame.
-//!
-//! Ported from `micropython/src/scenes/platformer.py`. Character controller
-//! (walk, jump, double-jump, solid blocks, one-way platforms, camera scroll),
-//! cat-swipe combat against slime enemies, checkpoints, coins, keys, doors,
-//! summary screen and inter-level transitions.
 
 use core::fmt::Write as _;
 

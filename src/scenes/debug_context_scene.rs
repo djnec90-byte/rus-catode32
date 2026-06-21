@@ -1,13 +1,6 @@
 //! Debug scene that exposes a handful of context-mutating actions:
 //! save now, edit coins, edit pet seed, reset plants, reset stats,
-//! factory-reset. Ports `micropython/src/scenes/debug_context.py` with two
-//! deliberate Rust-side deltas:
-//!
-//! - "Save now" doesn't reboot afterwards (the Rust port has no heap to
-//!   reclaim) and so doesn't show a "are you sure?" confirm. Instead it
-//!   surfaces a brief "Saved" popup so the action has visible feedback.
-//! - "Reset stats" zeroes the player-facing stats only and leaves identity
-//!   intact, rather than Python's full regen-the-pet-from-scratch reset.
+//! factory-reset.
 
 use core::fmt::Write as _;
 

@@ -4,9 +4,6 @@
 //! Python backups remain loadable (Rust → Python is best-effort; Python → Rust
 //! is the priority). Storage layer is `crate::storage` (round-robin sector
 //! rotation on the `nvs` partition).
-//!
-//! Field-by-field this is a direct port of `micropython/src/context.py`'s
-//! `_write_to_flash` and `load`.
 
 use core::str::FromStr;
 

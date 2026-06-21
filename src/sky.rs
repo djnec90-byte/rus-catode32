@@ -147,7 +147,7 @@ fn xorshift32(state: &mut u32) -> u32 {
     x
 }
 
-// (min_count, max_count, speed_multiplier) by weather — direct port of Python's WEATHER_CLOUD_CONFIG.
+// (min_count, max_count, speed_multiplier) by weather
 fn weather_cloud_config(weather: Weather) -> (u8, u8, f32) {
     match weather {
         Weather::Clear => (1, 2, 0.7),

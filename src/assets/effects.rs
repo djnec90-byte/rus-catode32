@@ -1,5 +1,4 @@
-//! Shared particle / effect sprites. Port of the `BURST1` (and friends)
-//! statics in `micropython/src/assets/effects.py`.
+//! Shared particle / effect sprites. 
 
 use crate::render::Sprite;
 

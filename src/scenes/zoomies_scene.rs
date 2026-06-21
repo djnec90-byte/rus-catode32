@@ -1,7 +1,4 @@
 //! Zoomies minigame — endless runner inspired by Chrome dino.
-//!
-//! Ported from `micropython/src/scenes/zoomies.py`. Unrelated to the
-//! `ZoomiesBehavior` autonomous behavior — they only share the name.
 
 use core::fmt::Write as _;
 

@@ -1,7 +1,5 @@
 //! Memory minigame — find matching pairs. Board grows over rounds:
 //! round 1: 9x6, round 2: 10x7, round 3+: 11x8.
-//!
-//! Ported from `micropython/src/scenes/memory.py`.
 
 use core::fmt::Write as _;
 

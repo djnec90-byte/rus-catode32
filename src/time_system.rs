@@ -2,7 +2,7 @@ use crate::{
     context::GameContext, temperature_system::get_temperature, weather_system::WeatherSystem,
 };
 
-// Matches Python's production override in main.py: game_minutes_per_second = 1/15.
+// game_minutes_per_second = 1/15.
 // That gives ~15 real minutes per in-game hour and ~6 real hours per in-game day.
 const GAME_MINUTES_PER_SECOND: f32 = 1.0 / 15.0;
 

@@ -1,9 +1,5 @@
 //! Hanjie (Nonogram) minigame — fill the grid using row/column clues.
 //!
-//! Ported from `micropython/src/scenes/hanjie.py`. Per a design change
-//! during the port, this version does *not* persist a best time — the win
-//! popup shows the current solve time only.
-//!
 //! Layout (128x64):
 //!   x=0..23    row clues (right-aligned, single digits at 6px pitch)
 //!   x=24..71+  6..9 column grid (8px cells), grows by round

@@ -1,6 +1,5 @@
 //! Terrain tile sprites for the Prowl platformer minigame.
-//! All terrain tiles are 8x8. Ported from
-//! `micropython/src/assets/platformer_terrain.py`.
+//! All terrain tiles are 8x8.
 
 use crate::render::Sprite;
 

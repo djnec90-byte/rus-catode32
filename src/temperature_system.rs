@@ -1,5 +1,4 @@
-// Deterministic temperature simulation, ported 1:1 from the MicroPython
-// `temperature_system.py`.
+// Deterministic temperature simulation
 //
 // Formula: seasonal_base + diurnal + weather_mod + slow_noise + day_noise + slot_noise
 //   seasonal_base: cosine wave, trough at day 0 (winter), peak at day 182 (summer)

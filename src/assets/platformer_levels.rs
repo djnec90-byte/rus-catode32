@@ -1,10 +1,6 @@
 //! Platformer level data and parser.
 //!
-//! Levels are authored as text grids in `src/assets/levels/level_NN.txt`
-//! (originally lived under `micropython/levels/`). They are included via
-//! `include_str!` and parsed at scene-enter time into `LevelData`.
-//!
-//! Character key (matches `tools/convert_level.py`):
+//! Character key:
 //!   '1' / '2'  solid terrain block (variants 0 / 1)
 //!   '_'        one-way platform (consecutive `_` on the same row coalesce)
 //!   'g'        grass decoration (sprite picked randomly at parse time)

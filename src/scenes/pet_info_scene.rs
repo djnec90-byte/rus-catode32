@@ -1,9 +1,4 @@
 //! Pet info — rich scrollable biography page.
-//!
-//! Ports `micropython/src/scenes/pet_info.py` 1:1. The page composes an intro
-//! paragraph wrapped beside the cat's headshot, then a body of paragraphs
-//! about the pet's favourites, current mood, and meal variety, with a
-//! "Change Name" row at the bottom that opens the keyboard.
 
 use core::fmt::Write;
 

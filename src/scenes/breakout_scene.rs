@@ -1,6 +1,4 @@
 //! Breakout / brick-breaker minigame.
-//!
-//! Ported from `micropython/src/scenes/breakout.py`.
 
 use core::fmt::Write as _;
 

@@ -75,8 +75,7 @@ impl Character {
     /// Draw the sick-sweat wavy lines above the cat's head when sickness has
     /// crossed the visibility threshold (lower while resting, so the player can
     /// still spot it). Anchored to the eye attach point when the pose has eyes,
-    /// otherwise to the head attach point — mirrors `CharacterEntity.draw` in
-    /// `micropython/src/entities/character.py`.
+    /// otherwise to the head attach point
     pub fn draw_sick_overlay(&self, renderer: &mut Renderer, camera_x: i32, ctx: &GameContext) {
         let threshold = match ctx.current_behavior_name {
             Some("sleeping") | Some("napping") => 2.0,

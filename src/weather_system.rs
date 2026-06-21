@@ -175,7 +175,7 @@ impl WeatherSystem {
 
     /// Build a deterministic forecast covering at least `hours` of future
     /// in-game time, starting with the current weather and its remaining
-    /// duration. Mirrors the Python `WeatherSystem.get_forecast`.
+    /// duration.
     pub fn get_forecast(&self, ctx: &GameContext, hours: u32) -> Vec<ForecastEntry, FORECAST_MAX_ENTRIES> {
         let mut out: Vec<ForecastEntry, FORECAST_MAX_ENTRIES> = Vec::new();
 

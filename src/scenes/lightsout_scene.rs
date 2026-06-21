@@ -1,9 +1,5 @@
 //! Lights Out minigame — toggle all cells off. Pressing a cell flips it and
 //! its orthogonal neighbours.
-//!
-//! Ported from `micropython/src/scenes/lightsout.py`. Grid size is selectable
-//! (4x4 / 5x5 / 6x6) via the Menu2 in-scene menu. Difficulty ramps with
-//! session wins: more random scramble presses up to a per-size cap.
 
 use core::fmt::Write as _;
 

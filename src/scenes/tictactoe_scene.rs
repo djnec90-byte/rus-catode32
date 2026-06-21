@@ -1,10 +1,4 @@
 //! TicTacToe minigame — play against the pet on a 3x3, 4x4, or 5x5 board.
-//!
-//! Ported from `micropython/src/scenes/tictactoe.py`. Board size grows with
-//! round number: 3x3 for rounds 0–2, 4x4 for 3–6, 5x5 for 7+. The pet uses a
-//! heuristic AI (immediate win, then block, then scored cell) with a 5% random
-//! move to keep games winnable. Larger boards can end in a "winning draw"
-//! where whoever had the longest contiguous run gets half a point.
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
