@@ -149,6 +149,31 @@ impl Renderer {
         }
     }
 
+    /// Bresenham midpoint circle outline. Mirrors Python `draw_circle(..., filled=False)`.
+    pub fn draw_circle_outline(&mut self, center: Point, radius: i32) {
+        let (cx, cy) = (center.x, center.y);
+        let mut x = radius;
+        let mut y = 0;
+        let mut err = 1 - radius;
+        while x >= y {
+            self.draw_pixel(Point::new(cx + x, cy + y), true);
+            self.draw_pixel(Point::new(cx - x, cy + y), true);
+            self.draw_pixel(Point::new(cx + x, cy - y), true);
+            self.draw_pixel(Point::new(cx - x, cy - y), true);
+            self.draw_pixel(Point::new(cx + y, cy + x), true);
+            self.draw_pixel(Point::new(cx - y, cy + x), true);
+            self.draw_pixel(Point::new(cx + y, cy - x), true);
+            self.draw_pixel(Point::new(cx - y, cy - x), true);
+            y += 1;
+            if err < 0 {
+                err += 2 * y + 1;
+            } else {
+                x -= 1;
+                err += 2 * (y - x) + 1;
+            }
+        }
+    }
+
     pub fn fill_rect_off(&mut self, pos: Point, size: Size) {
         let style = PrimitiveStyleBuilder::new()
             .fill_color(BinaryColor::Off)

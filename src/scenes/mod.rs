@@ -25,6 +25,7 @@ pub mod snake_scene;
 pub mod stats_scene;
 pub mod store_scene;
 pub mod stub_scene;
+pub mod tictactoe_scene;
 pub mod treehouse_scene;
 pub mod vacation_aquarium_scene;
 pub mod vacation_base;
@@ -62,6 +63,7 @@ use snake_scene::SnakeScene;
 use stats_scene::StatsScene;
 use store_scene::StoreScene;
 use stub_scene::StubScene;
+use tictactoe_scene::TicTacToeScene;
 use treehouse_scene::TreehouseScene;
 use vacation_aquarium_scene::VacationAquariumScene;
 use vacation_beach_scene::VacationBeachScene;
@@ -97,6 +99,7 @@ pub enum ActiveScene {
     Memory(MemoryScene),
     Maze(MazeScene),
     Hanjie(HanjieScene),
+    TicTacToe(TicTacToeScene),
     Platformer(PlatformerScene),
     VacationPark(VacationParkScene),
     VacationForest(VacationForestScene),
@@ -135,6 +138,7 @@ impl ActiveScene {
             SceneId::Memory => ActiveScene::Memory(MemoryScene::new()),
             SceneId::Maze => ActiveScene::Maze(MazeScene::new()),
             SceneId::Hanjie => ActiveScene::Hanjie(HanjieScene::new()),
+            SceneId::TicTacToe => ActiveScene::TicTacToe(TicTacToeScene::new()),
             SceneId::Platformer => ActiveScene::Platformer(PlatformerScene::new()),
             SceneId::VacationPark => ActiveScene::VacationPark(VacationParkScene::new()),
             SceneId::VacationForest => ActiveScene::VacationForest(VacationForestScene::new()),
@@ -175,6 +179,7 @@ impl ActiveScene {
             ActiveScene::Memory(s) => s,
             ActiveScene::Maze(s) => s,
             ActiveScene::Hanjie(s) => s,
+            ActiveScene::TicTacToe(s) => s,
             ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
@@ -213,6 +218,7 @@ impl ActiveScene {
             ActiveScene::Memory(s) => s,
             ActiveScene::Maze(s) => s,
             ActiveScene::Hanjie(s) => s,
+            ActiveScene::TicTacToe(s) => s,
             ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
