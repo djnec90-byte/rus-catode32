@@ -11,6 +11,7 @@ pub mod debug_power_scene;
 pub mod debug_stats_scene;
 pub mod debug_time_scene;
 pub mod forecast_scene;
+pub mod hanjie_scene;
 pub mod inside_scene;
 pub mod kitchen_scene;
 pub mod maze_scene;
@@ -47,6 +48,7 @@ use debug_power_scene::DebugPowerScene;
 use debug_stats_scene::DebugStatsScene;
 use debug_time_scene::DebugTimeScene;
 use forecast_scene::ForecastScene;
+use hanjie_scene::HanjieScene;
 use inside_scene::InsideScene;
 use kitchen_scene::KitchenScene;
 use maze_scene::MazeScene;
@@ -94,6 +96,7 @@ pub enum ActiveScene {
     Snake(SnakeScene),
     Memory(MemoryScene),
     Maze(MazeScene),
+    Hanjie(HanjieScene),
     Platformer(PlatformerScene),
     VacationPark(VacationParkScene),
     VacationForest(VacationForestScene),
@@ -131,6 +134,7 @@ impl ActiveScene {
             SceneId::Snake => ActiveScene::Snake(SnakeScene::new()),
             SceneId::Memory => ActiveScene::Memory(MemoryScene::new()),
             SceneId::Maze => ActiveScene::Maze(MazeScene::new()),
+            SceneId::Hanjie => ActiveScene::Hanjie(HanjieScene::new()),
             SceneId::Platformer => ActiveScene::Platformer(PlatformerScene::new()),
             SceneId::VacationPark => ActiveScene::VacationPark(VacationParkScene::new()),
             SceneId::VacationForest => ActiveScene::VacationForest(VacationForestScene::new()),
@@ -170,6 +174,7 @@ impl ActiveScene {
             ActiveScene::Snake(s) => s,
             ActiveScene::Memory(s) => s,
             ActiveScene::Maze(s) => s,
+            ActiveScene::Hanjie(s) => s,
             ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
@@ -207,6 +212,7 @@ impl ActiveScene {
             ActiveScene::Snake(s) => s,
             ActiveScene::Memory(s) => s,
             ActiveScene::Maze(s) => s,
+            ActiveScene::Hanjie(s) => s,
             ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,

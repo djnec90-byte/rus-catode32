@@ -451,7 +451,6 @@ pub struct GameContext {
     pub maze_best_time: i32,
     pub snake_high_score: i32,
     pub memory_best_score: i32,
-    pub hanjie_best_time: i32,
 
     // World/environment state — advanced by TimeSystem each frame.
     pub time_hours: u8,
@@ -604,7 +603,6 @@ impl GameContext {
             maze_best_time: 0,
             snake_high_score: 0,
             memory_best_score: -1,
-            hanjie_best_time: -1,
 
             time_hours: 12,
             time_minutes: 0,

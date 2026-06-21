@@ -33,6 +33,7 @@ pub enum SceneId {
     Snake,
     Memory,
     Maze,
+    Hanjie,
     Platformer,
     VacationPark,
     VacationForest,
