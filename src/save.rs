@@ -965,17 +965,18 @@ pub fn load(ctx: &mut GameContext) -> bool {
     // `save` below, never concurrently.
     let buf = unsafe { &mut *core::ptr::addr_of_mut!(JSON_BUF) };
     let Some(len) = storage::read_latest(buf) else {
+        println!("[Save] storage::read_latest returned None — no save loaded");
         return false;
     };
     match serde_json_core::from_slice::<SaveData>(&buf[..len]) {
-        Ok((data, _)) => {
+        Ok((data, consumed)) => {
             apply(&data, ctx);
             ctx.last_save_time = Some(Instant::now());
-            println!("[Save] Loaded {} bytes", len);
+            println!("[Save] Loaded {} bytes ({} parsed)", len, consumed);
             true
         }
-        Err(_) => {
-            println!("[Save] Parse failed (corrupt save)");
+        Err(e) => {
+            println!("[Save] Parse failed ({} bytes): {:?}", len, e);
             false
         }
     }

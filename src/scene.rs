@@ -30,6 +30,7 @@ pub enum SceneId {
     DebugContext,
     Zoomies,
     Breakout,
+    Snake,
     VacationPark,
     VacationForest,
     VacationAquarium,

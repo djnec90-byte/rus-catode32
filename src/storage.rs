@@ -102,7 +102,10 @@ fn sectors_for(payload_len: usize) -> usize {
 fn read_header(flash: &mut FlashStorage, part: PartitionInfo, sector: usize) -> Option<Record> {
     let mut buf = [0u8; HEADER_LEN];
     let addr = part.offset + (sector * SECTOR_SIZE) as u32;
-    flash.read(addr, &mut buf).ok()?;
+    if let Err(e) = flash.read(addr, &mut buf) {
+        println!("[Storage] Header read failed at sector {}: {:?}", sector, e);
+        return None;
+    }
     if buf[..4] != MAGIC {
         return None;
     }
@@ -138,6 +141,11 @@ pub fn has_save() -> bool {
 }
 
 /// Read the latest save payload into `buf`, walking across sector boundaries.
+///
+/// `esp-storage`'s default `NorFlash::read` requires the read length to be a
+/// multiple of WORD_SIZE (4 bytes). The on-disk payload is padded with 0xFF
+/// to that alignment by `write_chunk`, so we read into an aligned scratch
+/// region and copy the meaningful bytes out.
 pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     let flash = flash()?;
     let part = find_nvs_partition(flash)?;
@@ -148,14 +156,27 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
         return None;
     }
 
+    let mut scratch = [0u8; SECTOR_SIZE];
     let mut read = 0;
     let mut sector_idx = r.start_sector;
     let mut sector_offset = HEADER_LEN;
     while read < len {
         let space = SECTOR_SIZE - sector_offset;
         let chunk = space.min(len - read);
+        // Round up to WORD_SIZE — esp-storage rejects unaligned reads. The
+        // tail bytes on flash were written as 0xFF padding, so we just
+        // discard them after the read.
+        let aligned_chunk = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
+        let aligned_chunk = aligned_chunk.min(space);
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
-        flash.read(addr, &mut buf[read..read + chunk]).ok()?;
+        if let Err(e) = flash.read(addr, &mut scratch[..aligned_chunk]) {
+            println!(
+                "[Storage] Payload read failed at sector {} offset {}: {:?}",
+                sector_idx, sector_offset, e
+            );
+            return None;
+        }
+        buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
         read += chunk;
         sector_offset += chunk;
         if sector_offset >= SECTOR_SIZE {
@@ -286,8 +307,26 @@ pub fn write_next(payload: &[u8]) -> bool {
     header[4..8].copy_from_slice(&next_seq.to_le_bytes());
     header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
     let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
-    if flash.write(start_addr, &header).is_err() {
-        println!("[Storage] Header write failed");
+    if let Err(e) = flash.write(start_addr, &header) {
+        println!("[Storage] Header write failed: {:?}", e);
+        return false;
+    }
+
+    // Verify-after-write: read the header back and confirm it persisted as
+    // we expect before declaring success. Catches silent flash failures
+    // (write-cache anomalies, partial erases, etc) so save errors surface
+    // immediately rather than at next boot.
+    let mut readback = [0u8; HEADER_LEN];
+    if let Err(e) = flash.read(start_addr, &mut readback) {
+        println!("[Storage] Header verify-read failed: {:?}", e);
+        return false;
+    }
+    if readback != header {
+        println!(
+            "[Storage] Header verify mismatch — wrote {:?}, read {:?}",
+            &header[..12],
+            &readback[..12]
+        );
         return false;
     }
 

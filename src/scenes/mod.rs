@@ -17,6 +17,7 @@ pub mod menu_scene;
 pub mod outside_scene;
 pub mod pet_info_scene;
 pub mod pose_scene;
+pub mod snake_scene;
 pub mod stats_scene;
 pub mod store_scene;
 pub mod stub_scene;
@@ -49,6 +50,7 @@ use menu_scene::MenuScene;
 use outside_scene::OutsideScene;
 use pet_info_scene::PetInfoScene;
 use pose_scene::PoseScene;
+use snake_scene::SnakeScene;
 use stats_scene::StatsScene;
 use store_scene::StoreScene;
 use stub_scene::StubScene;
@@ -83,6 +85,7 @@ pub enum ActiveScene {
     DebugTime(DebugTimeScene),
     Zoomies(ZoomiesScene),
     Breakout(BreakoutScene),
+    Snake(SnakeScene),
     VacationPark(VacationParkScene),
     VacationForest(VacationForestScene),
     VacationAquarium(VacationAquariumScene),
@@ -116,6 +119,7 @@ impl ActiveScene {
             SceneId::DebugTime => ActiveScene::DebugTime(DebugTimeScene::new()),
             SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
             SceneId::Breakout => ActiveScene::Breakout(BreakoutScene::new()),
+            SceneId::Snake => ActiveScene::Snake(SnakeScene::new()),
             SceneId::VacationPark => ActiveScene::VacationPark(VacationParkScene::new()),
             SceneId::VacationForest => ActiveScene::VacationForest(VacationForestScene::new()),
             SceneId::VacationAquarium => {
@@ -151,6 +155,7 @@ impl ActiveScene {
             ActiveScene::DebugTime(s) => s,
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
+            ActiveScene::Snake(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
             ActiveScene::VacationAquarium(s) => s,
@@ -184,6 +189,7 @@ impl ActiveScene {
             ActiveScene::DebugTime(s) => s,
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
+            ActiveScene::Snake(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
             ActiveScene::VacationAquarium(s) => s,
