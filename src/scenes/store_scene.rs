@@ -107,15 +107,16 @@ const TOOLS: &[MenuItem<StoreAction>] = &[
 ];
 
 const GARDEN: &[MenuItem<StoreAction>] = &[
-    MenuItem { label: "Pots",       icon: None, submenu: Some(POTS),  action: None, confirm: None },
-    MenuItem { label: "Seeds",      icon: None, submenu: Some(SEEDS), action: None, confirm: None },
-    MenuItem { label: "Tools",      icon: None, submenu: Some(TOOLS), action: None, confirm: None },
+    MenuItem { label: "Pots",       icon: None, submenu: Some(POTS),  action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "Seeds",      icon: None, submenu: Some(SEEDS), action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "Tools",      icon: None, submenu: Some(TOOLS), action: None, confirm: None, confirm_on_vacation: None },
     MenuItem {
         label: "Fertilizer",
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyFertilizer(FERTILIZER_COST)),
         confirm: Some("Fertilizer: 25c"),
+        confirm_on_vacation: None,
     },
 ];
 
@@ -126,6 +127,7 @@ const SERVICE: &[MenuItem<StoreAction>] = &[
         submenu: None,
         action: Some(StoreAction::BuyService(ServiceKind::Groom, GROOM_COST)),
         confirm: Some("Groom: 50c"),
+        confirm_on_vacation: None,
     },
     MenuItem {
         label: "Train",
@@ -133,6 +135,7 @@ const SERVICE: &[MenuItem<StoreAction>] = &[
         submenu: None,
         action: Some(StoreAction::BuyService(ServiceKind::Train, TRAIN_COST)),
         confirm: Some("Train: 100c"),
+        confirm_on_vacation: None,
     },
 ];
 
@@ -143,6 +146,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationPark, 15)),
         confirm: Some("Trip: park 15c"),
+        confirm_on_vacation: None,
     },
     MenuItem {
         label: "Forest",
@@ -150,6 +154,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationForest, 25)),
         confirm: Some("Trip: forest 25c"),
+        confirm_on_vacation: None,
     },
     MenuItem {
         label: "Aqua.",
@@ -157,6 +162,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationAquarium, 50)),
         confirm: Some("Trip: aquarium 50c"),
+        confirm_on_vacation: None,
     },
     MenuItem {
         label: "Beach",
@@ -164,22 +170,24 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationBeach, 100)),
         confirm: Some("Trip: beach 100c"),
+        confirm_on_vacation: None,
     },
 ];
 
 const ROOT: &[MenuItem<StoreAction>] = &[
-    MenuItem { label: "Food",    icon: None, submenu: Some(FOOD),    action: None, confirm: None },
-    MenuItem { label: "Snacks",  icon: None, submenu: Some(SNACKS),  action: None, confirm: None },
-    MenuItem { label: "Toys",    icon: None, submenu: Some(TOYS),    action: None, confirm: None },
-    MenuItem { label: "Garden",  icon: None, submenu: Some(GARDEN),  action: None, confirm: None },
-    MenuItem { label: "Service", icon: None, submenu: Some(SERVICE), action: None, confirm: None },
-    MenuItem { label: "Trips",   icon: None, submenu: Some(TRIPS),   action: None, confirm: None },
+    MenuItem { label: "Food",    icon: None, submenu: Some(FOOD),    action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "Snacks",  icon: None, submenu: Some(SNACKS),  action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "Toys",    icon: None, submenu: Some(TOYS),    action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "Garden",  icon: None, submenu: Some(GARDEN),  action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "Service", icon: None, submenu: Some(SERVICE), action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "Trips",   icon: None, submenu: Some(TRIPS),   action: None, confirm: None, confirm_on_vacation: None },
     MenuItem {
         label: "Meds.",
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyMedicine(MEDICINE_COST)),
         confirm: Some("Medicine: 50c"),
+        confirm_on_vacation: None,
     },
     MenuItem {
         label: "Exit",
@@ -187,6 +195,7 @@ const ROOT: &[MenuItem<StoreAction>] = &[
         submenu: None,
         action: Some(StoreAction::Leave),
         confirm: None,
+        confirm_on_vacation: None,
     },
 ];
 
@@ -197,6 +206,7 @@ const fn food_item(label: &'static str, item: FoodItem, cost: u8, confirm: &'sta
         submenu: None,
         action: Some(StoreAction::BuyFood(item, cost)),
         confirm: Some(confirm),
+        confirm_on_vacation: None,
     }
 }
 
@@ -207,6 +217,7 @@ const fn toy_item(label: &'static str, variant: ToyVariant, cost: u8, confirm: &
         submenu: None,
         action: Some(StoreAction::BuyToy(variant, cost)),
         confirm: Some(confirm),
+        confirm_on_vacation: None,
     }
 }
 
@@ -217,6 +228,7 @@ const fn pot_item(label: &'static str, pot: PotSize, cost: u8, confirm: &'static
         submenu: None,
         action: Some(StoreAction::BuyPot(pot, cost)),
         confirm: Some(confirm),
+        confirm_on_vacation: None,
     }
 }
 
@@ -227,6 +239,7 @@ const fn seed_item(label: &'static str, seed: SeedKind, cost: u8, confirm: &'sta
         submenu: None,
         action: Some(StoreAction::BuySeeds(seed, cost)),
         confirm: Some(confirm),
+        confirm_on_vacation: None,
     }
 }
 
@@ -237,6 +250,7 @@ const fn tool_item(label: &'static str, tool: ToolKind, cost: u8, confirm: &'sta
         submenu: None,
         action: Some(StoreAction::BuyTool(tool, cost)),
         confirm: Some(confirm),
+        confirm_on_vacation: None,
     }
 }
 
@@ -519,7 +533,7 @@ impl Scene for StoreScene {
             return None;
         }
 
-        match self.menu.handle_input(buttons) {
+        match self.menu.handle_input(buttons, false) {
             MenuResult::Continue => None,
             MenuResult::Closed => Some(ctx.last_main_scene),
             MenuResult::Action(action) => self.handle_store_action(ctx, action),

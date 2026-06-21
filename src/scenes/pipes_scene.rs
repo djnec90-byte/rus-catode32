@@ -24,7 +24,7 @@ enum PipesAction {
 }
 
 const OPTIONS_ITEMS: &[MenuItem<PipesAction>] = &[
-    MenuItem { label: "New Board", icon: None, submenu: None, action: Some(PipesAction::NewBoard), confirm: None },
+    MenuItem { label: "New Board", icon: None, submenu: None, action: Some(PipesAction::NewBoard), confirm: None, confirm_on_vacation: None },
 ];
 
 const CELL: i32 = 9;
@@ -652,7 +652,7 @@ impl Scene for PipesScene {
         }
 
         if self.menu_active {
-            match self.options_menu.handle_input(buttons) {
+            match self.options_menu.handle_input(buttons, false) {
                 MenuResult::Continue => {}
                 MenuResult::Closed => {
                     self.menu_active = false;

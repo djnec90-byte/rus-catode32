@@ -828,7 +828,7 @@ impl Scene for ZoomiesScene {
             popup.draw(renderer, false);
         } else if self.is_hit {
             use crate::ui::popup::Popup;
-            let mut popup = Popup::new(14, 10, 100, 24);
+            let mut popup = Popup::new(14, 10, 100, 28);
             let mut buf: String<32> = String::new();
             if self.is_new_best {
                 let _ = write!(buf, "NEW BEST!\n{}", self.score);

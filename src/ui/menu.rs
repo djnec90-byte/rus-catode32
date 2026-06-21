@@ -29,6 +29,11 @@ pub struct MenuItem<A: Copy + 'static> {
     pub submenu: Option<&'static [MenuItem<A>]>,
     pub action: Option<A>,
     pub confirm: Option<&'static str>,
+    /// When the caller passes `vacation_active = true` to `handle_input`,
+    /// this prompt is shown instead of `confirm`. Lets scene-switch items
+    /// gate themselves behind an "End vacation?" prompt only while the
+    /// player is on a vacation scene.
+    pub confirm_on_vacation: Option<&'static str>,
 }
 
 pub enum MenuResult<A> {
@@ -82,7 +87,7 @@ impl<A: Copy + 'static> Menu<A> {
         self.pending_action = None;
     }
 
-    pub fn handle_input(&mut self, buttons: &mut Buttons) -> MenuResult<A> {
+    pub fn handle_input(&mut self, buttons: &mut Buttons, vacation_active: bool) -> MenuResult<A> {
         if self.confirm.is_open() {
             return match self.confirm.handle_input(buttons) {
                 ConfirmResult::Pending => MenuResult::Continue,
@@ -135,7 +140,12 @@ impl<A: Copy + 'static> Menu<A> {
                 if let Some(submenu) = item.submenu {
                     self.enter_submenu(submenu);
                 } else if let Some(action) = item.action {
-                    if let Some(text) = item.confirm {
+                    let confirm_text = if vacation_active {
+                        item.confirm_on_vacation.or(item.confirm)
+                    } else {
+                        item.confirm
+                    };
+                    if let Some(text) = confirm_text {
                         self.open_confirm(action, text);
                     } else {
                         return MenuResult::Action(action);

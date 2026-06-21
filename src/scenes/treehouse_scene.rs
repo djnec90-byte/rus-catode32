@@ -127,6 +127,10 @@ impl Scene for TreehouseScene {
         None
     }
 
+    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
+        self.base.tick_background(ctx, dt);
+    }
+
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
         if self.base.menu_active() {
             self.base.draw_menu(renderer);

@@ -68,6 +68,7 @@ const MENU: &[MenuItem<DebugPlantsAction>] = &[
         submenu: Some(POT_MENU),
         action: None,
         confirm: None,
+        confirm_on_vacation: None,
     },
     MenuItem {
         label: "Plant type",
@@ -75,6 +76,7 @@ const MENU: &[MenuItem<DebugPlantsAction>] = &[
         submenu: Some(SEED_MENU),
         action: None,
         confirm: None,
+        confirm_on_vacation: None,
     },
 ];
 
@@ -85,6 +87,7 @@ const fn pot_menu_item(label: &'static str, idx: u8) -> MenuItem<DebugPlantsActi
         submenu: None,
         action: Some(DebugPlantsAction::PickPot(idx)),
         confirm: None,
+        confirm_on_vacation: None,
     }
 }
 
@@ -95,6 +98,7 @@ const fn seed_menu_item(label: &'static str, idx: u8) -> MenuItem<DebugPlantsAct
         submenu: None,
         action: Some(DebugPlantsAction::PickSeed(idx)),
         confirm: None,
+        confirm_on_vacation: None,
     }
 }
 
@@ -215,7 +219,7 @@ impl Scene for DebugPlantsScene {
         _dt: f32,
     ) -> Option<SceneId> {
         if self.menu_active {
-            match self.menu.handle_input(buttons) {
+            match self.menu.handle_input(buttons, false) {
                 MenuResult::Continue => return None,
                 MenuResult::Closed => {
                     self.menu_active = false;

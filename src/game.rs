@@ -37,8 +37,7 @@ pub struct Game {
     transition: TransitionManager,
     /// Scene swap waiting on the current transition's midpoint.
     pending_scene: Option<SceneId>,
-    /// True while a transition-out is playing pre-sleep. Mirrors Python
-    /// `_sleep_pending` in `micropython/src/main.py`.
+    /// True while a transition-out is playing pre-sleep.
     sleep_pending: bool,
     /// True while a transition-out is playing before deep sleep. Deep sleep
     /// is one-way (device resets on wake), so there is no `in_only` reveal

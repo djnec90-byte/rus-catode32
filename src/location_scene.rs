@@ -137,6 +137,56 @@ impl LocationScene {
         }
     }
 
+    /// World-tick used by callers (e.g. the big-menu overlay) that want the
+    /// scene to keep advancing while input is being consumed elsewhere. Runs
+    /// the same world updates as `update` but without reading the player's
+    /// buttons, dispatching menu/placement input, or returning a scene swap.
+    pub fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
+        ctx.scene_camera_x = self.environment.camera_offset(Layer::Foreground);
+        ctx.input.left = false;
+        ctx.input.right = false;
+        ctx.input.up = false;
+        ctx.input.down = false;
+        ctx.input.a = false;
+        ctx.input.b = false;
+        ctx.input.a_just_pressed = false;
+        ctx.input.b_just_pressed = false;
+
+        let score = scene_plant_health_score(ctx, self.scene_id).clamp(-100, 100);
+        ctx.scene_plant_health = score as i8;
+
+        self.sky.update(ctx, dt);
+        tick_plants(ctx);
+        let prev_x = self.character.pos.x;
+        self.behaviors.update(ctx, &mut self.character, dt);
+        let pose = self.behaviors.current_pose();
+        self.character.set_pose(pose);
+        self.character.animate(dt);
+        self.character.eye_override = self.behaviors.current_eye_frame_override();
+        self.burst.update(dt);
+        self.plant_bursts.update(dt);
+        if self.placement.active() {
+            self.placement.update(dt);
+        }
+        if self.selection.active() {
+            self.selection.update(dt);
+        }
+
+        // Auto-follow — player isn't panning (they're in the overlay), so the
+        // camera tracks the cat normally if a behavior nudged it.
+        let cursor_active = self.placement.active() || self.selection.active();
+        if !cursor_active && self.character.pos.x != prev_x {
+            let screen_x = self.character.pos.x - self.environment.camera_x;
+            if screen_x < FOLLOW_MARGIN {
+                self.environment
+                    .set_camera(self.character.pos.x - FOLLOW_MARGIN);
+            } else if screen_x > DISPLAY_WIDTH - FOLLOW_MARGIN {
+                self.environment
+                    .set_camera(self.character.pos.x - (DISPLAY_WIDTH - FOLLOW_MARGIN));
+            }
+        }
+    }
+
     pub fn update(
         &mut self,
         ctx: &mut GameContext,

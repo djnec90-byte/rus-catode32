@@ -307,6 +307,28 @@ impl VacationAquariumScene {
             false,
         );
     }
+
+    fn tick_world(&mut self, ctx: &mut GameContext, dt: f32) {
+        let scaled = dt * ctx.time_speed;
+        self.sw_timer += scaled;
+        if self.sw_timer >= SW_FRAME_INTERVAL {
+            self.sw_timer -= SW_FRAME_INTERVAL;
+            self.sw_frame = (self.sw_frame + 1) % SW_FRAMES;
+        }
+        for f in self.fish.iter_mut() {
+            f.update(scaled);
+        }
+        if let Some(oct) = self.octopus.as_mut() {
+            oct.update(scaled);
+        }
+        if let Some(b) = self.bubbles.as_mut() {
+            b.update(scaled);
+        }
+        if let Some(d) = self.debris.as_mut() {
+            d.update(scaled);
+        }
+        self.state.tick(ctx, scaled);
+    }
 }
 
 impl Scene for VacationAquariumScene {
@@ -336,26 +358,13 @@ impl Scene for VacationAquariumScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        let scaled = dt * ctx.time_speed;
-        self.sw_timer += scaled;
-        if self.sw_timer >= SW_FRAME_INTERVAL {
-            self.sw_timer -= SW_FRAME_INTERVAL;
-            self.sw_frame = (self.sw_frame + 1) % SW_FRAMES;
-        }
-        for f in self.fish.iter_mut() {
-            f.update(scaled);
-        }
-        if let Some(oct) = self.octopus.as_mut() {
-            oct.update(scaled);
-        }
-        if let Some(b) = self.bubbles.as_mut() {
-            b.update(scaled);
-        }
-        if let Some(d) = self.debris.as_mut() {
-            d.update(scaled);
-        }
-        self.state.tick(ctx, scaled);
+        self.tick_world(ctx, dt);
         None
+    }
+
+    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
+        self.base.tick_background(ctx, dt);
+        self.tick_world(ctx, dt);
     }
 
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {

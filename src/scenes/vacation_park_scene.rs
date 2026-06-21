@@ -233,6 +233,15 @@ impl Scene for VacationParkScene {
         None
     }
 
+    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
+        self.base.tick_background(ctx, dt);
+        let scaled_dt = dt * ctx.time_speed;
+        for b in self.butterflies.iter_mut() {
+            b.update(scaled_dt);
+        }
+        self.state.tick(ctx, scaled_dt);
+    }
+
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
         if self.base.menu_active() {
             self.base.draw_menu(renderer);

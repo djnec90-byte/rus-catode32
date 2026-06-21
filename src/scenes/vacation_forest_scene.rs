@@ -341,6 +341,13 @@ impl Scene for VacationForestScene {
         None
     }
 
+    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
+        self.base.tick_background(ctx, dt);
+        let scaled = dt * ctx.time_speed;
+        self.update_critters(scaled);
+        self.state.tick(ctx, scaled);
+    }
+
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
         if self.base.menu_active() {
             self.base.draw_menu(renderer);

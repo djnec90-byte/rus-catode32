@@ -43,7 +43,10 @@ const UPSET: &[PoseId] = &[
 ];
 
 const SICK_POSE: PoseId = PoseId::LayingSideSick;
-const LOOK_AWAY_POSE: PoseId = PoseId::SittingBackBackNeutral;
+const LOOK_AWAY_POSES: &[PoseId] = &[
+    PoseId::SittingBackBackNeutral,
+    PoseId::SittingBackSideNeutral,
+];
 
 const MIN_POSE_DURATION: f32 = 15.0;
 const MAX_POSE_DURATION: f32 = 60.0;
@@ -90,6 +93,8 @@ impl IdleBehavior {
 
     fn look_away_weight(scene: SceneId) -> u32 {
         match scene {
+            SceneId::VacationAquarium => 10,
+            SceneId::VacationBeach => 6,
             SceneId::Outside | SceneId::Treehouse => 3,
             _ => 0,
         }
@@ -97,17 +102,18 @@ impl IdleBehavior {
 
     fn pick_new_pose(&mut self, ctx: &mut GameContext) {
         let pool = Self::pose_pool(ctx);
-        let look_away = Self::look_away_weight(ctx.last_main_scene);
-        let total = pool.len() as u32 + look_away;
+        let weight = Self::look_away_weight(ctx.last_main_scene);
+        let look_away_slots = weight as usize * LOOK_AWAY_POSES.len();
+        let total = pool.len() + look_away_slots;
         let roll = if total == 0 {
             0
         } else {
-            rand::rand_range_u32(&mut ctx.rng, 0, total - 1)
+            rand::rand_range_u32(&mut ctx.rng, 0, total as u32 - 1) as usize
         };
-        self.pose_id = if roll >= pool.len() as u32 {
-            LOOK_AWAY_POSE
+        self.pose_id = if roll >= pool.len() {
+            LOOK_AWAY_POSES[(roll - pool.len()) % LOOK_AWAY_POSES.len()]
         } else {
-            pool[roll as usize]
+            pool[roll]
         };
     }
 }
