@@ -13,6 +13,7 @@ pub mod debug_time_scene;
 pub mod forecast_scene;
 pub mod inside_scene;
 pub mod kitchen_scene;
+pub mod memory_scene;
 pub mod menu_scene;
 pub mod outside_scene;
 pub mod pet_info_scene;
@@ -47,6 +48,7 @@ use debug_time_scene::DebugTimeScene;
 use forecast_scene::ForecastScene;
 use inside_scene::InsideScene;
 use kitchen_scene::KitchenScene;
+use memory_scene::MemoryScene;
 use menu_scene::MenuScene;
 use outside_scene::OutsideScene;
 use pet_info_scene::PetInfoScene;
@@ -88,6 +90,7 @@ pub enum ActiveScene {
     Zoomies(ZoomiesScene),
     Breakout(BreakoutScene),
     Snake(SnakeScene),
+    Memory(MemoryScene),
     Platformer(PlatformerScene),
     VacationPark(VacationParkScene),
     VacationForest(VacationForestScene),
@@ -123,6 +126,7 @@ impl ActiveScene {
             SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
             SceneId::Breakout => ActiveScene::Breakout(BreakoutScene::new()),
             SceneId::Snake => ActiveScene::Snake(SnakeScene::new()),
+            SceneId::Memory => ActiveScene::Memory(MemoryScene::new()),
             SceneId::Platformer => ActiveScene::Platformer(PlatformerScene::new()),
             SceneId::VacationPark => ActiveScene::VacationPark(VacationParkScene::new()),
             SceneId::VacationForest => ActiveScene::VacationForest(VacationForestScene::new()),
@@ -160,6 +164,7 @@ impl ActiveScene {
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
             ActiveScene::Snake(s) => s,
+            ActiveScene::Memory(s) => s,
             ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
@@ -195,6 +200,7 @@ impl ActiveScene {
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
             ActiveScene::Snake(s) => s,
+            ActiveScene::Memory(s) => s,
             ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
