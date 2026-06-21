@@ -256,6 +256,18 @@ pub const BUBBLE_POP: Sprite = Sprite {
     fill_frames: None,
 };
 
+// --- Food items ---------------------------------------------------------
+
+const FISH1_FRAMES: &[&[u8]] = &[
+    b"\x07\x02\x1f\xc6\x3f\xfe\x5f\xfc\xfe\xfc\xfd\xfc\x3f\xcc\x0f\x86",
+];
+pub const FISH1: Sprite = Sprite {
+    width: 15,
+    height: 8,
+    frames: FISH1_FRAMES,
+    fill_frames: None,
+};
+
 // --- Platformer collectibles --------------------------------------------
 
 const KEY_FRAMES: &[&[u8]] = &[

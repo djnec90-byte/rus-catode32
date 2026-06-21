@@ -21,7 +21,7 @@ const MINIGAMES: &[MenuItem] = &[
     MenuItem { label: "Snake",     icon: Some(icons::SNAKE),      submenu: None, action: Some(MenuAction::Scene(SceneId::Snake)),             confirm: None },
     MenuItem { label: "Hunter",    icon: Some(icons::PLATFORMER), submenu: None, action: Some(MenuAction::Scene(SceneId::Platformer)),         confirm: None },
     MenuItem { label: "Memory",    icon: Some(icons::MEMORY),     submenu: None, action: Some(MenuAction::Scene(SceneId::Memory)),             confirm: None },
-    MenuItem { label: "Maze",      icon: Some(icons::MAZE),       submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("maze"))),      confirm: None },
+    MenuItem { label: "Maze",      icon: Some(icons::MAZE),       submenu: None, action: Some(MenuAction::Scene(SceneId::Maze)),              confirm: None },
     MenuItem { label: "TicTacToe", icon: Some(icons::TICTACTOE),  submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("tictactoe"))), confirm: None },
     MenuItem { label: "Hanjie",    icon: Some(icons::HANJIE),     submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("hanjie"))),    confirm: None },
     MenuItem { label: "Lights Out", icon: Some(icons::POWER),     submenu: None, action: Some(MenuAction::Scene(SceneId::Stub("lightsout"))), confirm: None },

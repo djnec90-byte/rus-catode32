@@ -32,6 +32,7 @@ pub enum SceneId {
     Breakout,
     Snake,
     Memory,
+    Maze,
     Platformer,
     VacationPark,
     VacationForest,
