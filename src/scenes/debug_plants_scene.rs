@@ -11,8 +11,14 @@ use crate::{
     input::{Button, Buttons},
     render::{Renderer, SpriteOpts},
     scene::{Scene, SceneId},
-    ui::menu::{Menu, MenuAction, MenuItem, MenuResult, StoreAction},
+    ui::menu::{Menu, MenuItem, MenuResult},
 };
+
+#[derive(Clone, Copy)]
+enum DebugPlantsAction {
+    PickPot(u8),
+    PickSeed(u8),
+}
 
 const FLOOR_Y: i32 = 63;
 
@@ -41,21 +47,21 @@ const SEEDS: &[SeedKind] = &[
     SeedKind::Sunflower,
 ];
 
-const POT_MENU: &[MenuItem] = &[
+const POT_MENU: &[MenuItem<DebugPlantsAction>] = &[
     pot_menu_item("Small", 0),
     pot_menu_item("Medium", 1),
     pot_menu_item("Large", 2),
     pot_menu_item("Planter", 3),
 ];
 
-const SEED_MENU: &[MenuItem] = &[
+const SEED_MENU: &[MenuItem<DebugPlantsAction>] = &[
     seed_menu_item("Cat Grass", 0),
     seed_menu_item("Freesia", 1),
     seed_menu_item("Rose", 2),
     seed_menu_item("Sunflower", 3),
 ];
 
-const MENU: &[MenuItem] = &[
+const MENU: &[MenuItem<DebugPlantsAction>] = &[
     MenuItem {
         label: "Pot type",
         icon: None,
@@ -72,24 +78,22 @@ const MENU: &[MenuItem] = &[
     },
 ];
 
-const fn pot_menu_item(label: &'static str, idx: u8) -> MenuItem {
+const fn pot_menu_item(label: &'static str, idx: u8) -> MenuItem<DebugPlantsAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
-        // Borrow the BuyMedicine slot purely as a numeric carrier — the debug
-        // scene intercepts the StoreAction before any inventory mutation runs.
-        action: Some(MenuAction::Store(StoreAction::BuyMedicine(idx))),
+        action: Some(DebugPlantsAction::PickPot(idx)),
         confirm: None,
     }
 }
 
-const fn seed_menu_item(label: &'static str, idx: u8) -> MenuItem {
+const fn seed_menu_item(label: &'static str, idx: u8) -> MenuItem<DebugPlantsAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyFertilizer(idx))),
+        action: Some(DebugPlantsAction::PickSeed(idx)),
         confirm: None,
     }
 }
@@ -99,7 +103,7 @@ pub struct DebugPlantsScene {
     plant_idx: usize,
     stage_idx: usize,
     health_idx: usize,
-    menu: Menu,
+    menu: Menu<DebugPlantsAction>,
     menu_active: bool,
 }
 
@@ -186,12 +190,14 @@ impl DebugPlantsScene {
         renderer.draw_text(row2.as_str(), Point::new(1, 8));
     }
 
-    fn apply_menu_action(&mut self, action: MenuAction) {
-        if let MenuAction::Store(StoreAction::BuyMedicine(idx)) = action {
-            self.pot_idx = (idx as usize) % POTS.len();
-        }
-        if let MenuAction::Store(StoreAction::BuyFertilizer(idx)) = action {
-            self.plant_idx = (idx as usize) % SEEDS.len();
+    fn apply_menu_action(&mut self, action: DebugPlantsAction) {
+        match action {
+            DebugPlantsAction::PickPot(idx) => {
+                self.pot_idx = (idx as usize) % POTS.len();
+            }
+            DebugPlantsAction::PickSeed(idx) => {
+                self.plant_idx = (idx as usize) % SEEDS.len();
+            }
         }
     }
 }

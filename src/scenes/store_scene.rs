@@ -13,9 +13,29 @@ use crate::{
     input::{Button, Buttons},
     render::Renderer,
     scene::{Scene, SceneId},
-    ui::menu::{Menu, MenuAction, MenuItem, MenuResult, ServiceKind, StoreAction},
+    ui::menu::{Menu, MenuItem, MenuResult},
     ui::popup::Popup,
 };
+
+#[derive(Clone, Copy)]
+pub enum ServiceKind {
+    Groom,
+    Train,
+}
+
+#[derive(Clone, Copy)]
+pub enum StoreAction {
+    BuyFood(FoodItem, u8),
+    BuyToy(ToyVariant, u8),
+    BuyPot(PotSize, u8),
+    BuySeeds(SeedKind, u8),
+    BuyTool(ToolKind, u8),
+    BuyFertilizer(u8),
+    BuyMedicine(u8),
+    BuyService(ServiceKind, u8),
+    BuyTrip(SceneId, u8),
+    Leave,
+}
 
 const FOOD_USES: u8 = 5;
 const SEEDS_PER_PACK: u8 = 3;
@@ -30,7 +50,7 @@ const ART_PANEL_X: i32 = 64;
 const COIN_X: i32 = 84;
 const COIN_Y: i32 = 29;
 
-const FOOD: &[MenuItem] = &[
+const FOOD: &[MenuItem<StoreAction>] = &[
     food_item("Kibble",  FoodItem::Kibble,  5,  "Kibble(5): 5c"),
     food_item("Cod",     FoodItem::Cod,     6,  "Cod(5): 6c"),
     food_item("Haddock", FoodItem::Haddock, 7,  "Haddock(5): 7c"),
@@ -46,7 +66,7 @@ const FOOD: &[MenuItem] = &[
     food_item("Lamb",    FoodItem::Lamb,    15, "Lamb(5): 15c"),
 ];
 
-const SNACKS: &[MenuItem] = &[
+const SNACKS: &[MenuItem<StoreAction>] = &[
     food_item("Carrots", FoodItem::Carrots,  2, "Carrots(5): 2c"),
     food_item("Pumpkin", FoodItem::Pumpkin,  2, "Pumpkin(5): 2c"),
     food_item("Treats",  FoodItem::Treats,   3, "Treats(5): 3c"),
@@ -58,7 +78,7 @@ const SNACKS: &[MenuItem] = &[
     food_item("Puree",   FoodItem::Puree,    8, "Puree(5): 8c"),
 ];
 
-const TOYS: &[MenuItem] = &[
+const TOYS: &[MenuItem<StoreAction>] = &[
     toy_item("String",  ToyVariant::String_, 20, "String: 20c"),
     toy_item("Feather", ToyVariant::Feather, 35, "Feather: 35c"),
     toy_item("Mouse",   ToyVariant::Mouse,   40, "Mouse Toy: 40c"),
@@ -67,26 +87,26 @@ const TOYS: &[MenuItem] = &[
     toy_item("Laser",   ToyVariant::Laser,   75, "Laser Pointer: 75c"),
 ];
 
-const POTS: &[MenuItem] = &[
+const POTS: &[MenuItem<StoreAction>] = &[
     pot_item("Small",   PotSize::Small,   15, "Small pot: 15c"),
     pot_item("Medium",  PotSize::Medium,  25, "Medium pot: 25c"),
     pot_item("Large",   PotSize::Large,   40, "Large pot: 40c"),
     pot_item("Planter", PotSize::Planter, 55, "Planter box: 55c"),
 ];
 
-const SEEDS: &[MenuItem] = &[
+const SEEDS: &[MenuItem<StoreAction>] = &[
     seed_item("Grass",   SeedKind::CatGrass,  4,  "Cat Grass x3: 4c"),
     seed_item("Freesia", SeedKind::Freesia,   10, "Freesia x3: 10c"),
     seed_item("Sun",     SeedKind::Sunflower, 12, "Sunflower x3: 12c"),
     seed_item("Rose",    SeedKind::Rose,      15, "Rose x3: 15c"),
 ];
 
-const TOOLS: &[MenuItem] = &[
+const TOOLS: &[MenuItem<StoreAction>] = &[
     tool_item("Spade",  ToolKind::Spade,       40, "Spade: 40c"),
     tool_item("W. Can", ToolKind::WateringCan, 50, "Watering Can: 50c"),
 ];
 
-const GARDEN: &[MenuItem] = &[
+const GARDEN: &[MenuItem<StoreAction>] = &[
     MenuItem { label: "Pots",       icon: None, submenu: Some(POTS),  action: None, confirm: None },
     MenuItem { label: "Seeds",      icon: None, submenu: Some(SEEDS), action: None, confirm: None },
     MenuItem { label: "Tools",      icon: None, submenu: Some(TOOLS), action: None, confirm: None },
@@ -94,60 +114,60 @@ const GARDEN: &[MenuItem] = &[
         label: "Fertilizer",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyFertilizer(FERTILIZER_COST))),
+        action: Some(StoreAction::BuyFertilizer(FERTILIZER_COST)),
         confirm: Some("Fertilizer: 25c"),
     },
 ];
 
-const SERVICE: &[MenuItem] = &[
+const SERVICE: &[MenuItem<StoreAction>] = &[
     MenuItem {
         label: "Groom",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyService(ServiceKind::Groom, GROOM_COST))),
+        action: Some(StoreAction::BuyService(ServiceKind::Groom, GROOM_COST)),
         confirm: Some("Groom: 50c"),
     },
     MenuItem {
         label: "Train",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyService(ServiceKind::Train, TRAIN_COST))),
+        action: Some(StoreAction::BuyService(ServiceKind::Train, TRAIN_COST)),
         confirm: Some("Train: 100c"),
     },
 ];
 
-const TRIPS: &[MenuItem] = &[
+const TRIPS: &[MenuItem<StoreAction>] = &[
     MenuItem {
         label: "Park",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTrip(SceneId::VacationPark, 15))),
+        action: Some(StoreAction::BuyTrip(SceneId::VacationPark, 15)),
         confirm: Some("Trip: park 15c"),
     },
     MenuItem {
         label: "Forest",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTrip(SceneId::VacationForest, 25))),
+        action: Some(StoreAction::BuyTrip(SceneId::VacationForest, 25)),
         confirm: Some("Trip: forest 25c"),
     },
     MenuItem {
         label: "Aqua.",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTrip(SceneId::VacationAquarium, 50))),
+        action: Some(StoreAction::BuyTrip(SceneId::VacationAquarium, 50)),
         confirm: Some("Trip: aquarium 50c"),
     },
     MenuItem {
         label: "Beach",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTrip(SceneId::VacationBeach, 100))),
+        action: Some(StoreAction::BuyTrip(SceneId::VacationBeach, 100)),
         confirm: Some("Trip: beach 100c"),
     },
 ];
 
-const ROOT: &[MenuItem] = &[
+const ROOT: &[MenuItem<StoreAction>] = &[
     MenuItem { label: "Food",    icon: None, submenu: Some(FOOD),    action: None, confirm: None },
     MenuItem { label: "Snacks",  icon: None, submenu: Some(SNACKS),  action: None, confirm: None },
     MenuItem { label: "Toys",    icon: None, submenu: Some(TOYS),    action: None, confirm: None },
@@ -158,70 +178,70 @@ const ROOT: &[MenuItem] = &[
         label: "Meds.",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyMedicine(MEDICINE_COST))),
+        action: Some(StoreAction::BuyMedicine(MEDICINE_COST)),
         confirm: Some("Medicine: 50c"),
     },
     MenuItem {
         label: "Exit",
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::Leave)),
+        action: Some(StoreAction::Leave),
         confirm: None,
     },
 ];
 
-const fn food_item(label: &'static str, item: FoodItem, cost: u8, confirm: &'static str) -> MenuItem {
+const fn food_item(label: &'static str, item: FoodItem, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyFood(item, cost))),
+        action: Some(StoreAction::BuyFood(item, cost)),
         confirm: Some(confirm),
     }
 }
 
-const fn toy_item(label: &'static str, variant: ToyVariant, cost: u8, confirm: &'static str) -> MenuItem {
+const fn toy_item(label: &'static str, variant: ToyVariant, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyToy(variant, cost))),
+        action: Some(StoreAction::BuyToy(variant, cost)),
         confirm: Some(confirm),
     }
 }
 
-const fn pot_item(label: &'static str, pot: PotSize, cost: u8, confirm: &'static str) -> MenuItem {
+const fn pot_item(label: &'static str, pot: PotSize, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyPot(pot, cost))),
+        action: Some(StoreAction::BuyPot(pot, cost)),
         confirm: Some(confirm),
     }
 }
 
-const fn seed_item(label: &'static str, seed: SeedKind, cost: u8, confirm: &'static str) -> MenuItem {
+const fn seed_item(label: &'static str, seed: SeedKind, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuySeeds(seed, cost))),
+        action: Some(StoreAction::BuySeeds(seed, cost)),
         confirm: Some(confirm),
     }
 }
 
-const fn tool_item(label: &'static str, tool: ToolKind, cost: u8, confirm: &'static str) -> MenuItem {
+const fn tool_item(label: &'static str, tool: ToolKind, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
-        action: Some(MenuAction::Store(StoreAction::BuyTool(tool, cost))),
+        action: Some(StoreAction::BuyTool(tool, cost)),
         confirm: Some(confirm),
     }
 }
 
 pub struct StoreScene {
-    menu: Menu,
+    menu: Menu<StoreAction>,
     popup: Popup,
     popup_active: bool,
     pending_scene: Option<SceneId>,
@@ -502,8 +522,7 @@ impl Scene for StoreScene {
         match self.menu.handle_input(buttons) {
             MenuResult::Continue => None,
             MenuResult::Closed => Some(ctx.last_main_scene),
-            MenuResult::Action(MenuAction::Scene(id)) => Some(id),
-            MenuResult::Action(MenuAction::Store(action)) => self.handle_store_action(ctx, action),
+            MenuResult::Action(action) => self.handle_store_action(ctx, action),
         }
     }
 

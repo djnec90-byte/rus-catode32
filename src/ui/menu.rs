@@ -3,10 +3,8 @@ use heapless::Vec;
 
 use crate::{
     assets::icons,
-    context::{FoodItem, PotSize, SeedKind, ToolKind, ToyVariant},
     input::{Button, Buttons},
     render::{Renderer, SpriteOpts},
-    scene::SceneId,
     ui::{
         confirm::{Confirm, ConfirmResult},
         scrollbar::Scrollbar,
@@ -25,70 +23,44 @@ const MIN_THUMB_HEIGHT: u32 = 4;
 const MAX_DEPTH: usize = 4;
 
 #[derive(Clone, Copy)]
-pub struct MenuItem {
+pub struct MenuItem<A: Copy + 'static> {
     pub label: &'static str,
     pub icon: Option<&'static [u8]>,
-    pub submenu: Option<&'static [MenuItem]>,
-    pub action: Option<MenuAction>,
+    pub submenu: Option<&'static [MenuItem<A>]>,
+    pub action: Option<A>,
     pub confirm: Option<&'static str>,
 }
 
-#[derive(Clone, Copy)]
-pub enum MenuAction {
-    Scene(SceneId),
-    Store(StoreAction),
-}
-
-#[derive(Clone, Copy)]
-pub enum ServiceKind {
-    Groom,
-    Train,
-}
-
-#[derive(Clone, Copy)]
-pub enum StoreAction {
-    BuyFood(FoodItem, u8),
-    BuyToy(ToyVariant, u8),
-    BuyPot(PotSize, u8),
-    BuySeeds(SeedKind, u8),
-    BuyTool(ToolKind, u8),
-    BuyFertilizer(u8),
-    BuyMedicine(u8),
-    BuyService(ServiceKind, u8),
-    BuyTrip(SceneId, u8),
-    Leave,
-}
-
-pub enum MenuResult {
+pub enum MenuResult<A> {
     Continue,
     Closed,
-    Action(MenuAction),
+    Action(A),
 }
 
 #[derive(Clone, Copy)]
-struct Frame {
-    items: &'static [MenuItem],
+struct Frame<A: Copy + 'static> {
+    items: &'static [MenuItem<A>],
     selected: usize,
     scroll: usize,
 }
 
-pub struct Menu {
-    current: Frame,
-    stack: Vec<Frame, MAX_DEPTH>,
+pub struct Menu<A: Copy + 'static> {
+    current: Frame<A>,
+    stack: Vec<Frame<A>, MAX_DEPTH>,
     content_width: i32,
     scrollbar_x: i32,
     confirm: Confirm,
     /// Action that fires once the open `Confirm` returns `Confirmed`.
-    pending_action: Option<MenuAction>,
+    pending_action: Option<A>,
 }
 
-impl Menu {
-    pub fn new(items: &'static [MenuItem]) -> Self {
+impl<A: Copy + 'static> Menu<A> {
+    pub fn new(items: &'static [MenuItem<A>]) -> Self {
         Self::with_width(items, DEFAULT_CONTENT_WIDTH, DEFAULT_SCROLLBAR_X)
     }
 
     pub fn with_width(
-        items: &'static [MenuItem],
+        items: &'static [MenuItem<A>],
         content_width: i32,
         scrollbar_x: i32,
     ) -> Self {
@@ -103,14 +75,14 @@ impl Menu {
     }
 
     /// Reset to the root menu (clears any submenu stack and pending confirmation).
-    pub fn reset_to(&mut self, items: &'static [MenuItem]) {
+    pub fn reset_to(&mut self, items: &'static [MenuItem<A>]) {
         self.current = Frame { items, selected: 0, scroll: 0 };
         self.stack.clear();
         self.confirm.close();
         self.pending_action = None;
     }
 
-    pub fn handle_input(&mut self, buttons: &mut Buttons) -> MenuResult {
+    pub fn handle_input(&mut self, buttons: &mut Buttons) -> MenuResult<A> {
         if self.confirm.is_open() {
             return match self.confirm.handle_input(buttons) {
                 ConfirmResult::Pending => MenuResult::Continue,
@@ -190,7 +162,7 @@ impl Menu {
         self.confirm.draw(renderer);
     }
 
-    fn draw_item(&self, renderer: &mut Renderer, item: &MenuItem, y: i32, selected: bool) {
+    fn draw_item(&self, renderer: &mut Renderer, item: &MenuItem<A>, y: i32, selected: bool) {
         if selected {
             renderer.draw_rect(
                 Point::new(0, y),
@@ -251,7 +223,7 @@ impl Menu {
         }
     }
 
-    fn enter_submenu(&mut self, submenu: &'static [MenuItem]) {
+    fn enter_submenu(&mut self, submenu: &'static [MenuItem<A>]) {
         let _ = self.stack.push(self.current);
         self.current = Frame { items: submenu, selected: 0, scroll: 0 };
     }
@@ -262,7 +234,7 @@ impl Menu {
         }
     }
 
-    fn open_confirm(&mut self, action: MenuAction, text: &str) {
+    fn open_confirm(&mut self, action: A, text: &str) {
         self.pending_action = Some(action);
         self.confirm.open(text);
     }

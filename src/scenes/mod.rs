@@ -14,11 +14,13 @@ pub mod forecast_scene;
 pub mod hanjie_scene;
 pub mod inside_scene;
 pub mod kitchen_scene;
+pub mod lightsout_scene;
 pub mod maze_scene;
 pub mod memory_scene;
 pub mod menu_scene;
 pub mod outside_scene;
 pub mod pet_info_scene;
+pub mod pipes_scene;
 pub mod platformer_scene;
 pub mod pose_scene;
 pub mod snake_scene;
@@ -52,11 +54,13 @@ use forecast_scene::ForecastScene;
 use hanjie_scene::HanjieScene;
 use inside_scene::InsideScene;
 use kitchen_scene::KitchenScene;
+use lightsout_scene::LightsOutScene;
 use maze_scene::MazeScene;
 use memory_scene::MemoryScene;
 use menu_scene::MenuScene;
 use outside_scene::OutsideScene;
 use pet_info_scene::PetInfoScene;
+use pipes_scene::PipesScene;
 use platformer_scene::PlatformerScene;
 use pose_scene::PoseScene;
 use snake_scene::SnakeScene;
@@ -100,6 +104,8 @@ pub enum ActiveScene {
     Maze(MazeScene),
     Hanjie(HanjieScene),
     TicTacToe(TicTacToeScene),
+    LightsOut(LightsOutScene),
+    Pipes(PipesScene),
     Platformer(PlatformerScene),
     VacationPark(VacationParkScene),
     VacationForest(VacationForestScene),
@@ -139,6 +145,8 @@ impl ActiveScene {
             SceneId::Maze => ActiveScene::Maze(MazeScene::new()),
             SceneId::Hanjie => ActiveScene::Hanjie(HanjieScene::new()),
             SceneId::TicTacToe => ActiveScene::TicTacToe(TicTacToeScene::new()),
+            SceneId::LightsOut => ActiveScene::LightsOut(LightsOutScene::new()),
+            SceneId::Pipes => ActiveScene::Pipes(PipesScene::new()),
             SceneId::Platformer => ActiveScene::Platformer(PlatformerScene::new()),
             SceneId::VacationPark => ActiveScene::VacationPark(VacationParkScene::new()),
             SceneId::VacationForest => ActiveScene::VacationForest(VacationForestScene::new()),
@@ -180,6 +188,8 @@ impl ActiveScene {
             ActiveScene::Maze(s) => s,
             ActiveScene::Hanjie(s) => s,
             ActiveScene::TicTacToe(s) => s,
+            ActiveScene::LightsOut(s) => s,
+            ActiveScene::Pipes(s) => s,
             ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,
@@ -219,6 +229,8 @@ impl ActiveScene {
             ActiveScene::Maze(s) => s,
             ActiveScene::Hanjie(s) => s,
             ActiveScene::TicTacToe(s) => s,
+            ActiveScene::LightsOut(s) => s,
+            ActiveScene::Pipes(s) => s,
             ActiveScene::Platformer(s) => s,
             ActiveScene::VacationPark(s) => s,
             ActiveScene::VacationForest(s) => s,

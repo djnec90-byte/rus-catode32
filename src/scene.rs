@@ -35,6 +35,8 @@ pub enum SceneId {
     Maze,
     Hanjie,
     TicTacToe,
+    LightsOut,
+    Pipes,
     Platformer,
     VacationPark,
     VacationForest,
