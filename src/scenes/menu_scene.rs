@@ -73,13 +73,24 @@ const BIG_MENU: &[MenuItem<SceneId>] = &[
 
 pub struct MenuScene {
     menu: Menu<SceneId>,
+    /// Set on the frame the player dismissed the menu (Menu1/Menu2 or B at
+    /// root). `SceneManager` reads this to close the overlay without firing
+    /// a scene swap — the player goes back to whatever was under the menu.
+    dismissed: bool,
 }
 
 impl MenuScene {
     pub fn new() -> Self {
         Self {
             menu: Menu::new(BIG_MENU),
+            dismissed: false,
         }
+    }
+
+    pub fn take_dismissed(&mut self) -> bool {
+        let was = self.dismissed;
+        self.dismissed = false;
+        was
     }
 }
 
@@ -92,7 +103,10 @@ impl Scene for MenuScene {
     ) -> Option<SceneId> {
         match self.menu.handle_input(buttons, ctx.on_vacation) {
             MenuResult::Continue => None,
-            MenuResult::Closed => Some(ctx.last_main_scene),
+            MenuResult::Closed => {
+                self.dismissed = true;
+                None
+            }
             MenuResult::Action(id) => Some(id),
         }
     }

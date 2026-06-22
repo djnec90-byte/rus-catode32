@@ -345,7 +345,7 @@ impl Scene for MemoryScene {
         buttons: &mut Buttons,
         dt: f32,
     ) -> Option<SceneId> {
-        if buttons.was_just_pressed(Button::B) || buttons.was_just_pressed(Button::Menu1) {
+        if buttons.was_just_pressed(Button::Menu1) {
             return Some(SceneId::Menu);
         }
 

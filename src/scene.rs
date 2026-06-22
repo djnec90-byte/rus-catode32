@@ -118,11 +118,14 @@ impl SceneManager {
             }
 
             let result = overlay.update(ctx, buttons, dt);
+            if overlay.take_dismissed() {
+                // Player pressed Menu1/Menu2/B to back out — close the overlay
+                // and stay on the current scene (no transition).
+                overlay.exit(ctx);
+                self.overlay = None;
+                return None;
+            }
             if let Some(id) = result {
-                // MenuScene returns `Some(last_main_scene)` on dismiss and
-                // `Some(action_id)` on selection. Either way, if the target
-                // matches the underlay there's nothing to swap — close
-                // instantly and stay on the current scene.
                 if id == self.current_id {
                     overlay.exit(ctx);
                     self.overlay = None;
