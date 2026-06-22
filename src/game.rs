@@ -9,6 +9,7 @@ use esp_hal::{
     time::{Duration, Instant},
 };
 use esp_println::println;
+use esp_radio::wifi::WifiController;
 
 use crate::{
     context::{GameContext, PowerAction},
@@ -20,6 +21,7 @@ use crate::{
     sleep_manager::{wait_buttons_stable_released_mask, SleepManager},
     time_system::TimeSystem,
     transition::{TransitionManager, TransitionStep},
+    wifi_tracker,
 };
 
 const DEEP_WAKE_BUTTONS: [Button; 4] = [Button::A, Button::B, Button::Menu1, Button::Menu2];
@@ -47,10 +49,22 @@ pub struct Game {
     /// the frame-timer can be reset and we don't apply a huge dt spike.
     just_woke: bool,
     last_dt_ms: u64,
+    /// WiFi radio controller. `None` if `esp_radio::wifi::new` failed at
+    /// boot — the game still runs, just without scanning.
+    wifi: Option<WifiController<'static>>,
+    /// Real-time instant at which the next wifi scan becomes due.
+    /// `None` means "scan ASAP" — used on boot.
+    wifi_next_scan: Option<Instant>,
 }
 
 impl Game {
-    pub fn new(renderer: Renderer, buttons: Buttons, rng: Rng, led: Led) -> Self {
+    pub fn new(
+        renderer: Renderer,
+        buttons: Buttons,
+        rng: Rng,
+        led: Led,
+        wifi: Option<WifiController<'static>>,
+    ) -> Self {
         let mut context = GameContext::new(led);
         // Seed the behavior RNG from the hardware peripheral so each boot's
         // behavior choices differ until/unless a save provides a seed.
@@ -77,6 +91,8 @@ impl Game {
             deep_sleep_pending: false,
             just_woke: false,
             last_dt_ms: 0,
+            wifi,
+            wifi_next_scan: None,
         }
     }
 
@@ -98,6 +114,18 @@ impl Game {
             }
 
             self.update(dt);
+
+            // Debug-scene-requested scan. Runs immediately (no transition
+            // cover) since the player is staring at a debug screen and
+            // explicitly asked for fresh data.
+            if self.context.wifi_scan_requested {
+                self.context.wifi_scan_requested = false;
+                if let Some(wifi) = self.wifi.as_mut() {
+                    wifi_tracker::scan_now(&mut self.context, wifi);
+                    self.wifi_next_scan = Some(Instant::now() + wifi_tracker::SCAN_INTERVAL);
+                }
+            }
+
             self.draw();
 
             if let Some(action) = self.context.pending_power.take() {
@@ -150,8 +178,14 @@ impl Game {
 
         match self.transition.update(dt) {
             TransitionStep::Midpoint => {
+                // Scene swap at midpoint also doubles as the cover for a
+                // wifi scan — the screen is fully black, the scan takes
+                // ~1–3 s, and the player just sees a slightly longer fade.
+                // Triggered on any transition that's also swapping a scene
+                // (so menu-only transitions don't pay the cost).
                 if let Some(next) = self.pending_scene.take() {
                     self.scene_manager.swap_to(&mut self.context, next);
+                    self.maybe_scan_wifi();
                 }
                 if self.sleep_pending {
                     self.sleep_pending = false;
@@ -176,6 +210,25 @@ impl Game {
             }
             TransitionStep::Active | TransitionStep::Inactive => {}
         }
+    }
+
+    /// Run a wifi scan if one is due. Called only from the transition
+    /// midpoint so the ~1–3 s blocking scan is hidden behind a black screen.
+    /// `wifi_next_scan = None` means "scan immediately" (boot case).
+    fn maybe_scan_wifi(&mut self) {
+        let Some(wifi) = self.wifi.as_mut() else {
+            return;
+        };
+        let now = Instant::now();
+        let due = match self.wifi_next_scan {
+            None => true,
+            Some(t) => now >= t,
+        };
+        if !due {
+            return;
+        }
+        wifi_tracker::scan_now(&mut self.context, wifi);
+        self.wifi_next_scan = Some(now + wifi_tracker::SCAN_INTERVAL);
     }
 
     fn draw(&mut self) {

@@ -21,6 +21,15 @@ esp-hal-smartled2 = { version = "0.28.2", features = ["esp32c6"] }
 smart-leds = "0.4.0"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde-json-core = "0.6"
+esp-alloc = "0.10.0"
+esp-radio = { version = "0.18.0", default-features = false, features = ["esp32c6", "wifi", "esp-alloc"] }
+esp-rtos = { version = "0.3.0", default-features = false, features = ["esp32c6", "esp-radio", "esp-alloc"] }
+embassy-futures = "0.1"
+
+[profile.dev.package.esp-radio]
+opt-level = 3
+[profile.dev.package.esp-wifi-sys]
+opt-level = 3
 
 [profile.dev]
 opt-level = 1

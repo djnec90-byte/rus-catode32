@@ -14,6 +14,25 @@ use crate::{
 
 pub const PET_NAME_MAX: usize = 12;
 
+/// Caps for the wifi tracker's two AP lists. Mirror Python's
+/// `_FAMILIAR_MAX` / `_RECENT_MAX` in `wifi_tracker.py`.
+pub const WIFI_FAMILIAR_MAX: usize = 16;
+pub const WIFI_RECENT_MAX: usize = 8;
+
+/// Max SSID length we persist with each tracked AP. Python truncates to 16
+/// at scan time; we mirror that cap so saves round-trip cleanly.
+pub const WIFI_SSID_MAX: usize = 16;
+
+/// One tracked access point. `b` is the BSSID (6 raw bytes; rendered as
+/// `aa:bb:cc:dd:ee:ff` in JSON), `s` is the SSID, `n` is the running
+/// "times seen" count subject to per-scan decay.
+#[derive(Clone, Debug)]
+pub struct WifiEntry {
+    pub bssid: [u8; 6],
+    pub ssid: heapless::String<WIFI_SSID_MAX>,
+    pub count: f32,
+}
+
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum StatId {
@@ -511,6 +530,17 @@ pub struct GameContext {
     pub scene_plant_health: i8,
     pub in_familiar_location: bool,
 
+    /// Long-lived AP list. Survives reboots via the save file. Entries here
+    /// are what `in_familiar_location` checks against.
+    pub wifi_familiar: Vec<WifiEntry, WIFI_FAMILIAR_MAX>,
+    /// Short-lived AP list. Entries here are candidates that haven't been
+    /// seen enough times yet to count as "familiar".
+    pub wifi_recent: Vec<WifiEntry, WIFI_RECENT_MAX>,
+    /// Set by the debug scene's "Scan" action; Game::update consumes it
+    /// next frame and drives a synchronous scan. Out-of-band from the
+    /// hourly midpoint scan so the debug UI can force a fresh result.
+    pub wifi_scan_requested: bool,
+
     /// True while the player is on a vacation scene. Suppresses the
     /// behavior-layer's auto-pick scene exit so the pet stays put.
     pub on_vacation: bool,
@@ -640,6 +670,9 @@ impl GameContext {
 
             scene_plant_health: 0,
             in_familiar_location: true,
+            wifi_familiar: Vec::new(),
+            wifi_recent: Vec::new(),
+            wifi_scan_requested: false,
 
             on_vacation: false,
             wants_to_go_home: false,

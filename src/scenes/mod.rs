@@ -10,6 +10,7 @@ pub mod debug_plants_scene;
 pub mod debug_power_scene;
 pub mod debug_stats_scene;
 pub mod debug_time_scene;
+pub mod debug_wifi_scene;
 pub mod forecast_scene;
 pub mod hanjie_scene;
 pub mod inside_scene;
@@ -50,6 +51,7 @@ use debug_plants_scene::DebugPlantsScene;
 use debug_power_scene::DebugPowerScene;
 use debug_stats_scene::DebugStatsScene;
 use debug_time_scene::DebugTimeScene;
+use debug_wifi_scene::DebugWifiScene;
 use forecast_scene::ForecastScene;
 use hanjie_scene::HanjieScene;
 use inside_scene::InsideScene;
@@ -97,6 +99,7 @@ pub enum ActiveScene {
     DebugPower(DebugPowerScene),
     DebugStats(DebugStatsScene),
     DebugTime(DebugTimeScene),
+    DebugWifi(DebugWifiScene),
     Zoomies(ZoomiesScene),
     Breakout(BreakoutScene),
     Snake(SnakeScene),
@@ -138,6 +141,7 @@ impl ActiveScene {
             SceneId::DebugPower => ActiveScene::DebugPower(DebugPowerScene::new()),
             SceneId::DebugStats => ActiveScene::DebugStats(DebugStatsScene::new()),
             SceneId::DebugTime => ActiveScene::DebugTime(DebugTimeScene::new()),
+            SceneId::DebugWifi => ActiveScene::DebugWifi(DebugWifiScene::new()),
             SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
             SceneId::Breakout => ActiveScene::Breakout(BreakoutScene::new()),
             SceneId::Snake => ActiveScene::Snake(SnakeScene::new()),
@@ -181,6 +185,7 @@ impl ActiveScene {
             ActiveScene::DebugPower(s) => s,
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
+            ActiveScene::DebugWifi(s) => s,
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
             ActiveScene::Snake(s) => s,
@@ -222,6 +227,7 @@ impl ActiveScene {
             ActiveScene::DebugPower(s) => s,
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
+            ActiveScene::DebugWifi(s) => s,
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
             ActiveScene::Snake(s) => s,

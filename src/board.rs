@@ -1,7 +1,8 @@
 use esp_hal::{
     gpio::{Input, InputConfig, Pull},
     i2c::master::{Config, I2c},
-    peripherals::{Peripherals, FLASH},
+    interrupt::software::SoftwareInterrupt,
+    peripherals::{Peripherals, FLASH, TIMG0, WIFI},
     rng::Rng,
     time::Rate,
     Blocking,
@@ -19,6 +20,9 @@ pub struct Board {
     pub rng: Rng,
     pub led: Led,
     pub flash: FLASH<'static>,
+    pub timg0: TIMG0<'static>,
+    pub sw_int0: SoftwareInterrupt<'static, 0>,
+    pub wifi: WIFI<'static>,
 }
 
 pub fn init(peripherals: Peripherals) -> Board {
@@ -42,11 +46,16 @@ pub fn init(peripherals: Peripherals) -> Board {
 
     let led = Led::new(peripherals.RMT, peripherals.GPIO8);
 
+    let sw = esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
+
     Board {
         i2c,
         buttons,
         rng: Rng::new(),
         led,
         flash: peripherals.FLASH,
+        timg0: peripherals.TIMG0,
+        sw_int0: sw.software_interrupt0,
+        wifi: peripherals.WIFI,
     }
 }

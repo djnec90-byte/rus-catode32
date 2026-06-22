@@ -16,13 +16,15 @@ use crate::{
     assets::plants::{PlantStage, PotKind},
     context::{
         FavWeather, FoodItem, GameContext, PotSize, SeedKind, ToolKind, ToyEntry, ToyVariant,
-        FOOD_ITEM_COUNT, MAX_PLANTS, RECENT_HISTORY, TOY_VARIANT_COUNT, PET_NAME_MAX,
+        WifiEntry, FOOD_ITEM_COUNT, MAX_PLANTS, PET_NAME_MAX, RECENT_HISTORY, TOY_VARIANT_COUNT,
+        WIFI_FAMILIAR_MAX, WIFI_RECENT_MAX, WIFI_SSID_MAX,
     },
     pet_seed::{PetGender, StarSign},
     plant_system::{Plant, PlantLayer},
     scene::SceneId,
     storage,
     time_system::{Season, Weather},
+    wifi_tracker,
 };
 
 /// Major schema version. Bumped when the on-disk shape changes in a
@@ -506,24 +508,21 @@ struct MilestonesData {
     #[serde(default)] store: bool,
 }
 
-/// Placeholder for fields Python tracks but the Rust port hasn't ported yet
-/// (wifi lists, friends map). Serialises as an empty JSON array or object so
-/// the wire shape matches Python; deserialise is a no-op accept-anything.
-/// TODO(wifi_espnow): replace with real types once WiFi/ESP-NOW lands.
-#[derive(Default)]
-struct StubArray;
-impl Serialize for StubArray {
-    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        use serde::ser::SerializeSeq;
-        s.serialize_seq(Some(0))?.end()
-    }
-}
-impl<'de> Deserialize<'de> for StubArray {
-    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        serde::de::IgnoredAny::deserialize(d).map(|_| StubArray)
-    }
+/// Wire-format for a single wifi AP entry. Mirrors Python's `{'b': ..., 's': ..., 'n': ...}`
+/// shape so the same `save.json` round-trips between the two ports.
+#[derive(Default, Serialize, Deserialize)]
+struct WifiEntryData {
+    #[serde(default, rename = "b")]
+    bssid: heapless::String<17>,
+    #[serde(default, rename = "s")]
+    ssid: heapless::String<WIFI_SSID_MAX>,
+    #[serde(default, rename = "n")]
+    count: f32,
 }
 
+/// Placeholder for fields Python tracks but the Rust port hasn't ported yet
+/// (friends map). Serialises as an empty JSON object so the wire shape
+/// matches Python; deserialise is a no-op accept-anything.
 #[derive(Default)]
 struct StubMap;
 impl Serialize for StubMap {
@@ -565,8 +564,8 @@ struct SaveData {
     #[serde(default)] least_fav_toy: Option<SStr>,
     #[serde(default)] fav_location: Option<SStr>,
     #[serde(default)] least_fav_location: Option<SStr>,
-    #[serde(default)] wifi_familiar: StubArray,
-    #[serde(default)] wifi_recent: StubArray,
+    #[serde(default)] wifi_familiar: Vec<WifiEntryData, WIFI_FAMILIAR_MAX>,
+    #[serde(default)] wifi_recent: Vec<WifiEntryData, WIFI_RECENT_MAX>,
     #[serde(default)] pet_name: Option<NameStr>,
     #[serde(default)] friends: StubMap,
     #[serde(default)] recent_meals: Vec<SStr, RECENT_HISTORY>,
@@ -723,8 +722,8 @@ fn build(ctx: &GameContext) -> SaveData {
         least_fav_toy: ctx.least_fav_toy.map(|t| sstr(toy_save_key(t))),
         fav_location: ctx.fav_location.map(|s| sstr(fav_location_save_key(s))),
         least_fav_location: ctx.least_fav_location.map(|s| sstr(fav_location_save_key(s))),
-        wifi_familiar: StubArray,
-        wifi_recent: StubArray,
+        wifi_familiar: build_wifi_list(&ctx.wifi_familiar),
+        wifi_recent: build_wifi_list(&ctx.wifi_recent),
         pet_name: if ctx.pet_name.is_empty() {
             None
         } else {
@@ -940,8 +939,42 @@ fn apply(data: &SaveData, ctx: &mut GameContext) {
     ctx.milestone_petted = data.milestones.petted;
     ctx.milestone_store = data.milestones.store;
 
+    // WiFi tracker state. Defaults to empty lists if the save omits them
+    // (e.g. saves from before wifi was wired up).
+    apply_wifi_list(&data.wifi_familiar, &mut ctx.wifi_familiar);
+    apply_wifi_list(&data.wifi_recent, &mut ctx.wifi_recent);
+
     ctx.first_impressions = false;
     ctx.recompute_health();
+}
+
+fn build_wifi_list<const N: usize>(src: &heapless::Vec<WifiEntry, N>) -> Vec<WifiEntryData, N> {
+    let mut out: Vec<WifiEntryData, N> = Vec::new();
+    for e in src.iter() {
+        let _ = out.push(WifiEntryData {
+            bssid: wifi_tracker::format_bssid(&e.bssid),
+            ssid: e.ssid.clone(),
+            count: e.count,
+        });
+    }
+    out
+}
+
+fn apply_wifi_list<const N: usize>(
+    src: &Vec<WifiEntryData, N>,
+    dst: &mut heapless::Vec<WifiEntry, N>,
+) {
+    dst.clear();
+    for e in src.iter() {
+        let Some(bssid) = wifi_tracker::parse_bssid(&e.bssid) else {
+            continue;
+        };
+        let _ = dst.push(WifiEntry {
+            bssid,
+            ssid: e.ssid.clone(),
+            count: e.count,
+        });
+    }
 }
 
 // ---------------------------------------------------------------------------
