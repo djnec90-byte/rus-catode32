@@ -10,6 +10,12 @@ use esp_hal::{
 
 use crate::{input::Buttons, led::Led};
 
+#[cfg(all(feature = "c6", feature = "c3"))]
+compile_error!("Features `c6` and `c3` are mutually exclusive — enable exactly one.");
+
+#[cfg(not(any(feature = "c6", feature = "c3")))]
+compile_error!("Enable either feature `c6` or `c3` to select the target board.");
+
 pub const DISPLAY_WIDTH: u16 = 128;
 pub const DISPLAY_HEIGHT: u16 = 64;
 pub const I2C_FREQ_KHZ: u32 = 400;
@@ -27,12 +33,21 @@ pub struct Board {
 
 pub fn init(peripherals: Peripherals) -> Board {
     let i2c_config = Config::default().with_frequency(Rate::from_khz(I2C_FREQ_KHZ));
+
+    #[cfg(feature = "c6")]
     let i2c = I2c::new(peripherals.I2C0, i2c_config)
         .unwrap()
         .with_sda(peripherals.GPIO4)
         .with_scl(peripherals.GPIO7);
+    #[cfg(feature = "c3")]
+    let i2c = I2c::new(peripherals.I2C0, i2c_config)
+        .unwrap()
+        .with_sda(peripherals.GPIO6)
+        .with_scl(peripherals.GPIO7);
 
     let input_config = InputConfig::default().with_pull(Pull::Up);
+    // Button order: UP, DOWN, LEFT, RIGHT, A, B, MENU1, MENU2
+    #[cfg(feature = "c6")]
     let buttons = Buttons::new([
         Input::new(peripherals.GPIO14, input_config),
         Input::new(peripherals.GPIO18, input_config),
@@ -42,6 +57,17 @@ pub fn init(peripherals: Peripherals) -> Board {
         Input::new(peripherals.GPIO0, input_config),
         Input::new(peripherals.GPIO3, input_config),
         Input::new(peripherals.GPIO2, input_config),
+    ]);
+    #[cfg(feature = "c3")]
+    let buttons = Buttons::new([
+        Input::new(peripherals.GPIO0, input_config),
+        Input::new(peripherals.GPIO1, input_config),
+        Input::new(peripherals.GPIO2, input_config),
+        Input::new(peripherals.GPIO3, input_config),
+        Input::new(peripherals.GPIO4, input_config),
+        Input::new(peripherals.GPIO5, input_config),
+        Input::new(peripherals.GPIO10, input_config),
+        Input::new(peripherals.GPIO11, input_config),
     ]);
 
     let led = Led::new(peripherals.RMT, peripherals.GPIO8);
