@@ -1,6 +1,6 @@
 //! Refcounted lifecycle for the shared WiFi/ESP-NOW radio.
 //!
-//! esp-radio 0.18 does not expose a `WifiController::stop` — the only way
+//! esp-radio 0.18 does not expose a `WifiController::stop`. The only way
 //! to truly power the WiFi MAC down is to drop the controller. This
 //! module owns that drop/recreate dance so the rest of the codebase can
 //! request the radio without thinking about it.
@@ -15,7 +15,7 @@
 //! peripheral is recovered via `unsafe { WIFI::steal() }` for the next
 //! cycle.
 //!
-//! Desktop builds have no radio — `acquire` always returns `false` and
+//! Desktop builds have no radio. `acquire` always returns `false` and
 //! `release` is a no-op. Code that handles the no-radio case (the
 //! "you've gone offline" branch) keeps working unchanged.
 

@@ -66,7 +66,7 @@ fn ten_ticks_paints_pixels() {
         game.tick();
     }
 
-    // Some scene drew at least one pixel — proves the renderer reached
+    // Some scene drew at least one pixel, proves the renderer reached
     // the framebuffer through the full pipeline.
     let fb = game.renderer().framebuffer();
     let mut any_lit = false;

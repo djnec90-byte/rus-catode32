@@ -1,22 +1,21 @@
 //! WiFi-based location tracking.
 //!
-//! Port of `micropython/src/wifi_tracker.py`. Maintains two lists of access
-//! points on the game context:
+//! Maintains two lists of access points on the game context:
 //!
-//! * `wifi_familiar` — up to [`WIFI_FAMILIAR_MAX`] APs seen most often.
-//! * `wifi_recent`   — up to [`WIFI_RECENT_MAX`] APs seen recently but not
-//!   yet promoted.
+//! * `wifi_familiar`: up to [`WIFI_FAMILIAR_MAX`] APs seen most often.
+//! * `wifi_recent`: up to [`WIFI_RECENT_MAX`] APs seen recently but not yet
+//!   promoted.
 //!
 //! Each scan increments the count for any visible AP and decays the count
 //! for every other tracked entry. Entries decayed below 0 are pruned; recent
 //! entries past a threshold are promoted into the familiar set.
 //!
 //! `in_familiar_location` is set true on the context whenever a familiar
-//! AP is visible in the latest scan — that's the "is the cat at home?"
+//! AP is visible in the latest scan. That's the "is the cat at home?"
 //! signal behaviors gate on.
 //!
 //! Scans are driven from the game-loop's transition midpoint (see
-//! `Game::maybe_scan_wifi`) so the ~1–3 s blocking call is hidden behind a
+//! `Game::maybe_scan_wifi`) so the ~1-3 s blocking call is hidden behind a
 //! black screen.
 //!
 //! Power: the radio is fully off at rest. `scan_now` calls
@@ -35,9 +34,7 @@ use crate::context::{GameContext, WifiEntry, WIFI_FAMILIAR_MAX, WIFI_RECENT_MAX,
 #[cfg(not(feature = "desktop"))]
 use crate::radio;
 
-/// Interval between hourly wifi scans, in real time. Mirrors the Python
-/// version's "once at boot, plus when triggered" cadence, but cadenced to
-/// roughly hourly so we don't depend on reboots.
+/// Interval between hourly wifi scans, in real time.
 pub const SCAN_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
 /// How many APs to ask the driver for per scan.
@@ -60,7 +57,7 @@ pub struct ScanAp {
 /// Drive a single wifi scan. On firmware this brings the radio up,
 /// runs the scan, releases, and updates `wifi_familiar` /
 /// `wifi_recent` / `in_familiar_location`. On desktop there is no
-/// radio — the call returns `None` and leaves the state untouched.
+/// radio; the call returns `None` and leaves the state untouched.
 #[cfg(not(feature = "desktop"))]
 pub fn scan_now(ctx: &mut GameContext) -> Option<Vec<ScanAp, 32>> {
     use embassy_futures::block_on;
@@ -103,7 +100,7 @@ async fn perform_scan(
 ) -> Result<Vec<ScanAp, 32>, esp_radio::wifi::WifiError> {
     use esp_radio::wifi::{scan::ScanConfig, sta::StationConfig, Config as WifiConfig};
 
-    // Apply a station config — this selects STA mode for a freshly
+    // Apply a station config. This selects STA mode for a freshly
     // initialized controller. Cheap on subsequent calls within the
     // same `radio::acquire` lifetime.
     let sta_config = WifiConfig::Station(StationConfig::default());
@@ -132,9 +129,8 @@ async fn perform_scan(
     Ok(out)
 }
 
-/// The same decay-and-promote algorithm the Python tracker uses. Public so
-/// the debug scene's "Scan" button (or a unit test, eventually) can drive
-/// it with a synthesized AP list.
+/// Decay-and-promote algorithm. Public so the debug scene's "Scan" button
+/// (or a unit test, eventually) can drive it with a synthesized AP list.
 fn process(ctx: &mut GameContext, aps: &[ScanAp]) {
     // Decay unseen entries, then prune the ones that hit zero.
     for entry in ctx.wifi_familiar.iter_mut() {
@@ -199,10 +195,9 @@ fn process(ctx: &mut GameContext, aps: &[ScanAp]) {
                 if ctx.wifi_recent.len() < WIFI_RECENT_MAX {
                     let _ = ctx.wifi_recent.push(demoted);
                 }
-                // If recent is also full, the demoted entry is dropped
-                // (matches Python behaviour).
+                // If recent is also full, the demoted entry is dropped.
             } else {
-                // Candidate is weaker than the weakest familiar — put it
+                // Candidate is weaker than the weakest familiar, put it
                 // back where it came from.
                 let _ = ctx.wifi_recent.insert(i, candidate);
                 i += 1;

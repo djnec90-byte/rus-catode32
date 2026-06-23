@@ -144,7 +144,7 @@ pub fn is_outdoor(scene: SceneId) -> bool {
 }
 
 pub fn auto_select_scene_exit(ctx: &mut GameContext) -> Option<NextBehavior> {
-    // Pet stays put on vacation — the player explicitly chooses "Go home".
+    // Pet stays put on vacation. The player explicitly chooses "Go home".
     if ctx.on_vacation {
         return None;
     }
@@ -220,7 +220,7 @@ pub fn auto_select_scene_exit(ctx: &mut GameContext) -> Option<NextBehavior> {
     }))
 }
 
-/// Sickness-tier auto-select blocking. Mirrors `_sick_blocks` in Python.
+/// Sickness-tier auto-select blocking.
 pub fn sick_blocks(id: BehaviorId, ctx: &GameContext) -> bool {
     if ctx.sickness < 2.0 {
         return false;
@@ -253,7 +253,7 @@ pub fn sick_blocks(id: BehaviorId, ctx: &GameContext) -> bool {
     false
 }
 
-/// Used by base.apply_location_bonus — favourite-weather bonus.
+/// Used by base.apply_location_bonus for the favourite-weather bonus.
 pub fn fav_weather_bonus(ctx: &GameContext) -> (f32, f32) {
     use crate::context::FavWeather;
     if let Some(fav) = ctx.fav_weather {

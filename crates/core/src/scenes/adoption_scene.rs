@@ -1,11 +1,11 @@
-//! Adoption scene — first-run cat selection and onboarding.
+//! Adoption scene: first-run cat selection and onboarding.
 //!
 //! States:
-//!   Grid    — 2×2 grid of candidate cats; D-pad to navigate, A to inspect
-//!   Profile — per-cat info card; B = back, A = adopt
-//!   Confirm — confirmation prompt; B = back, A = confirm
-//!   Naming  — on-screen keyboard for naming the cat
-//!   Moment  — adoption moment: cat walks in, shows love bubble, fades to inside
+//!   Grid:    2x2 grid of candidate cats; D-pad to navigate, A to inspect
+//!   Profile: per-cat info card; B = back, A = adopt
+//!   Confirm: confirmation prompt; B = back, A = confirm
+//!   Naming:  on-screen keyboard for naming the cat
+//!   Moment:  adoption moment, cat walks in, shows love bubble, fades to inside
 
 use core::fmt::Write;
 
@@ -55,7 +55,7 @@ struct Candidate {
     favs: DerivedFavorites,
     offsets: [i32; 5],
     name: &'static str,
-    /// Index into `portrait_poses` — the pose to render in the grid cell.
+    /// Index into `portrait_poses`, the pose to render in the grid cell.
     portrait_idx: usize,
 }
 
@@ -74,7 +74,7 @@ pub struct AdoptionScene {
     moment_pose: PoseId,
     moment_anim: PoseAnim,
     /// Guards the post-adoption save against repeat-firing while the
-    /// scene-transition fade plays — `update_moment` keeps returning
+    /// scene-transition fade plays. `update_moment` keeps returning
     /// `Some(Inside)` for several frames once its timer elapses.
     saved: bool,
 }
@@ -107,8 +107,7 @@ impl AdoptionScene {
                 continue;
             }
             let pose = id.data();
-            // Python check: `pose.get('head') and pose.get('eyes')`. In Rust
-            // every pose has a head, but eyes are optional.
+            // Every pose has a head, but eyes are optional; require both.
             if pose.eyes.is_some() {
                 let _ = out.push(id);
             }
@@ -130,7 +129,7 @@ impl AdoptionScene {
         let mut toms: Vec<Candidate, 2> = Vec::new();
         let mut queens: Vec<Candidate, 2> = Vec::new();
 
-        // Cap iterations — at 12 FPS we don't want a runaway loop if the
+        // Cap iterations. At 12 FPS we don't want a runaway loop if the
         // entropy/uniqueness conditions can't be satisfied.
         for _ in 0..1024 {
             if toms.len() >= 2 && queens.len() >= 2 {
@@ -270,7 +269,7 @@ impl AdoptionScene {
         ctx.milestone_store = false;
 
         // TODO(save_load): once the save layer exists, call `backup::write_adoption`
-        // with the full candidate list + chosen seed + name (mirrors Python).
+        // with the full candidate list + chosen seed + name.
 
         // Kick off the adoption moment.
         self.moment_x = -20.0;
@@ -550,8 +549,7 @@ fn profile_text(cand: &Candidate) -> String<PROFILE_TEXT_CAP> {
         PetGender::Tom => "his",
         PetGender::Queen => "her",
     };
-    // Python uses `seed % 12` for the displayed sign, not the stored
-    // `cand.favs.star_sign` — preserved here for 1:1 behaviour.
+    // Displayed sign uses `seed % 12`, not the stored `cand.favs.star_sign`.
     let displayed_sign = StarSign::from_index(cand.seed as u32 % 12);
     let temper = Temperament::from_dominant_index(dominant_trait_index(&cand.offsets));
     let weather = fav_weather_label(cand.favs.fav_weather);

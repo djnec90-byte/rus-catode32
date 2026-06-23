@@ -1,9 +1,8 @@
 //! Reusable staggered burst of sparkle particles around a screen anchor.
 //!
-//! Direct port of `ui.py::BurstEffect`. By default each particle animates
-//! through the 5-frame `BURST1` sparkle at 8 fps (0.625s per particle), with a
-//! 0.5s stagger between particles plus a small jitter — matching the pacing
-//! the Python game has shipped with since launch.
+//! By default each particle animates through the 5-frame `BURST1` sparkle at
+//! 8 fps (0.625s per particle), with a 0.5s stagger between particles plus a
+//! small jitter.
 
 use embedded_graphics::prelude::Point;
 use heapless::Vec;
@@ -96,17 +95,13 @@ impl BurstEffect {
         max_delay + self.style.total()
     }
 
-    /// HEAL sparkles around the character — wide spread, drifting upward.
-    /// Mirrors Python `character.play_bursts(count=10, icon=HEAL,
-    /// spread_x=28, spread_y_min=-40, spread_y_max=-10)`.
+    /// HEAL sparkles around the character: wide spread, drifting upward.
     pub fn trigger_heal(&mut self, rng: &mut u32, count: usize) {
         self.trigger_with(rng, count, HEAL_STYLE, -28.0, 28.0, -40.0, -10.0, 0.5);
     }
 
-    /// Plant watering / fertilizer feedback — narrow spread centered just
-    /// above the plant. Mirrors the Python `_e.trigger(count=4, spread_x=12,
-    /// spread_y_min=-25, spread_y_max=5)` call from `tend_water` /
-    /// `tend_fertilize` (default BURST1 sparkle, no icon override).
+    /// Plant watering / fertilizer feedback: narrow spread centered just
+    /// above the plant.
     pub fn trigger_plant(&mut self, rng: &mut u32, count: usize) {
         self.trigger_with(rng, count, DEFAULT_STYLE, -12.0, 12.0, -25.0, 5.0, 0.5);
     }
@@ -129,8 +124,8 @@ impl BurstEffect {
         for i in 0..n {
             let dx = rand::rand_range_f32(rng, spread_x_min, spread_x_max) as i16;
             let dy = rand::rand_range_f32(rng, spread_y_min, spread_y_max) as i16;
-            // Python uses `i * 0.5 + uniform(0.0, 0.25)`; keep the jitter
-            // proportional so non-default stagger values still scale.
+            // Keep the jitter proportional so non-default stagger values
+            // still scale.
             let jitter = rand::rand_range_f32(rng, 0.0, stagger * 0.5);
             let _ = self.particles.push(Particle {
                 dx,

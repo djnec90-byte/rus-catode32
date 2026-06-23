@@ -132,7 +132,6 @@ impl BreakoutScene {
         self.bricks_remaining = BRICK_COUNT as u16;
 
         // Pick SPECIAL_BRICK_COUNT distinct indices without replacement.
-        // Mirrors Python's `indices.pop(random.randint(0, len-1))` loop.
         let mut indices: Vec<u16, BRICK_COUNT> = Vec::new();
         for i in 0..BRICK_COUNT {
             let _ = indices.push(i as u16);
@@ -161,7 +160,7 @@ impl BreakoutScene {
     }
 
     fn launch_ball(&mut self) {
-        // 30 degrees from vertical, like Python.
+        // 30 degrees from vertical.
         let angle = core::f32::consts::PI / 6.0;
         self.ball_vx = BALL_SPEED * angle.sin();
         self.ball_vy = -BALL_SPEED * angle.cos();
@@ -305,7 +304,7 @@ impl BreakoutScene {
         {
             self.ball_y = paddle_top - BALL_SIZE as f32;
 
-            // -1 left edge, 0 center, 1 right edge → ±60°.
+            // -1 left edge, 0 center, 1 right edge -> +/-60 degrees.
             let mut hit_pos = (ball_center_x - paddle_left) / PADDLE_WIDTH as f32;
             hit_pos = (hit_pos - 0.5) * 2.0;
             let angle = hit_pos * (core::f32::consts::PI / 3.0);
@@ -387,9 +386,8 @@ impl BreakoutScene {
         if self.session_bricks == 0 && self.session_paws == 0 {
             return;
         }
-        // Note: Python divides session_bricks by 144.0, not the actual brick
-        // count (90). Preserved verbatim — changing it would shift the reward
-        // curve relative to the legacy build.
+        // Note: divides session_bricks by 144.0, not the actual brick count
+        // (90). Changing it would shift the reward curve.
         let brick_reward = (self.session_bricks as f32 / 144.0).sqrt();
         let paw_reward = (self.session_paws as f32 / 20.0).sqrt();
 

@@ -4,7 +4,7 @@
 //! game code can run in a desktop simulator and in host-side unit tests.
 //!
 //! Code inside this crate must never `use esp_hal::...` or `use
-//! esp_println::...` directly — go through these submodules so the desktop
+//! esp_println::...` directly. Go through these submodules so the desktop
 //! build doesn't break.
 
 pub mod power;

@@ -1,9 +1,7 @@
 //! Save / load for `GameContext`.
 //!
-//! On-disk format mirrors MicroPython's `save.json` byte-for-byte so existing
-//! Python backups remain loadable (Rust → Python is best-effort; Python → Rust
-//! is the priority). Storage layer is `crate::storage` (round-robin sector
-//! rotation on the `nvs` partition).
+//! Storage layer is `crate::storage` (round-robin sector rotation on the
+//! `nvs` partition).
 
 use core::str::FromStr;
 
@@ -28,10 +26,10 @@ use crate::{
 };
 
 /// Major schema version. Bumped when the on-disk shape changes in a
-/// backwards-incompatible way. Matches Python's `data['v'] = major(VERSION)`.
+/// backwards-incompatible way.
 const SCHEMA_VERSION: u8 = 0;
 
-/// 59 minutes — same threshold Python's `save_if_needed` uses.
+/// Save interval used by `save_if_needed`.
 const SAVE_INTERVAL: Duration = Duration::from_secs(59 * 60);
 
 /// Max size of the JSON payload. Sized to `storage::MAX_PAYLOAD`, which
@@ -53,15 +51,14 @@ type NameStr = String<PET_NAME_MAX>;
 
 fn sstr(s: &str) -> SStr {
     let mut out = SStr::new();
-    // `push_str` truncates by returning Err — we deliberately allow truncation
+    // `push_str` truncates by returning Err. We deliberately allow truncation
     // since every string we hand it is shorter than the buffer.
     let _ = out.push_str(s);
     out
 }
 
 // ---------------------------------------------------------------------------
-// Per-enum string mapping. Keep snake_case to match Python's existing
-// serialised keys.
+// Per-enum string mapping. Snake_case keys.
 // ---------------------------------------------------------------------------
 
 fn food_save_key(item: FoodItem) -> &'static str {
@@ -193,8 +190,7 @@ fn layer_save_key(l: PlantLayer) -> &'static str {
 }
 
 fn layer_from_key(s: &str) -> PlantLayer {
-    // Python had a `fg/mg/bg` legacy abbreviation pass; honour it here so old
-    // saves still load cleanly.
+    // Accept the legacy `fg/mg/bg` abbreviations so old saves still load.
     match s {
         "background" | "bg" => PlantLayer::Background,
         "foreground" | "fg" => PlantLayer::Foreground,
@@ -303,9 +299,8 @@ fn season_from_key(s: &str) -> Season {
     }
 }
 
-/// Python writes `moon_phase` as a human label ("1st Qtr", "Full", ...).
-/// Rust stores it as a 0–7 phase index, so save in the Python form and parse
-/// either form on load.
+/// `moon_phase` is stored as a 0-7 index in memory but written to disk as a
+/// human label ("1st Qtr", "Full", ...). Parse either form on load.
 fn moon_phase_save_key(p: u8) -> &'static str {
     match p % 8 {
         0 => "New",
@@ -399,9 +394,8 @@ fn fav_location_from_key(s: &str) -> Option<SceneId> {
 }
 
 // ---------------------------------------------------------------------------
-// Wire-format structs. Field names + #[serde(rename = "...")] match Python's
-// keys exactly. #[serde(default)] on every field keeps loading tolerant when
-// keys are missing.
+// Wire-format structs. #[serde(default)] on every field keeps loading
+// tolerant when keys are missing.
 // ---------------------------------------------------------------------------
 
 #[derive(Default, Serialize, Deserialize)]
@@ -460,8 +454,8 @@ struct SeedsData {
     #[serde(default)] sunflower: u8,
     #[serde(default)] rose: u8,
     #[serde(default)] freesia: u8,
-    // TODO(plants): Tulip exists in Python's seed list but has no plant type
-    // in the Rust port yet. Round-trip the count so old saves don't lose it.
+    // TODO(plants): Tulip has no plant type yet. Round-trip the count so old
+    // saves don't lose it.
     #[serde(default)] tulip: u8,
 }
 
@@ -480,7 +474,6 @@ struct ToyData {
 #[derive(Default, Serialize, Deserialize)]
 struct PlantRecord {
     #[serde(default)] id: u32,
-    /// Python key is the Python keyword `type`; preserve the wire name.
     #[serde(default, rename = "type")]
     seed_type: SStr,
     #[serde(default)] scene: SStr,
@@ -492,8 +485,8 @@ struct PlantRecord {
     #[serde(default)] age_hours: u32,
     #[serde(default)] water_debt_hours: f32,
     #[serde(default)] fertilizer: f32,
-    /// Python uses 0 as the "no planted_day recorded" sentinel; Rust uses
-    /// `Option<u32>`. We serialise as u32 and map 0 → Some(0) on load — the
+    /// Wire format uses 0 as the "no planted_day recorded" sentinel; in
+    /// memory we hold `Option<u32>` and map 0 to `Some(0)` on load. The
     /// distinction is purely cosmetic during gameplay.
     #[serde(default)] planted_day: u32,
     #[serde(default)] mirror: bool,
@@ -508,8 +501,7 @@ struct MilestonesData {
     #[serde(default)] store: bool,
 }
 
-/// Wire-format for a single wifi AP entry. Mirrors Python's `{'b': ..., 's': ..., 'n': ...}`
-/// shape so the same `save.json` round-trips between the two ports.
+/// Wire-format for a single wifi AP entry: `{'b': ..., 's': ..., 'n': ...}`.
 #[derive(Default, Serialize, Deserialize)]
 struct WifiEntryData {
     #[serde(default, rename = "b")]
@@ -520,9 +512,8 @@ struct WifiEntryData {
     count: f32,
 }
 
-/// Placeholder for fields Python tracks but the Rust port hasn't ported yet
-/// (friends map). Serialises as an empty JSON object so the wire shape
-/// matches Python; deserialise is a no-op accept-anything.
+/// Placeholder for the friends map (not yet implemented). Serialises as an
+/// empty JSON object; deserialise is a no-op accept-anything.
 #[derive(Default)]
 struct StubMap;
 impl Serialize for StubMap {
@@ -571,7 +562,7 @@ struct SaveData {
     #[serde(default)] recent_meals: Vec<SStr, RECENT_HISTORY>,
     #[serde(default)] milestones: MilestonesData,
 
-    // Flat stat fields — same keys Python's `_STAT_KEYS` writes at top level.
+    // Flat stat fields at the top level.
     #[serde(default)] fullness: f32,
     #[serde(default)] energy: f32,
     #[serde(default)] comfort: f32,
@@ -885,9 +876,8 @@ fn apply(data: &SaveData, ctx: &mut GameContext) {
     ctx.sickness = data.sickness;
     ctx.medicine_pending = data.medicine_pending;
 
-    // Plants: only overwrite when the save actually contains plant entries,
-    // matching Python's "if 'plants' in data" check (the starter set stays
-    // otherwise).
+    // Plants: only overwrite when the save actually contains plant entries.
+    // The starter set stays otherwise.
     if !data.plants.is_empty() {
         ctx.plants.clear();
         for r in data.plants.iter() {
@@ -992,7 +982,7 @@ pub fn load(ctx: &mut GameContext) -> bool {
     // `save` below, never concurrently.
     let buf = unsafe { &mut *core::ptr::addr_of_mut!(JSON_BUF) };
     let Some(len) = storage::read_latest(buf) else {
-        println!("[Save] storage::read_latest returned None — no save loaded");
+        println!("[Save] storage::read_latest returned None, no save loaded");
         return false;
     };
     match serde_json_core::from_slice::<SaveData>(&buf[..len]) {
@@ -1010,10 +1000,6 @@ pub fn load(ctx: &mut GameContext) -> bool {
 }
 
 /// Encode `ctx` to JSON and persist it. Returns true on success.
-///
-/// Unlike Python — which followed every save with `machine.soft_reset()` to
-/// reclaim a fragmented heap — this just writes and returns. The Rust port
-/// has no heap to fragment, so a save is a normal in-place operation.
 pub fn save(ctx: &mut GameContext) -> bool {
     let data = build(ctx);
     // SAFETY: see `load`.
@@ -1032,8 +1018,7 @@ pub fn save(ctx: &mut GameContext) -> bool {
     true
 }
 
-/// If `SAVE_INTERVAL` has elapsed since the last save, save now. Mirrors
-/// Python's `save_if_needed` minus the reboot.
+/// If `SAVE_INTERVAL` has elapsed since the last save, save now.
 pub fn save_if_needed(ctx: &mut GameContext) {
     let due = match ctx.last_save_time {
         None => true,

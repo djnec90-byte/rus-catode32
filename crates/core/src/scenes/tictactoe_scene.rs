@@ -1,4 +1,4 @@
-//! TicTacToe minigame — play against the pet on a 3x3, 4x4, or 5x5 board.
+//! TicTacToe minigame. Play against the pet on a 3x3, 4x4, or 5x5 board.
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;

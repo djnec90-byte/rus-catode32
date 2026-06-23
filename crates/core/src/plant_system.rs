@@ -1,8 +1,8 @@
-//! Plant growth state machine + tick logic. Direct port of `plant_system.py`.
+//! Plant growth state machine + tick logic.
 //!
 //! Plants live in `ctx.plants`. Ticking is global: `tick_plants(ctx)` runs
-//! once per in-game hour from `LocationScene::update` and advances every plant
-//! (not just the ones in the current scene), matching the Python behaviour.
+//! once per in-game hour from `LocationScene::update` and advances every
+//! plant, not just the ones in the current scene.
 
 use crate::{
     assets::plants::{PlantStage, PotKind},
@@ -12,15 +12,14 @@ use crate::{
     time_system::{Season, Weather},
 };
 
-/// Per-type thresholds (all in in-game hours). Numbers match `_PLANT_TYPES`
-/// in `plant_system.py`. Time scale: 1 in-game hour = 1 real minute, so 1
-/// real day = 1440 in-game hours.
+/// Per-type thresholds (all in in-game hours). Time scale: 1 in-game hour =
+/// 1 real minute, so 1 real day = 1440 in-game hours.
 #[derive(Clone, Copy)]
 pub struct PlantTypeSpec {
     pub wilt: u32,
     pub death: u32,
     pub recover: u32,
-    /// Cumulative seedling→young, young→growing, growing→mature, mature→thriving.
+    /// Cumulative seedling -> young -> growing -> mature -> thriving.
     pub stage_hours: [u32; 4],
     pub water_rate: f32,
     pub dormant_in_winter: bool,
@@ -124,7 +123,7 @@ fn stage_from_index(i: usize) -> PlantStage {
     }
 }
 
-// Fertilizer thresholds (matches Python constants).
+// Fertilizer thresholds.
 const FERT_DECAY: f32 = 0.015;
 const FERT_NO_MAX: f32 = 5.0;
 const FERT_LOW_MAX: f32 = 20.0;
@@ -178,7 +177,7 @@ pub struct Plant {
     pub aged: bool,
 }
 
-/// Layer hint stored on each plant. Matches Python's `'foreground' | 'midground' | 'background'`.
+/// Layer hint stored on each plant.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PlantLayer {
     Background,
@@ -322,7 +321,7 @@ pub fn tick_plant(plant: &mut Plant, season: Season, weather: Weather) {
     let debt = plant.water_debt;
 
     if stage.is_wilted() {
-        // Player watered → debt low → recover.
+        // Player watered -> debt low -> recover.
         if debt <= spec.recover as f32 {
             plant.stage = stage.base();
             return;
@@ -353,7 +352,7 @@ pub fn tick_plant(plant: &mut Plant, season: Season, weather: Weather) {
 }
 
 // ---------------------------------------------------------------------------
-// Global tick — called from LocationScene::update
+// Global tick, called from LocationScene::update
 // ---------------------------------------------------------------------------
 
 /// Advance every plant by however many in-game hours have elapsed since the
@@ -613,9 +612,8 @@ pub fn count_dead_plants(ctx: &GameContext, scene: SceneId) -> usize {
         .count()
 }
 
-/// Aggregate score used by behavior bonuses. Mirrors Python's
-/// `scene_plant_health` property: thriving +2, healthy +1, wilted/dormant -1,
-/// dead -2 (per plant in the scene).
+/// Aggregate score used by behavior bonuses: thriving +2, healthy +1,
+/// wilted/dormant -1, dead -2 (per plant in the scene).
 pub fn scene_plant_health_score(ctx: &GameContext, scene: SceneId) -> i32 {
     let mut score = 0i32;
     for p in ctx.plants.iter() {

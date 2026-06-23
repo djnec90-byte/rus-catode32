@@ -6,7 +6,7 @@
 //! 1. Pump SDL events; map arrow / A / S / Q / W keys onto the
 //!    `Button` indices used by `catode32_core::input`.
 //! 2. Call `Game::tick()` to run one frame of game logic + drawing.
-//! 3. Blit the in-memory 128×64 framebuffer to the `SimulatorDisplay`.
+//! 3. Blit the in-memory 128x64 framebuffer to the `SimulatorDisplay`.
 //! 4. `Window::update()` and sleep enough to land near 12 FPS.
 
 use std::thread;
@@ -37,14 +37,14 @@ const SCALE: u32 = 8;
 const FPS: u64 = 12;
 const FRAME_MS: u64 = 1000 / FPS;
 
-/// "Lit pixel" tint, matching the MicroPython kiosk's `DISPLAY_COLOR`.
+/// "Lit pixel" tint.
 const PIXEL_ON: Rgb888 = Rgb888::new(35, 165, 204);
-/// Background, matching the kiosk's `DISPLAY_BG` (a near-black charcoal —
-/// not pure 0,0,0 so the off pixels read as "screen, not void").
+/// Background (a near-black charcoal, not pure 0,0,0 so the off pixels read
+/// as "screen, not void").
 const PIXEL_OFF: Rgb888 = Rgb888::new(10, 10, 10);
 
-/// Map an SDL keycode onto the firmware-side button index, mirroring the
-/// MicroPython kiosk: arrows for the d-pad, A=A, S=B, Q=MENU1, W=MENU2.
+/// Map an SDL keycode onto the firmware-side button index.
+/// Arrows for the d-pad, A=A, S=B, Q=MENU1, W=MENU2.
 fn button_index(key: Keycode) -> Option<usize> {
     match key {
         Keycode::Up => Some(0),

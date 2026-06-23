@@ -144,7 +144,7 @@ impl Behavior for HuntingBehavior {
         if !self.success {
             return None;
         }
-        // Hungry → eat the catch. Otherwise present it as a gift.
+        // Hungry -> eat the catch. Otherwise present it as a gift.
         if ctx.fullness < 40.0 {
             Some(NextBehavior::Eating(EatingSource::CaughtSnack))
         } else {

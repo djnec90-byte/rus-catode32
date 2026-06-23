@@ -81,14 +81,14 @@ impl Renderer {
         }
     }
 
-    /// Desktop: borrow the underlying 128×64 1-bpp framebuffer so the
+    /// Desktop: borrow the underlying 128x64 1-bpp framebuffer so the
     /// host loop can copy it onto a `SimulatorDisplay`.
     #[cfg(feature = "desktop")]
     pub fn framebuffer(&self) -> &desktop_fb::DesktopFramebuffer {
         &self.display
     }
 
-    /// Cut display panel power (~1–2 mA saving). Drawing still updates the
+    /// Cut display panel power (~1-2 mA saving). Drawing still updates the
     /// off-screen buffer; nothing reaches the panel until `power_on()`.
     pub fn power_off(&mut self) {
         self.display.set_display_on(false).ok();
@@ -147,7 +147,7 @@ impl Renderer {
         self.draw_line_color(start, end, true);
     }
 
-    /// Draw a line in either ON (`on=true`) or OFF (`on=false`) — used by the
+    /// Draw a line in either ON (`on=true`) or OFF (`on=false`). Used by the
     /// feather render to carve gaps into the otherwise-solid quill outline.
     pub fn draw_line_color(&mut self, start: Point, end: Point, on: bool) {
         let color = if on { BinaryColor::On } else { BinaryColor::Off };
@@ -157,9 +157,8 @@ impl Renderer {
             .unwrap();
     }
 
-    /// Tiny filled disc, used by the laser dot and the string tip. Mirrors
-    /// Python's `draw_circle(..., filled=True)` for the small radii (1 / 2)
-    /// the playing behavior actually requests.
+    /// Tiny filled disc, used by the laser dot and the string tip. Sized for
+    /// the small radii (1 or 2) the playing behavior actually requests.
     pub fn draw_circle_filled(&mut self, center: Point, radius: i32) {
         let r2 = radius * radius;
         for dy in -radius..=radius {
@@ -176,7 +175,7 @@ impl Renderer {
         }
     }
 
-    /// Bresenham midpoint circle outline. Mirrors Python `draw_circle(..., filled=False)`.
+    /// Bresenham midpoint circle outline.
     pub fn draw_circle_outline(&mut self, center: Point, radius: i32) {
         let (cx, cy) = (center.x, center.y);
         let mut x = radius;
@@ -360,7 +359,7 @@ impl Renderer {
 
 // --- Desktop framebuffer ---------------------------------------------------
 
-/// 128×64 1-bpp framebuffer for desktop builds. Implements
+/// 128x64 1-bpp framebuffer for desktop builds. Implements
 /// `embedded_graphics::DrawTarget<Color = BinaryColor>` plus the
 /// SSD1306-shaped helper methods (`clear_buffer`, `flush`, `set_invert`,
 /// `set_display_on`) that `Renderer` calls, so the firmware drawing code
@@ -377,7 +376,7 @@ pub mod desktop_fb {
     const ROW_BYTES: usize = WIDTH / 8;
 
     pub struct DesktopFramebuffer {
-        /// Row-major 1-bpp packed (MSB first within a byte) — same layout as
+        /// Row-major 1-bpp packed (MSB first within a byte). Same layout as
         /// the sprites the firmware streams to the SSD1306.
         buf: [u8; WIDTH * HEIGHT / 8],
         invert: bool,
@@ -419,8 +418,8 @@ pub mod desktop_fb {
             self.on
         }
 
-        /// True if pixel (x, y) is lit. `invert` is *not* applied here —
-        /// the host loop applies it when blitting.
+        /// True if pixel (x, y) is lit. `invert` is *not* applied here.
+        /// The host loop applies it when blitting.
         pub fn pixel(&self, x: usize, y: usize) -> bool {
             if x >= WIDTH || y >= HEIGHT {
                 return false;

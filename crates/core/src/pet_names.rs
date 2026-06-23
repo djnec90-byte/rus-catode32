@@ -27,8 +27,8 @@ pub const EITHER_NAMES: &[&str] = &[
     "Zephyr", "Nimbus",
 ];
 
-/// Pick a name from the gendered pool concatenated with the unisex pool,
-/// matching Python: `pool = (TOM_NAMES if tom else QUEEN_NAMES) + EITHER_NAMES`
+/// Pick a name from the gendered pool concatenated with the unisex pool:
+/// `pool = (TOM_NAMES if tom else QUEEN_NAMES) + EITHER_NAMES`
 /// then `pool[(seed >> 20) % len(pool)]`.
 pub fn pick_name(seed: u64, gendered: &'static [&'static str]) -> &'static str {
     let total = gendered.len() + EITHER_NAMES.len();

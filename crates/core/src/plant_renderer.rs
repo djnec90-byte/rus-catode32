@@ -1,8 +1,6 @@
-//! Per-layer plant draw helper. Mirrors `plant_renderer.py`'s
-//! `draw_plants_layer`. The Rust port doesn't use the Python custom-draw
-//! callback system — scenes call `draw_plants(ctx, renderer, env, layer)`
-//! directly inside their `draw()` after the corresponding environment layer
-//! has been drawn.
+//! Per-layer plant draw helper. Scenes call
+//! `draw_plants(ctx, renderer, env, layer)` directly inside their `draw()`
+//! after the corresponding environment layer has been drawn.
 
 use embedded_graphics::prelude::Point;
 
@@ -58,7 +56,7 @@ pub fn draw_plants_layer(
             );
         }
 
-        // Ground plants have no pot — fall back to centering on the cursor x
+        // Ground plants have no pot, fall back to centering on the cursor x
         // with a small reference width so the seedling sits where it was placed.
         let center_x = if plant.pot == PotKind::Ground {
             screen_x

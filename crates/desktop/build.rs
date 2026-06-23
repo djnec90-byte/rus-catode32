@@ -7,7 +7,7 @@
 fn main() {
     if cfg!(target_os = "macos") {
         // Apple silicon Homebrew lives under /opt/homebrew; Intel
-        // Homebrew uses /usr/local. Add both — the linker silently
+        // Homebrew uses /usr/local. Add both. The linker silently
         // ignores ones that don't exist.
         println!("cargo:rustc-link-search=/opt/homebrew/lib");
         println!("cargo:rustc-link-search=/usr/local/lib");

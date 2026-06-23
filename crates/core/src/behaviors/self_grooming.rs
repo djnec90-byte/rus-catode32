@@ -91,7 +91,7 @@ impl Behavior for SelfGroomingBehavior {
         common::bonus_add(&mut bonus, StatId::Cleanliness, 15.0);
         common::bonus_add(&mut bonus, StatId::Fulfillment, 0.05);
 
-        // apply_location_bonus (does NOT call super — no fav_weather)
+        // apply_location_bonus (does NOT call super, no fav_weather)
         if ctx.in_familiar_location {
             common::bonus_scale(&mut bonus, StatId::Cleanliness, 1.1);
             common::bonus_add(&mut bonus, StatId::Serenity, 0.5);

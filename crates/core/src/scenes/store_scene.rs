@@ -1,8 +1,7 @@
-// TODO: Python store shows dynamic confirm text (e.g. "Can't afford!", "Already
-// owned!", per-item price strings) BEFORE the action fires. The Rust port uses
-// static menu trees and instead surfaces those messages as a post-action popup.
-// Functionally equivalent but a small UX deviation; revisit when the menu
-// system can hold owned-string items.
+// TODO: store currently surfaces messages like "Can't afford!" and "Already
+// owned!" as a post-action popup. A nicer UX would show the dynamic confirm
+// text BEFORE the action fires. Revisit when the menu system can hold
+// owned-string items.
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
@@ -548,7 +547,7 @@ impl Scene for StoreScene {
             self.popup.draw(renderer, false);
         }
         // Silence unused-import lint when ART_PANEL_X is not actively used as a
-        // const expression at runtime — kept as documentation of the layout.
+        // const expression at runtime. Kept as documentation of the layout.
         let _ = ART_PANEL_X;
     }
 }

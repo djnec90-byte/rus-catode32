@@ -63,7 +63,7 @@ const SEAWEED_POS: &[SeaweedSpawn] = &[
 ];
 
 // Rock dimensions baked as consts since the Sprite static can't be queried in
-// const context — keep in sync with the sprite literals in assets/nature.rs.
+// const context. Keep in sync with the sprite literals in assets/nature.rs.
 const ROCK_PILE_H: i32 = 23;
 
 const SEA_PLANT_POS: &[(i32, i32)] = &[
@@ -372,11 +372,11 @@ impl Scene for VacationAquariumScene {
             self.base.draw_menu(renderer);
             return;
         }
-        // Indoor scene — no sky. Tanks sit against a black wall.
+        // Indoor scene, no sky. Tanks sit against a black wall.
         self.base.environment.draw_layer(renderer, Layer::Background);
         self.base.environment.draw_layer(renderer, Layer::Midground);
-        // Midground custom passes: rocks → seaweed → creatures → particles →
-        // occluders (paint over anything that escaped the windows) → outlines.
+        // Midground custom passes: rocks -> seaweed -> creatures -> particles ->
+        // occluders (paint over anything that escaped the windows) -> outlines.
         self.draw_rocks_and_plants(renderer);
         self.draw_seaweed(renderer);
         self.draw_creatures(renderer);

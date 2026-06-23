@@ -157,7 +157,7 @@ impl Game {
             self.transition.start();
         }
 
-        // Sleep ran inside `update` at the transition midpoint — reset
+        // Sleep ran inside `update` at the transition midpoint. Reset
         // the frame timer so the next iteration doesn't see the entire
         // sleep duration as one dt.
         if self.just_woke {
@@ -228,7 +228,7 @@ impl Game {
                 if self.deep_sleep_pending {
                     // One-way: enter_deep_sleep never returns. The screen is
                     // already fully black from the out phase, so no reveal
-                    // is needed (and would never play — device resets on wake).
+                    // is needed (and would never play, device resets on wake).
                     self.enter_deep_sleep();
                 }
             }
@@ -352,7 +352,7 @@ impl Game {
         let mut g3 = unsafe { GPIO3::steal() };
 
         // The IO_MUX pull-ups configured at boot don't survive Ext1's
-        // `pad_hold` switch to RTC mode — without an RTC-side pull-up the
+        // `pad_hold` switch to RTC mode. Without an RTC-side pull-up the
         // LP-IO pin floats and the level=Low trigger fires almost
         // immediately. Enable them on the LP-IO peripheral now, before
         // Ext1::apply runs and freezes the pad state.

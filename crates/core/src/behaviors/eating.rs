@@ -69,8 +69,8 @@ impl EatingBehavior {
 
     /// Linear ramp from 0% at `start` to 100% at fullness=100. Midpoint of the
     /// ramp is offset by appeal: 76 + appeal*8 for meals, 86 + appeal*8 for
-    /// snacks — so meals are refused more readily than treats at the same
-    /// fullness level. Mirrors Python `_rejection_chance`.
+    /// snacks, so meals are refused more readily than treats at the same
+    /// fullness level.
     fn rejection_chance(fullness: f32, appeal: f32, is_snack: bool) -> f32 {
         let base = if is_snack { 86.0 } else { 76.0 };
         let midpoint = base + appeal * 8.0;
@@ -498,10 +498,7 @@ fn food_cfg(source: EatingSource) -> EatCfg {
                     b
                 },
             },
-            // Mackerel has no entry in Python's FOOD_CONFIG (see
-            // `eating.py` FOOD_CONFIG dict), so it falls through to
-            // DEFAULT_FOOD_CONFIG: fullness 8, eating_speed 0.4, appeal 0.5.
-            // Matched here exactly.
+            // Mackerel uses the default config: fullness 8, eating_speed 0.4, appeal 0.5.
             FoodItem::Mackerel => EatCfg {
                 sprite: &FOOD_BOWL,
                 eating_speed: 0.4,

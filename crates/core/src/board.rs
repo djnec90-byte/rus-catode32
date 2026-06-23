@@ -1,6 +1,6 @@
 //! ESP32 board init. Picks up GPIO/I2C/RMT/SoftwareInterrupt resources from
 //! the runtime peripherals and hands them to the rest of the firmware via
-//! the `Board` struct. The whole module is firmware-only — desktop builds
+//! the `Board` struct. The whole module is firmware-only; desktop builds
 //! construct equivalents (a SimulatorDisplay, a keyboard-driven `Buttons`,
 //! no-op LED, etc.) directly in the `desktop` crate.
 //!
@@ -27,7 +27,7 @@ mod firmware {
     use crate::{input::Buttons, led::Led};
 
     #[cfg(all(feature = "c6", feature = "c3"))]
-    compile_error!("Features `c6` and `c3` are mutually exclusive — enable exactly one.");
+    compile_error!("Features `c6` and `c3` are mutually exclusive, enable exactly one.");
 
     #[cfg(not(any(feature = "c6", feature = "c3")))]
     compile_error!("Enable either feature `c6` or `c3` to select the target board.");

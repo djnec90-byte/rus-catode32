@@ -143,7 +143,7 @@ impl Scene for BedroomScene {
             self.base.draw_menu(renderer);
             return;
         }
-        // Closed room — no sky.
+        // Closed room, no sky.
         self.base.environment.draw_layer(renderer, Layer::Background);
         self.draw_lamp(renderer);
         self.base.draw_plants(ctx, renderer, PlantLayer::Background);

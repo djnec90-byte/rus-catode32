@@ -1,8 +1,8 @@
-//! Pet interaction menu opened with Menu2 on any location scene. Mirrors the
-//! Python `MainScene._build_menu_items` tree: Affection / Train / Feed / Play
-//! / Gardening. Items, counts and inventory are recomputed every time the
-//! player navigates a page so labels like "Tuna (3)" and "Small pot (2)" stay
-//! accurate and out-of-stock entries disappear.
+//! Pet interaction menu opened with Menu2 on any location scene. Tree:
+//! Affection / Train / Feed / Play / Gardening. Items, counts and inventory
+//! are recomputed every time the player navigates a page so labels like
+//! "Tuna (3)" and "Small pot (2)" stay accurate and out-of-stock entries
+//! disappear.
 
 use core::fmt::Write as _;
 
@@ -68,7 +68,7 @@ pub enum GardeningAction {
     PlacePot(PotKind),
     PlantSeedInPot(SeedKind),
     PlantSeedInGround(SeedKind),
-    /// Open the tend cursor — LocationScene starts `PlantSelectionMode` and
+    /// Open the tend cursor. LocationScene starts `PlantSelectionMode` and
     /// re-opens this menu on a dynamic Tend page once the player picks one.
     StartTend,
     Water(u32),
@@ -176,7 +176,7 @@ impl LocationMenu {
         self.set_page(Page::Root, ctx);
     }
 
-    /// Open directly on the Tend page for a specific plant — used by
+    /// Open directly on the Tend page for a specific plant. Used by
     /// LocationScene after the PlantSelectionMode confirms a selection.
     pub fn open_tend(&mut self, ctx: &GameContext, scene: SceneId, plant_id: u32) {
         self.stack.clear();

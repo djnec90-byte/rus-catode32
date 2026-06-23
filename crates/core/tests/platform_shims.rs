@@ -21,7 +21,7 @@ fn duration_round_trip() {
 fn instant_monotonic_within_a_call() {
     let a = Instant::now();
     let b = Instant::now();
-    // Either same nanosecond (very tight) or b strictly after a — never before.
+    // Either same nanosecond (very tight) or b strictly after a, never before.
     assert!(b >= a);
 }
 

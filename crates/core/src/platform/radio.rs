@@ -3,7 +3,7 @@
 //! never-constructed stubs so `GameContext` keeps the same shape. The
 //! `crate::radio` and `crate::wifi_tracker` modules drop to no-op
 //! implementations on desktop, so the stubs here are only there to satisfy
-//! the type system — they're never touched at runtime.
+//! the type system; they're never touched at runtime.
 
 #[cfg(not(feature = "desktop"))]
 pub use esp_hal::peripherals::WIFI;
@@ -16,7 +16,7 @@ mod desktop {
 
     /// Stub for `esp_hal::peripherals::WIFI<'a>`. Desktop builds need a
     /// value to feed `Game::new`'s `wifi_peripheral` parameter, but the
-    /// stub is never read — `radio::acquire` is a no-op on desktop.
+    /// stub is never read. `radio::acquire` is a no-op on desktop.
     pub struct WIFI<'a>(PhantomData<&'a ()>);
 
     impl<'a> WIFI<'a> {
@@ -31,7 +31,7 @@ mod desktop {
         }
     }
 
-    /// Stub for `esp_radio::wifi::WifiController<'a>`. Same story —
+    /// Stub for `esp_radio::wifi::WifiController<'a>`. Same story:
     /// `GameContext::wifi` is always `None` on desktop.
     pub struct WifiController<'a>(PhantomData<&'a ()>);
 }

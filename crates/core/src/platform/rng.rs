@@ -19,7 +19,7 @@ mod desktop {
             | 1
     }
 
-    /// xorshift64* — adequate for game decisions on the desktop simulator.
+    /// xorshift64*, adequate for game decisions on the desktop simulator.
     pub struct Rng(Cell<u64>);
 
     impl Rng {

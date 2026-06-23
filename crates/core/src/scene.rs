@@ -74,7 +74,7 @@ pub struct SceneManager {
     /// `SceneId::Menu`; closed instantly when the menu is dismissed or
     /// when a chosen item matches the underlying scene.
     overlay: Option<MenuScene>,
-    /// True after the overlay has dispatched a scene-swap action — input is
+    /// True after the overlay has dispatched a scene-swap action. Input is
     /// frozen but the menu stays drawn so the player sees the fade-out
     /// covering the menu rather than briefly revealing the underlying scene.
     /// Cleared by `swap_to` when the transition midpoint actually fires.
@@ -95,9 +95,9 @@ impl SceneManager {
 
     /// Tick the current scene and report any swap it requested.
     ///
-    /// The swap is no longer applied inline — the caller (`Game`) defers it
+    /// The swap is no longer applied inline. The caller (`Game`) defers it
     /// until the screen transition reaches its midpoint, so the player sees
-    /// the fade-out → fade-in rather than an instant cut.
+    /// the fade-out then fade-in rather than an instant cut.
     ///
     /// `SceneId::Menu` requests open the big-menu overlay instead of being
     /// returned to the caller, so opening the menu doesn't fade or exit the
@@ -122,7 +122,7 @@ impl SceneManager {
 
             let result = overlay.update(ctx, buttons, dt);
             if overlay.take_dismissed() {
-                // Player pressed Menu1/Menu2/B to back out — close the overlay
+                // Player pressed Menu1/Menu2/B to back out. Close the overlay
                 // and stay on the current scene (no transition).
                 overlay.exit(ctx);
                 self.overlay = None;
@@ -134,7 +134,7 @@ impl SceneManager {
                     self.overlay = None;
                     return None;
                 }
-                // Real swap requested — leave the menu drawn while the
+                // Real swap requested. Leave the menu drawn while the
                 // transition plays; `swap_to` will close it at the midpoint.
                 self.overlay_pending_close = true;
                 return Some(id);
@@ -168,11 +168,10 @@ impl SceneManager {
 
     /// Minimal scene tick used by `SleepManager` while the screen is off.
     ///
-    /// Mirrors Python `SceneManager.sleep_update`: ticks the current scene
-    /// so behaviors and needs keep advancing, but ignores any returned
-    /// scene-change request — switching scenes invisibly behind a black
-    /// screen would surprise the player on wake. Behavior-requested scene
-    /// changes mid-sleep are intentionally dropped.
+    /// Ticks the current scene so behaviors and needs keep advancing, but
+    /// ignores any returned scene-change request. Switching scenes invisibly
+    /// behind a black screen would surprise the player on wake.
+    /// Behavior-requested scene changes mid-sleep are intentionally dropped.
     pub fn sleep_update(&mut self, ctx: &mut GameContext, buttons: &mut Buttons, dt: f32) {
         let _ = self.current.as_scene_mut().update(ctx, buttons, dt);
     }

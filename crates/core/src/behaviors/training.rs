@@ -8,7 +8,7 @@ use crate::{
 };
 
 fn rejection_chance(ctx: &GameContext) -> f32 {
-    // Mirrors Python _REJECTION_THRESHOLDS: energy 30, focus 30, courage 25, sociability 25.
+    // Rejection thresholds: energy 30, focus 30, courage 25, sociability 25.
     let mut complement: f32 = 1.0;
     let checks = [
         (ctx.energy, 30.0_f32),
@@ -142,11 +142,7 @@ impl Behavior for TrainingBehavior {
         if self.rejected {
             return;
         }
-        // Stat tables per training_type. Mirrors Python training.py:_BONUSES.
-        // Python uses key "couriosity" (typo) which doesn't match any attribute
-        // and is silently dropped by apply_stat_changes — we replicate that by
-        // omitting those entries entirely so balance stays 1:1 with the Python
-        // tree until the Python typo is fixed and ported over.
+        // Stat tables per training_type.
         let mut bonus: heapless::Vec<(StatId, f32), 14> = heapless::Vec::new();
         match self.kind {
             TrainingKind::Intelligence => {

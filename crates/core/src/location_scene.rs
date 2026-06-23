@@ -106,13 +106,13 @@ pub struct LocationScene {
     plant_bursts: PlantBursts,
     scene_id: SceneId,
     plant_surfaces: &'static [PlantSurface],
-    /// True while the player is chaining tend actions (Water/Fertilize) — the
+    /// True while the player is chaining tend actions (Water/Fertilize). The
     /// menu re-opens the selection cursor after each one so multiple plants
     /// can be tended in succession without re-navigating from Menu2.
     in_tend_mode: bool,
     last_tended_plant_id: Option<u32>,
     /// Pending seed kind for an in-ground placement flow. Set when the player
-    /// picks "Plant Seed → In Ground → Rose" before placement starts.
+    /// picks "Plant Seed -> In Ground -> Rose" before placement starts.
     pending_ground_seed: Option<crate::context::SeedKind>,
     popup: Popup,
     popup_active: bool,
@@ -143,7 +143,7 @@ pub struct LocationScene {
     /// `behaviors.current_id()` and sends `vbeh` on change. Sentinel
     /// `None` means "no broadcast yet this visit".
     last_vbeh: Option<BehaviorId>,
-    /// Seconds since the last inviter→invitee proximity sniff; the
+    /// Seconds since the last inviter-to-invitee proximity sniff; the
     /// inviter waits this much before firing another one.
     sniff_cooldown: f32,
     /// Inviter-only: seconds since the last `venv` broadcast.
@@ -205,7 +205,7 @@ impl LocationScene {
             }
         }
 
-        // Visit silence timeout — checked before broadcast so a dead
+        // Visit silence timeout, checked before broadcast so a dead
         // peer can't keep the heartbeat going forever.
         if ctx.visit.is_some() {
             self.visit_silence_timer += dt;
@@ -328,8 +328,7 @@ impl LocationScene {
                     self.visit_silence_timer = 0.0;
                     // Invitee mirrors the inviter's clock + weather
                     // for the duration of the visit. We don't touch
-                    // day_number or season_offset — those are
-                    // local-only.
+                    // day_number or season_offset, those are local-only.
                     ctx.time_hours = env.hour.min(23);
                     ctx.time_minutes = env.minute.min(59);
                     ctx.weather = espnow_msg::weather_from_wire(env.weather);
@@ -426,7 +425,7 @@ impl LocationScene {
         let Some(espnow) = ctx.espnow.as_mut() else {
             return;
         };
-        // Ensure the peer is registered for unicast — `start_session`
+        // Ensure the peer is registered for unicast; `start_session`
         // only adds the broadcast peer. Idempotent on repeat calls.
         espnow.add_peer(peer_mac);
         let frame = espnow_msg::encode_vst(cur_x, cur_pose, cur_mirror, vx);
@@ -480,7 +479,7 @@ impl LocationScene {
             self.sniff_cooldown = SNIFF_COOLDOWN;
             return;
         }
-        // Trigger local sniff in place (no target_x — we're already
+        // Trigger local sniff in place (no target_x, we're already
         // close), and tell the peer to do the same.
         ctx.pending_greeting_target_x = None;
         self.behaviors
@@ -529,7 +528,7 @@ impl LocationScene {
 
     fn handle_heard_vocalize(&mut self, ctx: &mut GameContext, icon: BubbleIcon) {
         // Corner is opposite the cat so the bubble doesn't overlap
-        // the sprite. World→screen accuracy isn't important; the
+        // the sprite. World-to-screen accuracy isn't important; the
         // scene midpoint is good enough.
         let mid = (ctx.scene_x_min + ctx.scene_x_max) / 2;
         let corner = if self.character.pos.x < mid {
@@ -607,7 +606,7 @@ impl LocationScene {
         // is always on the left at `ANCHOR - GAP`, the invitee's is
         // always on the right at `ANCHOR + GAP`. Both devices use the
         // same constants so the first `vst ` from the peer lands at
-        // the position we already drew them at — no jump, no
+        // the position we already drew them at. No jump, no
         // randomness. mirror_h has them facing inward toward each
         // other (cats face left by default; `mirror_h = true` flips
         // to face right).
@@ -624,8 +623,8 @@ impl LocationScene {
             let mut v = VisitorCat::new(pos);
             v.mirror_h = visitor_face_right;
             self.visitor = Some(v);
-            // Camera was set from the (pre-visit) character x above —
-            // re-center on the new x.
+            // Camera was set from the (pre-visit) character x above.
+            // Re-center on the new x.
             self.environment
                 .set_camera(self.character.pos.x - DISPLAY_WIDTH / 2);
         } else {
@@ -644,7 +643,7 @@ impl LocationScene {
         self.sniff_cooldown = 0.0;
 
         // Broadcast our current scene to the peer so they can follow.
-        // Only valid for `LocationScene`-backed scenes — non-encodable
+        // Only valid for `LocationScene`-backed scenes; non-encodable
         // scene ids (minigames etc.) just skip the broadcast.
         if let Some(visit) = ctx.visit.as_ref() {
             let peer_mac = visit.peer_mac;
@@ -743,7 +742,7 @@ impl LocationScene {
             self.selection.update(dt);
         }
 
-        // Auto-follow — player isn't panning (they're in the overlay), so the
+        // Auto-follow: player isn't panning (they're in the overlay), so the
         // camera tracks the cat normally if a behavior nudged it.
         let cursor_active = self.placement.active() || self.selection.active();
         if !cursor_active && self.character.pos.x != prev_x {
@@ -786,7 +785,7 @@ impl LocationScene {
         let score = scene_plant_health_score(ctx, self.scene_id).clamp(-100, 100);
         ctx.scene_plant_health = score as i8;
 
-        // World ticks regardless of menu state — matches Python's MainScene.
+        // World ticks regardless of menu state.
         self.sky.update(ctx, dt);
         // Advance plants once per in-game hour (catches up if many hours elapsed).
         tick_plants(ctx);
@@ -943,7 +942,7 @@ impl LocationScene {
     ) {
         match kind {
             PlacementKind::Pot(pot) => {
-                // Cap to 16 plants per scene (matches Python design memo).
+                // Cap to 16 plants per scene.
                 let scene_count = ctx.plants.iter().filter(|p| p.scene == self.scene_id).count();
                 if scene_count < 16 {
                     let _ = place_empty_pot(ctx, self.scene_id, layer, x, y_snap, pot);
@@ -1233,7 +1232,7 @@ impl LocationScene {
         let camera_offset = self.environment.camera_offset(Layer::Foreground);
         self.character.draw(renderer, camera_offset);
         // Visitor pet sits behind the local cat's overlays but on top
-        // of the base sprite — same z-order as having two siblings on
+        // of the base sprite. Same z-order as having two siblings on
         // the same layer.
         if let Some(visitor) = self.visitor.as_ref() {
             visitor.draw(renderer, camera_offset);
@@ -1260,8 +1259,7 @@ impl LocationScene {
         self.selection.draw(ctx, renderer, &self.environment);
         if let Some(flash) = self.heard_flash {
             use micromath::F32Ext;
-            // Sinusoidal bob — same `sin(elapsed * 9.42) * 3` curve
-            // the Python heard-bubble used.
+            // Sinusoidal bob using `sin(elapsed * 9.42) * 3`.
             let y_offset = ((flash.elapsed * 9.42).sin() * 3.0) as i32;
             bubble::draw_heard(renderer, flash.icon, flash.corner, y_offset);
         }
@@ -1279,9 +1277,8 @@ pub use plant_system::scene_plant_health_score as plant_health;
 /// returns a [`NextBehavior`] we should consider triggering locally,
 /// or `None` if the peer's behavior shouldn't propagate. The
 /// returned behavior is gated by a probability + stat check, both
-/// rolled here using `ctx.rng`. Mirrors the legacy MicroPython
-/// `_MIRROR_TABLE` shape — the exact entries / weights are tuned for
-/// social-feel, not literal Python parity.
+/// rolled here using `ctx.rng`. Entries and weights are tuned for
+/// social-feel.
 fn mirror_for_peer(peer: BehaviorId, ctx: &mut GameContext) -> Option<NextBehavior> {
     use crate::rand::rand_f32;
     let roll = rand_f32(&mut ctx.rng);

@@ -63,7 +63,7 @@ impl VocalizingBehavior {
     }
 
     pub fn priority(ctx: &GameContext, rng: &mut u32) -> u32 {
-        // Wants-to-go-home wins most selection rounds (Python parity).
+        // Wants-to-go-home wins most selection rounds.
         if ctx.wants_to_go_home {
             return rand::rand_range_f32(rng, 2.0, 8.0).max(0.0) as u32;
         }

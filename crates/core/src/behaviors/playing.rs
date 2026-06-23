@@ -33,8 +33,7 @@ use crate::{
     scene::SceneId,
 };
 
-/// Toy variants the pet can play with on its own (no player input). Mirrors
-/// `BehaviorManager._SOLO_PLAY_VARIANTS` in Python.
+/// Toy variants the pet can play with on its own (no player input).
 const SOLO_PLAY_VARIANTS: &[ToyVariant] = &[
     ToyVariant::Ball,
     ToyVariant::String_,
@@ -1100,7 +1099,7 @@ impl Behavior for PlayingBehavior {
         }
         let mut bonus = self.play_bonus_table();
 
-        // apply_location_bonus (does NOT call super — no fav_weather)
+        // apply_location_bonus (does NOT call super, no fav_weather)
         if matches!(
             ctx.last_main_scene,
             SceneId::Outside | SceneId::Treehouse | SceneId::Inside
@@ -1112,7 +1111,7 @@ impl Behavior for PlayingBehavior {
         common::bonus_add(&mut bonus, StatId::Loyalty, 0.5);
 
         // Favourite / least-favourite toy modifier (after location bonus, before
-        // progress scaling — matches Python order).
+        // progress scaling).
         let fav_match = ctx
             .fav_toy
             .map(|tv| tv.to_play_variant() == self.variant)

@@ -132,9 +132,9 @@ impl Behavior for SleepingBehavior {
                 self.phase_timer = 0.0;
                 self.pose_id = PoseId::LayingSideNeutral;
                 ctx.pending_wake_greeting = true;
-                // Mirrors Python's sleeping behavior: opportunistic save at
-                // the wake transition. `save_if_needed` checks the elapsed
-                // timer itself, so it's a no-op for short naps.
+                // Opportunistic save at the wake transition.
+                // `save_if_needed` checks the elapsed timer itself, so it's a
+                // no-op for short naps.
                 crate::save::save_if_needed(ctx);
             }
             Phase::Waking if self.phase_timer >= 3.0 => {

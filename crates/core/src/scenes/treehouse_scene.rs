@@ -126,7 +126,7 @@ impl Scene for TreehouseScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        // TODO: weather-change detection (Python re-enters scene on weather change).
+        // TODO: weather-change detection (re-enter scene on weather change).
         None
     }
 
@@ -139,7 +139,7 @@ impl Scene for TreehouseScene {
             self.base.draw_menu(renderer);
             return;
         }
-        // Open-air — sky visible.
+        // Open-air, sky visible.
         self.base.draw_sky(renderer, ctx);
         self.base.environment.draw_layer(renderer, Layer::Background);
         self.base.environment.draw_layer(renderer, Layer::Midground);

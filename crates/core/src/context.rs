@@ -19,13 +19,12 @@ use crate::{
 
 pub const PET_NAME_MAX: usize = 12;
 
-/// Caps for the wifi tracker's two AP lists. Mirror Python's
-/// `_FAMILIAR_MAX` / `_RECENT_MAX` in `wifi_tracker.py`.
+/// Caps for the wifi tracker's two AP lists.
 pub const WIFI_FAMILIAR_MAX: usize = 16;
 pub const WIFI_RECENT_MAX: usize = 8;
 
-/// Max SSID length we persist with each tracked AP. Python truncates to 16
-/// at scan time; we mirror that cap so saves round-trip cleanly.
+/// Max SSID length we persist with each tracked AP. Truncated to 16 at scan
+/// time so saves round-trip cleanly.
 pub const WIFI_SSID_MAX: usize = 16;
 
 /// One tracked access point. `b` is the BSSID (6 raw bytes; rendered as
@@ -77,8 +76,7 @@ impl StatId {
 
 /// Which role this device is playing in an active visit. Determines
 /// which side runs greeting/proximity-sniff/environment-broadcast logic
-/// in the visit manager (Phase 5). Mirrors the legacy `visit['role']`
-/// MicroPython string field.
+/// in the visit manager (Phase 5).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum VisitRole {
     Inviter,
@@ -253,8 +251,7 @@ pub struct InputSnapshot {
     pub b_just_pressed: bool,
 }
 
-/// What the eating behavior records in `recent_meals`. Mirrors Python's
-/// `context.recent_meals` (list of food-type strings) but typed so the variety
+/// What the eating behavior records in `recent_meals`. Typed so the variety
 /// penalty can compare entries cleanly.
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -367,8 +364,8 @@ pub const TOOL_COUNT: usize = 2;
 
 pub const RECENT_HISTORY: usize = 5;
 
-/// Global cap on live plants across every scene. Mirrors the Python design
-/// memo's "16 pots per scene" guideline summed across 5 plantable scenes.
+/// Global cap on live plants across every scene. Sized for "16 pots per
+/// scene" across 5 plantable scenes.
 pub const MAX_PLANTS: usize = 80;
 
 /// Pending cross-scene move request. Set when the player picks "Move to <scene>"
@@ -383,9 +380,8 @@ pub struct PendingGardeningMove {
 /// of `next_plant_id` so the first player-placed plant uses a fresh id.
 pub const STARTER_PLANT_COUNT: usize = 8;
 
-/// Developer-seeded plants placed in each room on first boot. Mirrors
-/// `reset_context._make_starter_plants` in the Python tree so the world feels
-/// inhabited without immediately demanding player attention.
+/// Developer-seeded plants placed in each room on first boot, so the world
+/// feels inhabited without immediately demanding player attention.
 pub fn starter_plants() -> Vec<Plant, MAX_PLANTS> {
     use crate::plant_system::Plant as P;
     let mut v: Vec<Plant, MAX_PLANTS> = Vec::new();
@@ -484,7 +480,7 @@ pub struct GameContext {
 
     pub coins: i32,
 
-    // Inventory — separate per-category storage. Counts are indexed by enum
+    // Inventory, separate per-category storage. Counts are indexed by enum
     // discriminant (use `as usize`). Toys are a sparse list with per-instance
     // durability since each variant has at most one entry in the player's bag.
     pub food_stock: [u8; FOOD_ITEM_COUNT],
@@ -503,7 +499,7 @@ pub struct GameContext {
     pub snake_high_score: i32,
     pub memory_best_score: i32,
 
-    // World/environment state — advanced by TimeSystem each frame.
+    // World/environment state, advanced by TimeSystem each frame.
     pub time_hours: u8,
     pub time_minutes: u8,
     pub day_number: u32,
@@ -541,7 +537,7 @@ pub struct GameContext {
     // RNG seed used by the behavior layer.
     pub rng: u32,
     // Hardware RNG handle for code paths that need fresh entropy (e.g. adoption
-    // seed generation). Carries no state — `Rng` is a zero-sized peripheral
+    // seed generation). Carries no state; `Rng` is a zero-sized peripheral
     // marker; it's stashed on the context so scenes can reach it without
     // plumbing a separate parameter.
     pub hw_rng: Rng,
@@ -602,11 +598,11 @@ pub struct GameContext {
     /// Refcount of how many subsystems currently want the radio up.
     /// Bumped by [`crate::radio::acquire`], decremented by
     /// [`crate::radio::release`]; the actual init/teardown happens on
-    /// the 0↔1 transitions.
+    /// the 0/1 transitions.
     pub radio_users: u8,
 
     /// Active playdate, if any. Owns one slot in `radio_users` for as
-    /// long as it is `Some` — the social scene takes that ref on
+    /// long as it is `Some`. The social scene takes that ref on
     /// handshake success and the visit manager (Phase 5) releases it
     /// on visit end.
     pub visit: Option<VisitState>,
@@ -622,12 +618,12 @@ pub struct GameContext {
     pub plants: Vec<Plant, MAX_PLANTS>,
     pub next_plant_id: u32,
     /// Absolute in-game hour index (day_number * 24 + time_hours) at the last
-    /// plant tick. None on cold boot — first tick anchors instead of catching
+    /// plant tick. None on cold boot, first tick anchors instead of catching
     /// up so saved water_debt remains authoritative.
     pub last_plant_tick_hour: Option<u32>,
     pub pending_gardening_move: Option<PendingGardeningMove>,
 
-    // Pet identity — set during the adoption scene from a 64-bit seed.
+    // Pet identity, set during the adoption scene from a 64-bit seed.
     pub pet_seed: u64,
     pub pet_name: heapless::String<PET_NAME_MAX>,
     pub pet_gender: Option<PetGender>,
@@ -658,7 +654,7 @@ pub struct GameContext {
     pub milestone_store: bool,
 
     /// Instant of the most recent successful save. `None` until the first
-    /// save (or load — load also stamps this). Drives `save::save_if_needed`.
+    /// save (or load, which also stamps this). Drives `save::save_if_needed`.
     pub last_save_time: Option<Instant>,
 }
 
@@ -707,7 +703,7 @@ impl GameContext {
             time_hours: 12,
             time_minutes: 0,
             day_number: 0,
-            // Matches Python default: all pets start in late spring.
+            // All pets start in late spring.
             season_offset: 120,
             season: Season::Spring,
             moon_phase: 2,
@@ -890,7 +886,7 @@ impl GameContext {
 
     /// Apply a batch of stat changes with asymptotic damping near 0 and 100.
     /// Stats near their ceiling resist further increases; stats near the floor
-    /// resist further decreases. Mirrors Python `context.apply_stat_changes`.
+    /// resist further decreases.
     pub fn apply_stat_changes(&mut self, changes: &[(StatId, f32)]) {
         use micromath::F32Ext;
         const EXP: f32 = 0.7;

@@ -18,7 +18,7 @@ const FULL_CELL_W: i32 = 128 / FULL_COLS as i32; // 11
 const HEX_COLS: usize = 9;
 const HEX_CELL_W: i32 = 128 / HEX_COLS as i32; // 14
 
-/// Special-key sentinels — chosen out-of-band from normal characters.
+/// Special-key sentinels, chosen out-of-band from normal characters.
 const KEY_EMPTY: char = '\x00';
 const KEY_BACK: char = '\x08';
 const KEY_DONE: char = '\r';

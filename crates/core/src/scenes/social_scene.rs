@@ -1,5 +1,4 @@
-//! Social menu — peer discovery and playdate handshake. Loose port of
-//! `micropython/src/scenes/social.py`.
+//! Social menu: peer discovery and playdate handshake.
 //!
 //! State machine:
 //!
@@ -83,7 +82,7 @@ enum State {
         /// time.
         elapsed: f32,
     },
-    /// Active playdate — the user navigated back into the Social menu
+    /// Active playdate. The user navigated back into the Social menu
     /// to leave. Shows an "End visit?" confirm; A ends, B returns to
     /// the previous scene without disturbing the visit.
     Visiting,
@@ -120,7 +119,7 @@ impl SocialScene {
     }
 
     /// Add or refresh a peer in the nearby list. Drops on overflow
-    /// rather than evicting — a missing peer just won't appear in the
+    /// rather than evicting; a missing peer just won't appear in the
     /// list until an older entry ages out.
     fn note_hello(&mut self, mac: MacAddr, name: PetName) {
         if let Some(entry) = self.nearby.iter_mut().find(|e| e.mac == mac) {
@@ -177,7 +176,7 @@ impl SocialScene {
     }
 
     fn handle_vreq(&mut self, ctx: &mut GameContext, src: MacAddr, name: PetName) {
-        // Only honor invites while Browsing — if we're already
+        // Only honor invites while Browsing. If we're already
         // inviting someone or showing a prompt, the new request is
         // dropped. The other side will see an invite timeout.
         if !matches!(self.state, State::Browsing) {

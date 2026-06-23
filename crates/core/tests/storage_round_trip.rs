@@ -1,9 +1,9 @@
 //! Verifies the desktop storage backend (file-backed `./catode32-save.json`)
-//! survives a write → read round trip.
+//! survives a write/read round trip.
 //!
 //! Runs the test inside a temp working directory so a real save file in
 //! the repo root isn't clobbered. Single-test file so cargo runs it in
-//! its own process — the static `FLASH_STORAGE` cell on firmware has no
+//! its own process. The static `FLASH_STORAGE` cell on firmware has no
 //! desktop analogue, but cargo's per-binary process isolation keeps
 //! multiple test files from racing on the same `./catode32-save.json`.
 
@@ -17,7 +17,7 @@ use std::sync::{Mutex, MutexGuard, OnceLock};
 use catode32_core::storage;
 
 /// Serialises the tests in this file. They both flip the process CWD and
-/// then read/write `./catode32-save.json` — running in parallel would
+/// then read/write `./catode32-save.json`. Running in parallel would
 /// have them racing on the same path.
 fn lock() -> MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();

@@ -2,7 +2,7 @@
 //!
 //! We don't use ESP-IDF's NVS *format* (this is a bare-metal Rust firmware);
 //! the `nvs` partition is just a convenient 24 KB region reserved by the
-//! bootloader. We use it as a ring of N × 4 KB sectors and pack records into
+//! bootloader. We use it as a ring of N x 4 KB sectors and pack records into
 //! it as variable-length spans.
 //!
 //! On-disk layout per record:
@@ -168,7 +168,7 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     while read < len {
         let space = SECTOR_SIZE - sector_offset;
         let chunk = space.min(len - read);
-        // Round up to WORD_SIZE — esp-storage rejects unaligned reads. The
+        // Round up to WORD_SIZE. esp-storage rejects unaligned reads. The
         // tail bytes on flash were written as 0xFF padding, so we just
         // discard them after the read.
         let aligned_chunk = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
@@ -228,7 +228,7 @@ pub fn erase_all() -> bool {
             return false;
         }
     }
-    println!("[Storage] Factory reset — wiped {} sectors", part.sectors);
+    println!("[Storage] Factory reset, wiped {} sectors", part.sectors);
     true
 }
 
@@ -283,7 +283,7 @@ pub fn write_next(payload: &[u8]) -> bool {
     }
 
     // Stream the payload across sectors (skipping the 16-byte header at the
-    // start of the first sector — it's filled in last so a mid-write power
+    // start of the first sector; it's filled in last so a mid-write power
     // loss leaves no MAGIC and the previous record remains canonical).
     let mut scratch = [0u8; SECTOR_SIZE];
     let mut written = 0;
@@ -328,7 +328,7 @@ pub fn write_next(payload: &[u8]) -> bool {
     }
     if readback != header {
         println!(
-            "[Storage] Header verify mismatch — wrote {:?}, read {:?}",
+            "[Storage] Header verify mismatch, wrote {:?}, read {:?}",
             &header[..12],
             &readback[..12]
         );
@@ -353,7 +353,7 @@ pub use firmware::{erase_all, has_save, init, read_latest, write_next};
 #[cfg(feature = "desktop")]
 mod desktop {
     //! Desktop save backend: a single JSON file in the current working
-    //! directory. No header / no wear leveling — `payload` is the raw
+    //! directory. No header / no wear leveling. `payload` is the raw
     //! bytes written by `save.rs`, stored verbatim. `init()` is a no-op
     //! (kept so call sites match the firmware signature shape).
 

@@ -37,7 +37,7 @@ pub enum SettingValue {
         index: usize,
         options: &'static [&'static str],
     },
-    /// Action item — no value to cycle. Pressing A while it's selected
+    /// Action item, no value to cycle. Pressing A while it's selected
     /// closes the value-edit loop with `SettingsResult::Activated(index)`
     /// so the caller can do something custom (open a sub-screen, fire a
     /// destructive op, etc).

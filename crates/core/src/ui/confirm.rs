@@ -1,10 +1,9 @@
 //! Reusable yes/no confirmation dialog.
 //!
-//! Mirrors the visual style of the Python project's confirm prompts: a 120×40
-//! framed box anchored at (4, 12) with an inner fill so it sits cleanly on top
-//! of whatever the host scene is drawing. Body text wraps to 14 chars wide
-//! and 8 lines max with up to 3 visible at a time (vertical scroll arrows
-//! appear when the message overflows).
+//! A 120x40 framed box anchored at (4, 12) with an inner fill so it sits
+//! cleanly on top of whatever the host scene is drawing. Body text wraps to
+//! 14 chars wide and 8 lines max with up to 3 visible at a time (vertical
+//! scroll arrows appear when the message overflows).
 //!
 //! Controls: A confirms, B cancels, Up/Down scroll long messages.
 
@@ -94,8 +93,7 @@ impl Confirm {
         if !self.open {
             return;
         }
-        // Outer border + filled-off interior — same geometry the Python
-        // project uses for its confirms.
+        // Outer border + filled-off interior.
         renderer.fill_rect_off(Point::new(5, 13), Size::new(118, 38));
         renderer.draw_rect(Point::new(4, 12), Size::new(120, 40), false);
 

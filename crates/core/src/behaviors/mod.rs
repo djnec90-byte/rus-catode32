@@ -245,7 +245,7 @@ const AUTO_SELECT_NAMES: &[BehaviorId] = &[
 ];
 
 pub fn auto_select(ctx: &mut GameContext) -> NextBehavior {
-    // Random meander gate — scaled by sickness.
+    // Random meander gate, scaled by sickness.
     let meander_p = if ctx.sickness >= 8.0 {
         0.02
     } else if ctx.sickness >= 5.0 {
@@ -353,7 +353,7 @@ fn to_next_default(id: BehaviorId) -> NextBehavior {
     }
 }
 
-// can_trigger dispatch — keeps the gate logic centralized.
+// can_trigger dispatch, keeps the gate logic centralized.
 fn can_trigger(id: BehaviorId, ctx: &GameContext) -> bool {
     match id {
         BehaviorId::Sleeping => SleepingBehavior::can_trigger(ctx),
@@ -379,7 +379,7 @@ fn can_trigger(id: BehaviorId, ctx: &GameContext) -> bool {
 
 fn priority(id: BehaviorId, ctx: &GameContext) -> u32 {
     // The same `ctx.rng` is borrowed mutably by each priority fn via interior
-    // copy — they take `&GameContext` and roll using a local RNG view. We use
+    // copy. They take `&GameContext` and roll using a local RNG view. We use
     // the global rng field via a tiny mutation helper to keep priorities
     // deterministically advanced.
     let mut rng = ctx.rng.wrapping_mul(2654435769).wrapping_add(id as u32);

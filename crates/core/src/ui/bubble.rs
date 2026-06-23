@@ -75,8 +75,8 @@ impl BubbleIcon {
         }
     }
 
-    /// Look up a bubble icon by the Python-side string name. Used by behaviors
-    /// that store a `&'static str` hint in `ctx.pending_popup_icon`.
+    /// Look up a bubble icon by string name. Used by behaviors that store a
+    /// `&'static str` hint in `ctx.pending_popup_icon`.
     pub fn from_name(name: &str) -> Option<Self> {
         Some(match name {
             "heart" => BubbleIcon::Heart,
@@ -99,7 +99,7 @@ impl BubbleIcon {
 
 /// Draw a speech bubble above a character.
 ///
-/// `char_x`/`char_y` is the character's screen position. `progress` (0.0–1.0)
+/// `char_x`/`char_y` is the character's screen position. `progress` (0.0-1.0)
 /// drifts the bubble upward up to 10 pixels. `mirror=true` puts the bubble on
 /// the right side of the character (tail pointing right).
 pub fn draw_above_char(
@@ -147,7 +147,7 @@ pub enum Corner {
     Right,
 }
 
-/// Draw an upside-down speech bubble in a top corner — represents a sound
+/// Draw an upside-down speech bubble in a top corner. Represents a sound
 /// heard from a nearby cat's device.
 pub fn draw_heard(renderer: &mut Renderer, icon: BubbleIcon, corner: Corner, y_offset: i32) {
     let (bubble_x, mirror_h) = match corner {

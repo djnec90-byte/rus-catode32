@@ -23,7 +23,7 @@ fn main() -> ! {
     storage::init(board.flash);
     let renderer = Renderer::new(board.i2c);
 
-    println!("catode32 v0.10.0 — behavior framework");
+    println!("catode32 v0.10.0 behavior framework");
 
     // Start the preemptive scheduler. The radio stack drives its event loop
     // on a task scheduled by esp-rtos, so the scheduler must be running
@@ -32,7 +32,7 @@ fn main() -> ! {
     let timg0 = TimerGroup::new(board.timg0);
     esp_rtos::start(timg0.timer0, board.sw_int0);
 
-    // No wifi init at boot — the radio is brought up on demand by
+    // No wifi init at boot. The radio is brought up on demand by
     // `radio::acquire` and dropped again on the last release. The
     // peripheral and an empty ESP-NOW manager are stashed on the game
     // context so the first acquire can do the actual `wifi::new`.
