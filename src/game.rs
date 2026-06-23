@@ -9,10 +9,11 @@ use esp_hal::{
     time::{Duration, Instant},
 };
 use esp_println::println;
-use esp_radio::wifi::WifiController;
+use esp_hal::peripherals::WIFI;
 
 use crate::{
     context::{GameContext, PowerAction},
+    espnow_manager::EspNowManager,
     input::{Button, Buttons},
     led::Led,
     render::Renderer,
@@ -23,6 +24,9 @@ use crate::{
     transition::{TransitionManager, TransitionStep},
     wifi_tracker,
 };
+// Both the WiFi peripheral stash and the ESP-NOW manager live on
+// `GameContext`. The wifi controller itself only exists between
+// `radio::acquire` / `radio::release` calls.
 
 const DEEP_WAKE_BUTTONS: [Button; 4] = [Button::A, Button::B, Button::Menu1, Button::Menu2];
 
@@ -49,11 +53,10 @@ pub struct Game {
     /// the frame-timer can be reset and we don't apply a huge dt spike.
     just_woke: bool,
     last_dt_ms: u64,
-    /// WiFi radio controller. `None` if `esp_radio::wifi::new` failed at
-    /// boot — the game still runs, just without scanning.
-    wifi: Option<WifiController<'static>>,
     /// Real-time instant at which the next wifi scan becomes due.
-    /// `None` means "scan ASAP" — used on boot.
+    /// `None` means "scan ASAP" — used on boot. The controller itself
+    /// lives on `GameContext` so the ESP-NOW manager and scenes can
+    /// share it.
     wifi_next_scan: Option<Instant>,
 }
 
@@ -63,7 +66,8 @@ impl Game {
         buttons: Buttons,
         rng: Rng,
         led: Led,
-        wifi: Option<WifiController<'static>>,
+        wifi_peripheral: WIFI<'static>,
+        espnow: EspNowManager,
     ) -> Self {
         let mut context = GameContext::new(led);
         // Seed the behavior RNG from the hardware peripheral so each boot's
@@ -71,6 +75,8 @@ impl Game {
         let seed = rng.random();
         context.rng = if seed == 0 { 1 } else { seed };
         context.hw_rng = rng;
+        context.espnow = Some(espnow);
+        context.wifi_peripheral = Some(wifi_peripheral);
         let loaded = save::has_save() && save::load(&mut context);
         let start = if loaded {
             SceneId::Inside
@@ -91,7 +97,6 @@ impl Game {
             deep_sleep_pending: false,
             just_woke: false,
             last_dt_ms: 0,
-            wifi,
             wifi_next_scan: None,
         }
     }
@@ -113,6 +118,13 @@ impl Game {
                 self.sleep_manager.notify_activity();
             }
 
+            // Pull any inbound ESP-NOW frames from the driver into our inbox
+            // before scene update so a scene-side dispatcher can drain them.
+            // No-op when the manager has not been started by a social scene.
+            if let Some(espnow) = self.context.espnow.as_mut() {
+                espnow.poll();
+            }
+
             self.update(dt);
 
             // Debug-scene-requested scan. Runs immediately (no transition
@@ -120,8 +132,7 @@ impl Game {
             // explicitly asked for fresh data.
             if self.context.wifi_scan_requested {
                 self.context.wifi_scan_requested = false;
-                if let Some(wifi) = self.wifi.as_mut() {
-                    wifi_tracker::scan_now(&mut self.context, wifi);
+                if wifi_tracker::scan_now(&mut self.context).is_some() {
                     self.wifi_next_scan = Some(Instant::now() + wifi_tracker::SCAN_INTERVAL);
                 }
             }
@@ -216,9 +227,8 @@ impl Game {
     /// midpoint so the ~1–3 s blocking scan is hidden behind a black screen.
     /// `wifi_next_scan = None` means "scan immediately" (boot case).
     fn maybe_scan_wifi(&mut self) {
-        let Some(wifi) = self.wifi.as_mut() else {
-            return;
-        };
+        // No `ctx.wifi` check anymore: the controller doesn't exist at
+        // rest. `scan_now` does its own acquire/release.
         let now = Instant::now();
         let due = match self.wifi_next_scan {
             None => true,
@@ -227,8 +237,9 @@ impl Game {
         if !due {
             return;
         }
-        wifi_tracker::scan_now(&mut self.context, wifi);
-        self.wifi_next_scan = Some(now + wifi_tracker::SCAN_INTERVAL);
+        if wifi_tracker::scan_now(&mut self.context).is_some() {
+            self.wifi_next_scan = Some(now + wifi_tracker::SCAN_INTERVAL);
+        }
     }
 
     fn draw(&mut self) {

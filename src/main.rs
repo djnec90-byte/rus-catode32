@@ -10,6 +10,8 @@ mod clock;
 mod context;
 mod entities;
 mod environment;
+mod espnow_manager;
+mod espnow_msg;
 mod game;
 mod gardening_ui;
 mod input;
@@ -19,6 +21,7 @@ mod pet_names;
 mod pet_seed;
 mod plant_renderer;
 mod plant_system;
+mod radio;
 mod rand;
 mod render;
 mod save;
@@ -66,23 +69,17 @@ fn main() -> ! {
     let timg0 = TimerGroup::new(board.timg0);
     esp_rtos::start(timg0.timer0, board.sw_int0);
 
-    // Bring up the wifi controller. None on failure — the game keeps running
-    // and `in_familiar_location` stays at its default (true) so behaviors
-    // gated on "at home" continue to work.
-    let wifi_controller = match esp_radio::wifi::new(board.wifi, Default::default()) {
-        Ok((controller, _interfaces)) => Some(controller),
-        Err(e) => {
-            println!("[WiFi] wifi::new failed: {:?}", e);
-            None
-        }
-    };
-
+    // No wifi init at boot — the radio is brought up on demand by
+    // `radio::acquire` and dropped again on the last release. The
+    // peripheral and an empty ESP-NOW manager are stashed on the game
+    // context so the first acquire can do the actual `wifi::new`.
     Game::new(
         renderer,
         board.buttons,
         board.rng,
         board.led,
-        wifi_controller,
+        board.wifi,
+        espnow_manager::EspNowManager::new(),
     )
     .run();
 }

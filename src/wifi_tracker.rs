@@ -18,20 +18,25 @@
 //! Scans are driven from the game-loop's transition midpoint (see
 //! `Game::maybe_scan_wifi`) so the ~1–3 s blocking call is hidden behind a
 //! black screen.
+//!
+//! Power: the radio is fully off at rest. `scan_now` calls
+//! [`crate::radio::acquire`] to bring it up (which does a full
+//! `esp_radio::wifi::new`), runs the scan, and calls `release` to
+//! drop the controller and park the peripheral again. If ESP-NOW has
+//! an active session the refcount keeps the radio up through the scan
+//! and the release only decrements.
 
 use embassy_futures::block_on;
 use esp_hal::time::Duration;
 use esp_println::println;
 use esp_radio::wifi::{
-    scan::ScanConfig,
-    sta::StationConfig,
-    Config as WifiConfig,
-    WifiController,
+    scan::ScanConfig, sta::StationConfig, Config as WifiConfig, WifiController,
 };
 use heapless::Vec;
 
-use crate::context::{
-    GameContext, WifiEntry, WIFI_FAMILIAR_MAX, WIFI_RECENT_MAX, WIFI_SSID_MAX,
+use crate::{
+    context::{GameContext, WifiEntry, WIFI_FAMILIAR_MAX, WIFI_RECENT_MAX, WIFI_SSID_MAX},
+    radio,
 };
 
 /// Interval between hourly wifi scans, in real time. Mirrors the Python
@@ -56,21 +61,29 @@ pub struct ScanAp {
     pub rssi: i8,
 }
 
-/// Drive a single wifi scan. Blocks the caller for ~1–3 s while the radio
-/// works. Updates `wifi_familiar`, `wifi_recent`, and `in_familiar_location`
-/// on the context. Returns the raw scan result for callers that want it
-/// (the debug scene); empty vec on error.
-pub fn scan_now(
-    ctx: &mut GameContext,
-    controller: &mut WifiController<'static>,
-) -> Vec<ScanAp, 32> {
-    let aps = match block_on(perform_scan(controller)) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("[WiFi] Scan failed: {:?}", e);
-            return Vec::new();
+/// Drive a single wifi scan. Brings the radio up via
+/// [`crate::radio::acquire`] (which on a cold start does the full
+/// `esp_radio::wifi::new` — adds ~1–2 s to the first scan), runs the
+/// scan, and releases. Updates `wifi_familiar`, `wifi_recent`, and
+/// `in_familiar_location` on the context. Returns `Some(scan)` on
+/// success (the raw scan result for the debug scene), or `None` if
+/// the radio could not be acquired or the scan itself failed.
+pub fn scan_now(ctx: &mut GameContext) -> Option<Vec<ScanAp, 32>> {
+    if !radio::acquire(ctx) {
+        return None;
+    }
+    let aps = {
+        let controller = ctx.wifi.as_mut().expect("acquire succeeded");
+        match block_on(perform_scan(controller)) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("[WiFi] Scan failed: {:?}", e);
+                radio::release(ctx);
+                return None;
+            }
         }
     };
+    radio::release(ctx);
 
     process(ctx, &aps);
 
@@ -80,15 +93,15 @@ pub fn scan_now(
         ctx.wifi_familiar.len(),
         WIFI_FAMILIAR_MAX,
     );
-    aps
+    Some(aps)
 }
 
 async fn perform_scan(
     controller: &mut WifiController<'static>,
 ) -> Result<Vec<ScanAp, 32>, esp_radio::wifi::WifiError> {
-    // Apply a station config — this both selects STA mode and brings the
-    // driver up. Idempotent on subsequent scans; first call does the heavy
-    // lifting, later calls are cheap because the mode is unchanged.
+    // Apply a station config — this selects STA mode for a freshly
+    // initialized controller. Cheap on subsequent calls within the
+    // same `radio::acquire` lifetime.
     let sta_config = WifiConfig::Station(StationConfig::default());
     controller.set_config(&sta_config)?;
 

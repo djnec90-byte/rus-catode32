@@ -89,8 +89,11 @@ impl VocalizingBehavior {
                 return (rand::rand_range_f32(rng, 12.0, 22.0) / urgency).max(0.0) as u32;
             }
         }
-        // Outdoor chatty.
-        if common::is_outdoor(ctx.last_main_scene)
+        // Outdoor chatty: ESP-NOW radio active (typically outdoor scenes).
+        if ctx
+            .espnow
+            .as_ref()
+            .is_some_and(|e| e.is_active())
             && ctx.recent_index(BehaviorId::Vocalizing).is_none()
         {
             return rand::rand_range_f32(rng, 5.0, 15.0).max(0.0) as u32;
@@ -129,24 +132,10 @@ impl Behavior for VocalizingBehavior {
         self.total = rand::rand_range_f32(&mut ctx.rng, 5.0, 9.0);
         self.pose_id = PoseId::SittingForwardNeutral;
 
-        // Hint icon for the speech bubble. Mirrors Python: vacation overstay →
-        // home, low-fullness → meal, weather complaint → sun, low-affection → heart.
-        ctx.pending_popup_icon = if ctx.wants_to_go_home {
-            Some("home")
-        } else if ctx.fullness < 30.0 {
-            Some("hunger")
-        } else if matches!(ctx.weather, Weather::Rain | Weather::Storm | Weather::Snow)
-            && common::is_outdoor(ctx.last_main_scene)
-        {
-            Some("wet")
-        } else if ctx.affection < 40.0 {
-            Some("lonely")
-        } else {
-            Some("exclaim")
-        };
+        ctx.pending_popup_icon = Some(pick_icon(ctx));
     }
 
-    fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
+    fn update(&mut self, ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
         self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
@@ -154,6 +143,11 @@ impl Behavior for VocalizingBehavior {
                 self.phase = Phase::Vocalizing;
                 self.phase_timer = 0.0;
                 self.pose_id = PoseId::YellingForwardLiftAndYell;
+                // Signal LocationScene to broadcast this vocalization
+                // over ESP-NOW if the radio is acquired for this scene.
+                // The icon hint reuses the same `pending_popup_icon`
+                // value that drives the on-screen bubble.
+                ctx.pending_vocalize_broadcast = ctx.pending_popup_icon;
             }
             Phase::Vocalizing if self.phase_timer >= self.total - 2.0 => {
                 self.phase = Phase::Settling;
@@ -203,7 +197,43 @@ impl Behavior for VocalizingBehavior {
     }
 }
 
-/// Outdoor scene helper kept here so the SceneId import isn't unused.
+const NEED_THRESHOLD: f32 = 60.0;
+
+fn pick_icon(ctx: &GameContext) -> &'static str {
+    if ctx.wants_to_go_home {
+        return "home";
+    }
+    if common::is_outdoor(ctx.last_main_scene) {
+        if ctx.temperature < 2.0 {
+            return "cold";
+        }
+        if ctx.temperature > 30.0 {
+            return "hot";
+        }
+        match ctx.weather {
+            Weather::Rain | Weather::Storm => return "wet",
+            Weather::Snow => return "cold",
+            _ => {}
+        }
+    }
+    let needs = [
+        (ctx.fullness, "hunger"),
+        (ctx.comfort, "discomfort"),
+        (ctx.fulfillment, "bored"),
+        (ctx.affection, "lonely"),
+    ];
+    let (worst_stat, worst_icon) = needs
+        .iter()
+        .copied()
+        .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(core::cmp::Ordering::Equal))
+        .unwrap();
+    if worst_stat < NEED_THRESHOLD {
+        worst_icon
+    } else {
+        "exclaim"
+    }
+}
+
 #[allow(dead_code)]
 fn _scene_outdoor(s: SceneId) -> bool {
     common::is_outdoor(s)

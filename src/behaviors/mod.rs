@@ -231,6 +231,7 @@ const AUTO_SELECT_NAMES: &[BehaviorId] = &[
     BehaviorId::Zoomies,
     BehaviorId::Vocalizing,
     BehaviorId::Hunting,
+    BehaviorId::Playing,
     BehaviorId::Investigating,
     BehaviorId::Observing,
     BehaviorId::SelfGrooming,
@@ -242,8 +243,6 @@ const AUTO_SELECT_NAMES: &[BehaviorId] = &[
     BehaviorId::Lounging,
     BehaviorId::Startled,
 ];
-// TODO(playing): include `BehaviorId::Playing` once toy inventory exists so
-// auto-select can require a solo-play variant.
 
 pub fn auto_select(ctx: &mut GameContext) -> NextBehavior {
     // Random meander gate — scaled by sickness.
@@ -319,6 +318,14 @@ pub fn auto_select(ctx: &mut GameContext) -> NextBehavior {
     }
     let pick = rand::rand_range_u32(&mut ctx.rng, 0, (tied.len() - 1) as u32) as usize;
     let chosen = tied[pick];
+    if chosen == BehaviorId::Playing {
+        let solo = playing::solo_toys_in_inventory(ctx);
+        if !solo.is_empty() {
+            let i = rand::rand_range_u32(&mut ctx.rng, 0, (solo.len() - 1) as u32) as usize;
+            let variant = solo[i].to_play_variant();
+            return NextBehavior::Playing(variant);
+        }
+    }
     to_next_default(chosen)
 }
 
@@ -365,6 +372,7 @@ fn can_trigger(id: BehaviorId, ctx: &GameContext) -> bool {
         BehaviorId::Lounging => LoungingBehavior::can_trigger(ctx),
         BehaviorId::Startled => StartledBehavior::can_trigger(ctx),
         BehaviorId::Meandering => MeanderingBehavior::can_trigger(ctx),
+        BehaviorId::Playing => PlayingBehavior::can_trigger(ctx),
         _ => false,
     }
 }
@@ -391,6 +399,7 @@ fn priority(id: BehaviorId, ctx: &GameContext) -> u32 {
         BehaviorId::Hiding => HidingBehavior::priority(ctx, &mut rng),
         BehaviorId::Lounging => LoungingBehavior::priority(ctx, &mut rng),
         BehaviorId::Startled => StartledBehavior::priority(ctx, &mut rng),
+        BehaviorId::Playing => PlayingBehavior::priority(ctx, &mut rng),
         _ => 100,
     }
 }

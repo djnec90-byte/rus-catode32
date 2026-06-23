@@ -21,6 +21,7 @@ pub enum EatingSource {
 
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
 pub enum BehaviorId {
     Idle,
     Sleeping,
@@ -369,7 +370,10 @@ impl BehaviorManager {
         let id = self.current.as_dyn().id();
         let progress = self.current.as_dyn().progress();
         let chained = if completed {
-            self.current.as_dyn().next(ctx)
+            self.current.as_dyn().next(ctx).filter(|n| {
+                let next_id = ActiveBehavior::from_next(n.clone()).as_dyn().id();
+                !crate::behaviors::common::sick_blocks(next_id, ctx)
+            })
         } else {
             None
         };

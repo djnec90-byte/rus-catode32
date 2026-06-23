@@ -198,8 +198,14 @@ impl Scene for OutsideScene {
         // Seed the scene's RNG from the system clock so each entry rolls a fresh world.
         self.rng = (Instant::now().duration_since_epoch().as_micros() as u32).max(1);
         self.spawn_critters(ctx);
-        // TODO: espnow.start() when WiFi is wired up and not currently visiting.
+        // Acquire the radio for passive ESP-NOW listening. Phase 4
+        // will gate this on "not currently visiting" once visits exist.
+        crate::espnow_manager::start_session(ctx);
         // TODO: first-impression behavior trigger on first enter (Python `_first_impression_behavior`).
+    }
+
+    fn exit(&mut self, ctx: &mut GameContext) {
+        crate::espnow_manager::stop_session(ctx);
     }
 
     fn update(

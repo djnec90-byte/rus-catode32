@@ -107,10 +107,14 @@ impl Scene for TreehouseScene {
     fn enter(&mut self, ctx: &mut GameContext) {
         self.base.enter(ctx, SceneId::Treehouse, PLANT_SURFACES);
         ctx.cat_bed_x = Some(CAT_BED_X);
+        // Acquire the radio for passive ESP-NOW listening. Phase 4
+        // will gate this on "not currently visiting" once visits exist.
+        crate::espnow_manager::start_session(ctx);
     }
 
     fn exit(&mut self, ctx: &mut GameContext) {
         ctx.cat_bed_x = None;
+        crate::espnow_manager::stop_session(ctx);
     }
 
     fn update(
@@ -122,7 +126,6 @@ impl Scene for TreehouseScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        // TODO: espnow.start() when WiFi is wired up and not currently visiting.
         // TODO: weather-change detection (Python re-enters scene on weather change).
         None
     }

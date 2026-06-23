@@ -26,12 +26,40 @@ use crate::{
     },
     behavior::{Behavior, BehaviorId, BehaviorState, NextBehavior, PlayVariant},
     behaviors::common,
-    context::{GameContext, StatId},
+    context::{GameContext, StatId, ToyVariant},
     entities::character::Character,
     rand,
     render::{Renderer, SpriteOpts},
     scene::SceneId,
 };
+
+/// Toy variants the pet can play with on its own (no player input). Mirrors
+/// `BehaviorManager._SOLO_PLAY_VARIANTS` in Python.
+const SOLO_PLAY_VARIANTS: &[ToyVariant] = &[
+    ToyVariant::Ball,
+    ToyVariant::String_,
+    ToyVariant::Feather,
+    ToyVariant::Mouse,
+];
+
+fn is_solo(v: ToyVariant) -> bool {
+    SOLO_PLAY_VARIANTS.iter().any(|&s| s == v)
+}
+
+/// Returns the list of solo-toy variants currently present in the player's
+/// inventory. Used by both `can_trigger` and auto-select variant choice.
+pub fn solo_toys_in_inventory(
+    ctx: &GameContext,
+) -> heapless::Vec<ToyVariant, { SOLO_PLAY_VARIANTS.len() }> {
+    let mut out: heapless::Vec<ToyVariant, { SOLO_PLAY_VARIANTS.len() }> =
+        heapless::Vec::new();
+    for entry in ctx.toys.iter() {
+        if is_solo(entry.variant) {
+            let _ = out.push(entry.variant);
+        }
+    }
+    out
+}
 
 // -- Tuning constants (mirrors playing.py top-of-file constants) ---------
 
@@ -251,6 +279,23 @@ impl PlayingBehavior {
             had_bubbles: false,
             bubble_pose_timer: 0.0,
         }
+    }
+
+    pub fn can_trigger(ctx: &GameContext) -> bool {
+        if ctx.playfulness < 40.0 {
+            return false;
+        }
+        !solo_toys_in_inventory(ctx).is_empty()
+    }
+
+    pub fn priority(ctx: &GameContext, rng: &mut u32) -> u32 {
+        let lo = 100.0 - ctx.playfulness * 1.5;
+        let hi = ctx.playfulness * 1.5;
+        let mut base = rand::rand_range_f32(rng, lo, hi);
+        if ctx.in_familiar_location {
+            base *= 0.85;
+        }
+        base.max(0.0) as u32
     }
 
     fn rejection_chance(ctx: &GameContext) -> f32 {

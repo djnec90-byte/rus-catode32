@@ -427,6 +427,16 @@ pub struct SkyRenderer {
     lightning_invert: bool,
     rng: u32,
     star_seed: u32,
+    /// Parameters of the most recently spawned shooting star, if it
+    /// has not yet been read by `take_just_spawned_shooting_star`.
+    /// Used by `LocationScene` during a visit to broadcast a `vss `
+    /// frame on the inviter side. Locally-spawned and packet-spawned
+    /// stars both set this; the caller is responsible for not
+    /// echoing packet-driven spawns back across the wire.
+    just_spawned_ss: Option<(f32, f32, f32, f32, f32)>,
+    /// Same as `just_spawned_ss` but for balloon / plane spawns.
+    /// Tuple is `(event_idx, going_right, y, speed)`.
+    just_spawned_se: Option<(u8, bool, i16, f32)>,
 }
 
 impl SkyRenderer {
@@ -458,6 +468,8 @@ impl SkyRenderer {
             lightning_invert: false,
             rng: seed,
             star_seed: STAR_SEED,
+            just_spawned_ss: None,
+            just_spawned_se: None,
         }
     }
 
@@ -495,6 +507,31 @@ impl SkyRenderer {
         self.shooting_star = Some(ShootingStarEvent::new(
             start_x, start_y, max_length, speed_x, speed_y,
         ));
+        self.just_spawned_ss = Some((start_x, start_y, max_length, speed_x, speed_y));
+    }
+
+    /// Spawn a shooting star using parameters provided by an inbound
+    /// `vss ` packet from the playdate inviter. Skips the
+    /// "already-have-one" check so a packet-driven star can ride on
+    /// top of any local timing. Does **not** flag
+    /// `just_spawned_ss`, since this came from the wire and we don't
+    /// want to echo it back.
+    pub fn spawn_shooting_star_from_packet(
+        &mut self,
+        x: f32,
+        y: f32,
+        max_length: f32,
+        sx: f32,
+        sy: f32,
+    ) {
+        self.shooting_star = Some(ShootingStarEvent::new(x, y, max_length, sx, sy));
+    }
+
+    /// Read-and-clear the most recent locally-spawned shooting star's
+    /// params. `LocationScene` polls this on the inviter side so it
+    /// can broadcast a `vss ` to the invitee.
+    pub fn take_just_spawned_shooting_star(&mut self) -> Option<(f32, f32, f32, f32, f32)> {
+        self.just_spawned_ss.take()
     }
 
     fn spawn_sky_event(&mut self) {
@@ -519,6 +556,46 @@ impl SkyRenderer {
             world_width: self.world_width,
             active: true,
         });
+        self.just_spawned_se = Some((evt_idx as u8, going_right, y, speed));
+    }
+
+    /// Spawn a sky event (balloon / plane) using parameters from an
+    /// inbound `vse ` packet. Index out-of-range wraps via modulo to
+    /// match Python's behavior. Does not flag `just_spawned_se`, so a
+    /// packet-driven spawn isn't echoed back.
+    pub fn spawn_sky_event_from_packet(
+        &mut self,
+        event_idx: u8,
+        going_right: bool,
+        y: i16,
+        speed: f32,
+    ) {
+        if SKY_EVENT_TYPES.is_empty() {
+            return;
+        }
+        let idx = (event_idx as usize) % SKY_EVENT_TYPES.len();
+        let event_type = &SKY_EVENT_TYPES[idx];
+        let start_x = if going_right {
+            -(event_type.sprite.width as f32) - 10.0
+        } else {
+            self.world_width as f32 + 10.0
+        };
+        self.sky_event = Some(SkyEventEntity {
+            sprite: event_type.sprite,
+            x: start_x,
+            y,
+            speed,
+            going_right,
+            mirror_when_right: event_type.mirror_when_right,
+            world_width: self.world_width,
+            active: true,
+        });
+    }
+
+    /// Read-and-clear the most recent locally-spawned sky-event's
+    /// params. Counterpart to [`Self::take_just_spawned_shooting_star`].
+    pub fn take_just_spawned_sky_event(&mut self) -> Option<(u8, bool, i16, f32)> {
+        self.just_spawned_se.take()
     }
 
     fn meteor_rate(&self, ctx: &GameContext) -> f32 {

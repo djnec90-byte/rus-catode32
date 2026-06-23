@@ -2,9 +2,13 @@ use heapless::Vec;
 
 use esp_hal::{rng::Rng, time::Instant};
 
+use esp_hal::peripherals::WIFI;
+use esp_radio::wifi::WifiController;
+
 use crate::{
     assets::plants::{PlantStage, PotKind},
     behavior::BehaviorId,
+    espnow_manager::EspNowManager,
     led::Led,
     pet_seed::{PetGender, StarSign},
     plant_system::{Plant, PlantLayer},
@@ -68,6 +72,33 @@ impl StatId {
                 | StatId::Focus
         )
     }
+}
+
+/// Which role this device is playing in an active visit. Determines
+/// which side runs greeting/proximity-sniff/environment-broadcast logic
+/// in the visit manager (Phase 5). Mirrors the legacy `visit['role']`
+/// MicroPython string field.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum VisitRole {
+    Inviter,
+    Invitee,
+}
+
+/// Active playdate session. Set by the social scene the moment the
+/// vreq/vok handshake completes; cleared when the visit ends (`vbye`,
+/// timeout, or local exit). While `Some`, the radio refcount is held
+/// across scene transitions so the visit runtime keeps receiving.
+#[derive(Clone)]
+pub struct VisitState {
+    pub peer_mac: [u8; 6],
+    pub peer_name: heapless::String<PET_NAME_MAX>,
+    pub role: VisitRole,
+    /// Wall-clock seconds the visit has been running. Bumped each
+    /// frame by the visit manager once Phase 5 lands.
+    pub play_time: f32,
+    /// Becomes true after the greeting ritual has fired on local-cat
+    /// scene entry. Phase-5 hook.
+    pub greeted: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -522,6 +553,18 @@ pub struct GameContext {
     pub pending_scene: Option<SceneId>,
     pub pending_popup_icon: Option<&'static str>,
     pub pending_power: Option<PowerAction>,
+    /// Set by the Vocalizing behavior when it transitions from
+    /// WindingUp into the actual Vocalizing phase. `LocationScene`
+    /// reads-and-clears this each frame and, if the cat is currently
+    /// in a scene that has the ESP-NOW radio acquired
+    /// (outside/treehouse), broadcasts a `voc ` frame so nearby cats
+    /// can hear the vocalization.
+    pub pending_vocalize_broadcast: Option<&'static str>,
+    /// Target x for the next Greeting trigger. Set by `LocationScene`
+    /// when entering a scene during an active visit or when a
+    /// `vgrt` / `vprx` packet arrives; read-and-cleared by
+    /// `GreetingBehavior::enter`. `None` means "sniff in place".
+    pub pending_greeting_target_x: Option<i32>,
 
     /// Aggregate plant-health score for the current scene. Recomputed every
     /// frame by LocationScene from `ctx.plants` (thriving +2, healthy +1,
@@ -540,6 +583,32 @@ pub struct GameContext {
     /// next frame and drives a synchronous scan. Out-of-band from the
     /// hourly midpoint scan so the debug UI can force a fresh result.
     pub wifi_scan_requested: bool,
+
+    /// ESP-NOW transport. The manager struct itself is always present;
+    /// its inner driver handle is bound only while
+    /// [`crate::radio::acquire`] has the radio up.
+    pub espnow: Option<EspNowManager>,
+
+    /// WiFi radio controller. `Some` only while the radio is acquired;
+    /// `None` at rest. Managed by [`crate::radio`].
+    pub wifi: Option<WifiController<'static>>,
+
+    /// Stash for the WiFi peripheral while the radio is off. `wifi::new`
+    /// consumes this on acquire; teardown steals it back via
+    /// `WIFI::steal()` so the next acquire can re-init.
+    pub wifi_peripheral: Option<WIFI<'static>>,
+
+    /// Refcount of how many subsystems currently want the radio up.
+    /// Bumped by [`crate::radio::acquire`], decremented by
+    /// [`crate::radio::release`]; the actual init/teardown happens on
+    /// the 0↔1 transitions.
+    pub radio_users: u8,
+
+    /// Active playdate, if any. Owns one slot in `radio_users` for as
+    /// long as it is `Some` — the social scene takes that ref on
+    /// handshake success and the visit manager (Phase 5) releases it
+    /// on visit end.
+    pub visit: Option<VisitState>,
 
     /// True while the player is on a vacation scene. Suppresses the
     /// behavior-layer's auto-pick scene exit so the pet stays put.
@@ -666,6 +735,8 @@ impl GameContext {
 
             pending_scene: None,
             pending_popup_icon: None,
+            pending_vocalize_broadcast: None,
+            pending_greeting_target_x: None,
             pending_power: None,
 
             scene_plant_health: 0,
@@ -673,6 +744,11 @@ impl GameContext {
             wifi_familiar: Vec::new(),
             wifi_recent: Vec::new(),
             wifi_scan_requested: false,
+            espnow: None,
+            wifi: None,
+            wifi_peripheral: None,
+            radio_users: 0,
+            visit: None,
 
             on_vacation: false,
             wants_to_go_home: false,

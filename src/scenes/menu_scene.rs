@@ -39,7 +39,7 @@ const VACATIONS: &[MenuItem<SceneId>] = &[
 
 const WIRELESS: &[MenuItem<SceneId>] = &[
     MenuItem { label: "Wifi",    icon: Some(icons::WIFI), submenu: None, action: Some(SceneId::DebugWifi),            confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "ESP-NOW", icon: Some(icons::WIFI), submenu: None, action: Some(SceneId::Stub("debug_espnow")), confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "ESP-NOW", icon: Some(icons::WIFI), submenu: None, action: Some(SceneId::DebugEspnow), confirm: None, confirm_on_vacation: None },
 ];
 
 const DEBUG: &[MenuItem<SceneId>] = &[
@@ -65,7 +65,7 @@ const BIG_MENU: &[MenuItem<SceneId>] = &[
     MenuItem { label: "Forecast",   icon: Some(icons::SUN),       submenu: None,             action: Some(SceneId::Forecast),       confirm: None, confirm_on_vacation: None },
     MenuItem { label: "Minigames",  icon: Some(icons::MINIGAMES), submenu: Some(MINIGAMES),  action: None,                          confirm: None, confirm_on_vacation: None },
     MenuItem { label: "Store",      icon: Some(icons::STORE),     submenu: None,             action: Some(SceneId::Store),          confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Social",     icon: Some(icons::CAT),       submenu: None,             action: Some(SceneId::Stub("social")), confirm: None, confirm_on_vacation: None },
+    MenuItem { label: "Social",     icon: Some(icons::CAT),       submenu: None,             action: Some(SceneId::Social),         confirm: None, confirm_on_vacation: None },
     MenuItem { label: "Pet info",   icon: Some(icons::CAT),       submenu: None,             action: Some(SceneId::PetInfo),        confirm: None, confirm_on_vacation: None },
     MenuItem { label: "Debug",      icon: Some(icons::WRENCH),    submenu: Some(DEBUG),      action: None,                          confirm: None, confirm_on_vacation: None },
     MenuItem { label: "Credits",    icon: Some(icons::CREDITS),   submenu: None,             action: Some(SceneId::Credits),        confirm: None, confirm_on_vacation: None },

@@ -5,6 +5,7 @@ pub mod credits_scene;
 pub mod debug_behaviors_scene;
 pub mod debug_context_scene;
 pub mod debug_env_scene;
+pub mod debug_espnow_scene;
 pub mod debug_led_scene;
 pub mod debug_plants_scene;
 pub mod debug_power_scene;
@@ -25,6 +26,7 @@ pub mod pipes_scene;
 pub mod platformer_scene;
 pub mod pose_scene;
 pub mod snake_scene;
+pub mod social_scene;
 pub mod stats_scene;
 pub mod store_scene;
 pub mod stub_scene;
@@ -46,6 +48,7 @@ use credits_scene::CreditsScene;
 use debug_behaviors_scene::DebugBehaviorsScene;
 use debug_context_scene::DebugContextScene;
 use debug_env_scene::DebugEnvScene;
+use debug_espnow_scene::DebugEspnowScene;
 use debug_led_scene::DebugLedScene;
 use debug_plants_scene::DebugPlantsScene;
 use debug_power_scene::DebugPowerScene;
@@ -66,6 +69,7 @@ use pipes_scene::PipesScene;
 use platformer_scene::PlatformerScene;
 use pose_scene::PoseScene;
 use snake_scene::SnakeScene;
+use social_scene::SocialScene;
 use stats_scene::StatsScene;
 use store_scene::StoreScene;
 use stub_scene::StubScene;
@@ -100,6 +104,8 @@ pub enum ActiveScene {
     DebugStats(DebugStatsScene),
     DebugTime(DebugTimeScene),
     DebugWifi(DebugWifiScene),
+    DebugEspnow(DebugEspnowScene),
+    Social(SocialScene),
     Zoomies(ZoomiesScene),
     Breakout(BreakoutScene),
     Snake(SnakeScene),
@@ -142,6 +148,8 @@ impl ActiveScene {
             SceneId::DebugStats => ActiveScene::DebugStats(DebugStatsScene::new()),
             SceneId::DebugTime => ActiveScene::DebugTime(DebugTimeScene::new()),
             SceneId::DebugWifi => ActiveScene::DebugWifi(DebugWifiScene::new()),
+            SceneId::DebugEspnow => ActiveScene::DebugEspnow(DebugEspnowScene::new()),
+            SceneId::Social => ActiveScene::Social(SocialScene::new()),
             SceneId::Zoomies => ActiveScene::Zoomies(ZoomiesScene::new()),
             SceneId::Breakout => ActiveScene::Breakout(BreakoutScene::new()),
             SceneId::Snake => ActiveScene::Snake(SnakeScene::new()),
@@ -186,6 +194,8 @@ impl ActiveScene {
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
             ActiveScene::DebugWifi(s) => s,
+            ActiveScene::DebugEspnow(s) => s,
+            ActiveScene::Social(s) => s,
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
             ActiveScene::Snake(s) => s,
@@ -228,6 +238,8 @@ impl ActiveScene {
             ActiveScene::DebugStats(s) => s,
             ActiveScene::DebugTime(s) => s,
             ActiveScene::DebugWifi(s) => s,
+            ActiveScene::DebugEspnow(s) => s,
+            ActiveScene::Social(s) => s,
             ActiveScene::Zoomies(s) => s,
             ActiveScene::Breakout(s) => s,
             ActiveScene::Snake(s) => s,

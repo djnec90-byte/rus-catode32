@@ -54,6 +54,12 @@ impl Behavior for GreetingBehavior {
     }
 
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
+        // Pull a one-shot target_x from the context if one's been
+        // staged (visit greeting / proximity sniff). Falls back to
+        // an in-place sniff when no target was provided.
+        if let Some(tx) = ctx.pending_greeting_target_x.take() {
+            self.target_x = Some(tx);
+        }
         self.phase = if self.target_x.is_some() {
             Phase::Walking
         } else {

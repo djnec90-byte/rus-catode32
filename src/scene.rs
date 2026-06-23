@@ -29,6 +29,8 @@ pub enum SceneId {
     DebugPower,
     DebugContext,
     DebugWifi,
+    DebugEspnow,
+    Social,
     Zoomies,
     Breakout,
     Snake,
