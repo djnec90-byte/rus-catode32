@@ -1,0 +1,35 @@
+[package]
+name = "catode32-firmware"
+version = "0.10.0"
+edition = "2021"
+description = "ESP32 firmware binary for catode32"
+license = "MIT"
+repository = "https://github.com/moonbench/catode32"
+
+[features]
+default = ["c6"]
+c6 = [
+    "catode32-core/c6",
+    "esp-hal/esp32c6",
+    "esp-backtrace/esp32c6",
+    "esp-println/esp32c6",
+    "esp-bootloader-esp-idf/esp32c6",
+    "esp-rtos/esp32c6",
+]
+c3 = [
+    "catode32-core/c3",
+    "esp-hal/esp32c3",
+    "esp-backtrace/esp32c3",
+    "esp-println/esp32c3",
+    "esp-bootloader-esp-idf/esp32c3",
+    "esp-rtos/esp32c3",
+]
+
+[dependencies]
+catode32-core = { path = "../core", default-features = false }
+esp-hal = { version = "1.1.1", default-features = false, features = ["rt"] }
+esp-backtrace = { version = "0.19.0", default-features = false, features = ["panic-handler", "println"] }
+esp-println = { version = "0.17.0", default-features = false }
+esp-bootloader-esp-idf = { version = "0.5.0", default-features = false }
+esp-alloc = "0.10.0"
+esp-rtos = { version = "0.3.0", default-features = false, features = ["esp-radio", "esp-alloc"] }
