@@ -85,9 +85,9 @@ impl DebugContextScene {
             SettingItem::action(t!("Save now")),
             SettingItem::int(t!("Coins"), coins, COINS_MIN, COINS_MAX, COINS_STEP),
             SettingItem::action(t!("Seed")),
-            SettingItem::action("Reset plants"),
+            SettingItem::action(t!("Reset Plants")),
             SettingItem::action(t!("Reset stats")),
-            SettingItem::action("Delete context"),
+            SettingItem::action(t!("Delete Context")),
         ];
         self.settings.open(&items);
         self.mode = Mode::Settings;

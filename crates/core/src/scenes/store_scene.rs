@@ -3,6 +3,8 @@
 // text BEFORE the action fires. Revisit when the menu system can hold
 // owned-string items.
 
+use core::fmt::Write as _;
+
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
 use crate::t;
@@ -115,7 +117,7 @@ const GARDEN: &[MenuItem<StoreAction>] = &[
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyFertilizer(FERTILIZER_COST)),
-        confirm: Some("Fertilizer: 25c"),
+        confirm: None,
         confirm_on_vacation: None,
     },
 ];
@@ -126,7 +128,7 @@ const SERVICE: &[MenuItem<StoreAction>] = &[
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyService(ServiceKind::Groom, GROOM_COST)),
-        confirm: Some("Groom: 50c"),
+        confirm: None,
         confirm_on_vacation: None,
     },
     MenuItem {
@@ -134,7 +136,7 @@ const SERVICE: &[MenuItem<StoreAction>] = &[
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyService(ServiceKind::Train, TRAIN_COST)),
-        confirm: Some("Train: 100c"),
+        confirm: None,
         confirm_on_vacation: None,
     },
 ];
@@ -145,7 +147,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationPark, 15)),
-        confirm: Some("Trip: park 15c"),
+        confirm: None,
         confirm_on_vacation: None,
     },
     MenuItem {
@@ -153,7 +155,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationForest, 25)),
-        confirm: Some("Trip: forest 25c"),
+        confirm: None,
         confirm_on_vacation: None,
     },
     MenuItem {
@@ -161,7 +163,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationAquarium, 50)),
-        confirm: Some("Trip: aquarium 50c"),
+        confirm: None,
         confirm_on_vacation: None,
     },
     MenuItem {
@@ -169,7 +171,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationBeach, 100)),
-        confirm: Some("Trip: beach 100c"),
+        confirm: None,
         confirm_on_vacation: None,
     },
 ];
@@ -186,7 +188,7 @@ const ROOT: &[MenuItem<StoreAction>] = &[
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyMedicine(MEDICINE_COST)),
-        confirm: Some("Medicine: 50c"),
+        confirm: None,
         confirm_on_vacation: None,
     },
     MenuItem {
@@ -199,57 +201,86 @@ const ROOT: &[MenuItem<StoreAction>] = &[
     },
 ];
 
-const fn food_item(label: &'static str, item: FoodItem, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
+fn pot_full_label(p: PotSize) -> &'static str {
+    match p {
+        PotSize::Small => t!("Small pot"),
+        PotSize::Medium => t!("Medium pot"),
+        PotSize::Large => t!("Large pot"),
+        PotSize::Planter => t!("Planter box"),
+    }
+}
+
+fn seed_full_label(s: SeedKind) -> &'static str {
+    match s {
+        SeedKind::CatGrass => t!("Cat Grass"),
+        SeedKind::Freesia => t!("Freesia"),
+        SeedKind::Sunflower => t!("Sunflower"),
+        SeedKind::Rose => t!("Rose"),
+    }
+}
+
+fn tool_label(t: ToolKind) -> &'static str {
+    match t {
+        ToolKind::Spade => t!("Spade"),
+        ToolKind::WateringCan => t!("Watering Can"),
+    }
+}
+
+// Per-item confirm strings are built dynamically at action time so they can
+// pull from translation keys like "{item}({uses}): {cost}c". The `_confirm`
+// parameter on these helpers is unused but kept to keep the call sites
+// readable as "<label>, ..., <visible price>" rows.
+const fn food_item(label: &'static str, item: FoodItem, cost: u8, _confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyFood(item, cost)),
-        confirm: Some(confirm),
+        confirm: None,
         confirm_on_vacation: None,
     }
 }
 
-const fn toy_item(label: &'static str, variant: ToyVariant, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
+const fn toy_item(label: &'static str, variant: ToyVariant, cost: u8, _confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyToy(variant, cost)),
-        confirm: Some(confirm),
+        confirm: None,
         confirm_on_vacation: None,
     }
 }
 
-const fn pot_item(label: &'static str, pot: PotSize, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
+const fn pot_item(label: &'static str, pot: PotSize, cost: u8, _confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyPot(pot, cost)),
-        confirm: Some(confirm),
+        confirm: None,
         confirm_on_vacation: None,
     }
 }
 
-const fn seed_item(label: &'static str, seed: SeedKind, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
+const fn seed_item(label: &'static str, seed: SeedKind, cost: u8, _confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuySeeds(seed, cost)),
-        confirm: Some(confirm),
+        confirm: None,
         confirm_on_vacation: None,
     }
 }
 
-const fn tool_item(label: &'static str, tool: ToolKind, cost: u8, confirm: &'static str) -> MenuItem<StoreAction> {
+const fn tool_item(label: &'static str, tool: ToolKind, cost: u8, _confirm: &'static str) -> MenuItem<StoreAction> {
     MenuItem {
         label,
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTool(tool, cost)),
-        confirm: Some(confirm),
+        confirm: None,
         confirm_on_vacation: None,
     }
 }
@@ -259,6 +290,8 @@ pub struct StoreScene {
     popup: Popup,
     popup_active: bool,
     pending_scene: Option<SceneId>,
+    confirm: crate::ui::confirm::Confirm,
+    pending_action: Option<StoreAction>,
 }
 
 impl StoreScene {
@@ -268,11 +301,129 @@ impl StoreScene {
             popup: Popup::new(14, 20, 100, 24),
             popup_active: false,
             pending_scene: None,
+            confirm: crate::ui::confirm::Confirm::new(),
+            pending_action: None,
         }
+    }
+
+    /// Build the localized confirm prompt for a store action. Returns `None`
+    /// for actions that fire immediately without confirmation (e.g. `Leave`).
+    fn confirm_text(action: StoreAction) -> Option<heapless::String<48>> {
+        use crate::i18n::substitute;
+        let mut buf: heapless::String<48> = heapless::String::new();
+        match action {
+            StoreAction::Leave => return None,
+            StoreAction::BuyFood(item, cost) => {
+                let mut uses_b: heapless::String<8> = heapless::String::new();
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(uses_b, "{}", FOOD_USES);
+                let _ = write!(cost_b, "{}", cost);
+                substitute(
+                    &mut buf,
+                    t!("{item}({uses}): {cost}c"),
+                    &[("item", item.label()), ("uses", uses_b.as_str()), ("cost", cost_b.as_str())],
+                );
+            }
+            StoreAction::BuyToy(variant, cost) => {
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(cost_b, "{}", cost);
+                substitute(
+                    &mut buf,
+                    t!("{item}: {cost}c"),
+                    &[("item", variant.label()), ("cost", cost_b.as_str())],
+                );
+            }
+            StoreAction::BuyPot(pot, cost) => {
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(cost_b, "{}", cost);
+                substitute(
+                    &mut buf,
+                    t!("{item}: {cost}c"),
+                    &[("item", pot_full_label(pot)), ("cost", cost_b.as_str())],
+                );
+            }
+            StoreAction::BuySeeds(seed, cost) => {
+                let mut n_b: heapless::String<8> = heapless::String::new();
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(n_b, "{}", SEEDS_PER_PACK);
+                let _ = write!(cost_b, "{}", cost);
+                substitute(
+                    &mut buf,
+                    t!("{item}x{n}: {cost}c"),
+                    &[("item", seed_full_label(seed)), ("n", n_b.as_str()), ("cost", cost_b.as_str())],
+                );
+            }
+            StoreAction::BuyTool(tool, cost) => {
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(cost_b, "{}", cost);
+                substitute(
+                    &mut buf,
+                    t!("{item}: {cost}c"),
+                    &[("item", tool_label(tool)), ("cost", cost_b.as_str())],
+                );
+            }
+            StoreAction::BuyFertilizer(cost) => {
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(cost_b, "{}", cost);
+                substitute(
+                    &mut buf,
+                    t!("Fertilizer: {cost}c"),
+                    &[("cost", cost_b.as_str())],
+                );
+            }
+            StoreAction::BuyMedicine(cost) => {
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(cost_b, "{}", cost);
+                substitute(
+                    &mut buf,
+                    t!("{item}: {cost}c"),
+                    &[("item", t!("Medicine")), ("cost", cost_b.as_str())],
+                );
+            }
+            StoreAction::BuyService(kind, cost) => {
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(cost_b, "{}", cost);
+                let label = match kind {
+                    ServiceKind::Groom => t!("Groom"),
+                    ServiceKind::Train => t!("Train"),
+                };
+                substitute(
+                    &mut buf,
+                    t!("{item}: {cost}c"),
+                    &[("item", label), ("cost", cost_b.as_str())],
+                );
+            }
+            StoreAction::BuyTrip(dest, cost) => {
+                let mut cost_b: heapless::String<8> = heapless::String::new();
+                let _ = write!(cost_b, "{}", cost);
+                let dest_label = match dest {
+                    SceneId::VacationPark => t!("Park"),
+                    SceneId::VacationForest => t!("Forest"),
+                    SceneId::VacationAquarium => t!("Aquarium"),
+                    SceneId::VacationBeach => t!("Beach"),
+                    _ => "?",
+                };
+                substitute(
+                    &mut buf,
+                    t!("A trip to the {dest}: {cost}c"),
+                    &[("dest", dest_label), ("cost", cost_b.as_str())],
+                );
+            }
+        }
+        Some(buf)
     }
 
     fn set_popup(&mut self, text: &str) {
         self.popup.set_text(text, true, true);
+        self.popup_active = true;
+    }
+
+    /// Build `template` with `item` substituted in, then show it as a popup.
+    /// Template is expected to contain a `{item}` placeholder.
+    fn set_popup_with_item(&mut self, template: &str, item: &str) {
+        let mut buf: heapless::String<48> = heapless::String::new();
+        crate::i18n::substitute(&mut buf, template, &[("item", item)]);
+        self.popup.set_text(buf.as_str(), true, true);
         self.popup_active = true;
     }
 
@@ -292,7 +443,7 @@ impl StoreScene {
             StoreAction::BuyFood(item, cost) => {
                 if Self::try_spend(ctx, cost) {
                     ctx.add_food_stock(item, FOOD_USES);
-                    self.set_popup("Purchased!");
+                    self.set_popup_with_item(t!("{item} purchased!"), item.label());
                 } else {
                     self.set_popup(t!("Can't afford!"));
                 }
@@ -305,17 +456,13 @@ impl StoreScene {
                         self.set_popup(t!("Already owned!"));
                     } else if Self::try_spend(ctx, cost) {
                         ctx.refresh_toy(variant);
-                        self.set_popup(if matches!(variant, ToyVariant::Bubbles) {
-                            "Refilled!"
-                        } else {
-                            "Replaced!"
-                        });
+                        self.set_popup_with_item(t!("{item} replaced!"), variant.label());
                     } else {
                         self.set_popup(t!("Can't afford!"));
                     }
                 } else if Self::try_spend(ctx, cost) {
                     ctx.add_toy(variant);
-                    self.set_popup("Purchased!");
+                    self.set_popup_with_item(t!("{item} purchased!"), variant.label());
                 } else {
                     self.set_popup(t!("Can't afford!"));
                 }
@@ -324,7 +471,7 @@ impl StoreScene {
             StoreAction::BuyPot(pot, cost) => {
                 if Self::try_spend(ctx, cost) {
                     ctx.add_pot(pot);
-                    self.set_popup("Pot bought!");
+                    self.set_popup_with_item(t!("{item} bought!"), pot_full_label(pot));
                 } else {
                     self.set_popup(t!("Can't afford!"));
                 }
@@ -333,7 +480,7 @@ impl StoreScene {
             StoreAction::BuySeeds(seed, cost) => {
                 if Self::try_spend(ctx, cost) {
                     ctx.add_seeds(seed, SEEDS_PER_PACK);
-                    self.set_popup("Seeds bought!");
+                    self.set_popup_with_item(t!("{item} bought!"), seed_full_label(seed));
                 } else {
                     self.set_popup(t!("Can't afford!"));
                 }
@@ -344,7 +491,7 @@ impl StoreScene {
                     self.set_popup(t!("Already owned!"));
                 } else if Self::try_spend(ctx, cost) {
                     ctx.set_tool(tool, true);
-                    self.set_popup("Tool bought!");
+                    self.set_popup_with_item(t!("{item} bought!"), tool_label(tool));
                 } else {
                     self.set_popup(t!("Can't afford!"));
                 }
@@ -362,7 +509,7 @@ impl StoreScene {
             StoreAction::BuyMedicine(cost) => {
                 if Self::try_spend(ctx, cost) {
                     ctx.medicine = ctx.medicine.saturating_add(1);
-                    self.set_popup("Medicine bought!");
+                    self.set_popup_with_item(t!("{item} bought!"), t!("Medicine"));
                 } else {
                     self.set_popup(t!("Can't afford!"));
                 }
@@ -379,7 +526,7 @@ impl StoreScene {
                                 (StatId::Sociability, 8.0),
                                 (StatId::Courage, 6.0),
                             ]);
-                            self.set_popup("A spa day!");
+                            self.set_popup(t!("A luxurious spa day!"));
                         }
                         ServiceKind::Train => {
                             ctx.apply_stat_changes(&[
@@ -389,7 +536,7 @@ impl StoreScene {
                                 (StatId::Fitness, 6.0),
                                 (StatId::Mischievousness, -8.0),
                             ]);
-                            self.set_popup("Training done!");
+                            self.set_popup(t!("Professional training done!"));
                         }
                     }
                 }
@@ -515,6 +662,8 @@ impl Scene for StoreScene {
         self.menu.reset_to(ROOT);
         self.popup_active = false;
         self.pending_scene = None;
+        self.confirm.close();
+        self.pending_action = None;
     }
 
     fn update(
@@ -533,10 +682,35 @@ impl Scene for StoreScene {
             return None;
         }
 
+        if self.confirm.is_open() {
+            use crate::ui::confirm::ConfirmResult;
+            match self.confirm.handle_input(buttons) {
+                ConfirmResult::Pending => return None,
+                ConfirmResult::Confirmed => {
+                    if let Some(action) = self.pending_action.take() {
+                        return self.handle_store_action(ctx, action);
+                    }
+                    return None;
+                }
+                ConfirmResult::Cancelled => {
+                    self.pending_action = None;
+                    return None;
+                }
+            }
+        }
+
         match self.menu.handle_input(buttons, false) {
             MenuResult::Continue => None,
             MenuResult::Closed => Some(ctx.last_main_scene),
-            MenuResult::Action(action) => self.handle_store_action(ctx, action),
+            MenuResult::Action(action) => {
+                if let Some(text) = Self::confirm_text(action) {
+                    self.pending_action = Some(action);
+                    self.confirm.open(text.as_str());
+                    None
+                } else {
+                    self.handle_store_action(ctx, action)
+                }
+            }
         }
     }
 
@@ -546,6 +720,9 @@ impl Scene for StoreScene {
         self.menu.draw(renderer);
         if self.popup_active {
             self.popup.draw(renderer, false);
+        }
+        if self.confirm.is_open() {
+            self.confirm.draw(renderer);
         }
         // Silence unused-import lint when ART_PANEL_X is not actively used as a
         // const expression at runtime. Kept as documentation of the layout.

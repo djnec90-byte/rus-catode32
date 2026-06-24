@@ -21,6 +21,7 @@ pub mod platform;
 pub use catode32_i18n_macros::t;
 
 pub mod assets;
+pub mod i18n;
 pub mod behavior;
 pub mod behaviors;
 pub mod board;

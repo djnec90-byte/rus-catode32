@@ -187,7 +187,8 @@ impl SocialScene {
             espnow.add_peer(src);
         }
         let mut prompt: String<32> = String::new();
-        let _ = write!(&mut prompt, "{} wants to play!", name.as_str());
+        let _ = prompt.push_str(name.as_str());
+        let _ = prompt.push_str(t!(" wants to play!"));
         self.confirm.open(prompt.as_str());
         self.state = State::Invited {
             peer_mac: src,
@@ -265,12 +266,10 @@ impl SocialScene {
     }
 
     fn draw_browsing(&self, renderer: &mut Renderer) {
-        let mut header: String<24> = String::new();
-        let _ = write!(&mut header, "Nearby: {}", self.nearby.len());
-        renderer.draw_text(header.as_str(), Point::new(0, 0));
+        renderer.draw_text(t!("Social"), Point::new(0, 0));
 
         if self.nearby.is_empty() {
-            renderer.draw_text("(searching...)", Point::new(0, 16));
+            renderer.draw_text(t!("No cats nearby..."), Point::new(0, 18));
         } else {
             for (i, entry) in self.nearby.iter().take(LINES_VISIBLE).enumerate() {
                 let mut row: String<24> = String::new();
@@ -280,17 +279,14 @@ impl SocialScene {
             }
         }
 
-        renderer.draw_text("A:invite B:back", Point::new(0, 56));
+        renderer.draw_text(t!("A=invite  B=back"), Point::new(0, 56));
     }
 
-    fn draw_inviting(&self, renderer: &mut Renderer, peer_name: &str, elapsed: f32) {
+    fn draw_inviting(&self, renderer: &mut Renderer, peer_name: &str, _elapsed: f32) {
         renderer.draw_text(t!("Inviting..."), Point::new(0, 0));
         renderer.draw_text(peer_name, Point::new(0, 16));
-        let remaining = (INVITE_TIMEOUT - elapsed).max(0.0);
-        let mut line: String<24> = String::new();
-        let _ = write!(&mut line, "{}s left", remaining as i32);
-        renderer.draw_text(line.as_str(), Point::new(0, 32));
-        renderer.draw_text("B: cancel", Point::new(0, 56));
+        renderer.draw_text(t!("Waiting..."), Point::new(0, 32));
+        renderer.draw_text(t!("B=cancel"), Point::new(0, 56));
     }
 }
 

@@ -253,13 +253,18 @@ impl LightsOutScene {
         let _ = write!(moves, "{}", self.move_count);
         r.draw_text(moves.as_str(), Point::new(92, 2));
         let mut par: String<12> = String::new();
-        let _ = write!(par, "Par:{}", self.par);
+        let _ = par.push_str(t!("Par:"));
+        let _ = write!(par, "{}", self.par);
         r.draw_text(par.as_str(), Point::new(82, 12));
     }
 
     fn set_win_popup(&mut self) {
         let mut text: String<48> = String::new();
-        let _ = write!(text, "All off!\n\nMoves: {}", self.move_count);
+        let _ = text.push_str(t!("All off!"));
+        let _ = text.push_str("\n\n");
+        let mut n: String<8> = String::new();
+        let _ = write!(n, "{}", self.move_count);
+        crate::i18n::substitute(&mut text, t!("Moves: {n}"), &[("n", n.as_str())]);
         self.win_popup.set_text(text.as_str(), false, true);
     }
 }

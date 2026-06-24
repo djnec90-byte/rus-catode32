@@ -57,11 +57,12 @@ fn fmt_hour(h: u8, out: &mut String<4>) {
     if h == 0 {
         let _ = out.push_str(t!("12A"));
     } else if h < 12 {
-        let _ = write!(out, "{}A", h);
+        let _ = write!(out, t!("{h}A"), h = h);
     } else if h == 12 {
         let _ = out.push_str(t!("12P"));
     } else {
-        let _ = write!(out, "{}P", h - 12);
+        let h = h - 12;
+        let _ = write!(out, t!("{h}P"), h = h);
     }
 }
 
@@ -217,7 +218,7 @@ impl Scene for ForecastScene {
         // Header: "Season: Weather" for the highlighted slot.
         let sel = self.slots[self.cursor];
         let mut header: String<32> = String::new();
-        let _ = write!(header, "{}: {}", ctx.season.name(), sel.weather.name());
+        let _ = write!(header, "{}: {}", ctx.season.label(), sel.weather.label());
         renderer.draw_text(header.as_str(), Point::new(0, 0));
         renderer.draw_line(Point::new(0, 9), Point::new(127, 9));
 

@@ -14,6 +14,7 @@ use crate::{
     assets::icons,
     input::{Button, Buttons},
     render::{Renderer, SpriteOpts},
+    t,
 };
 
 const LINE_LEN: usize = 16;
@@ -133,7 +134,7 @@ impl Confirm {
             }
         }
 
-        renderer.draw_text("[A]Yes [B]No", Point::new(20, 42));
+        renderer.draw_text(t!("[A]Yes [B]No"), Point::new(20, 42));
     }
 }
 

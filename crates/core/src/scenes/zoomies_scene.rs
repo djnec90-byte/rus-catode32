@@ -831,9 +831,15 @@ impl Scene for ZoomiesScene {
             let mut popup = Popup::new(14, 10, 100, 28);
             let mut buf: String<32> = String::new();
             if self.is_new_best {
-                let _ = write!(buf, "NEW BEST!\n{}", self.score);
+                let _ = buf.push_str(t!("NEW BEST!"));
+                let _ = buf.push('\n');
+                let _ = write!(buf, "{}", self.score);
             } else {
-                let _ = write!(buf, "Ooof!\nBest: {}", ctx.zoomies_high_score);
+                let _ = buf.push_str(t!("Ooof!"));
+                let _ = buf.push('\n');
+                let mut n: String<8> = String::new();
+                let _ = write!(n, "{}", ctx.zoomies_high_score);
+                crate::i18n::substitute(&mut buf, t!("Best: {n}"), &[("n", n.as_str())]);
             }
             popup.set_text(buf.as_str(), false, true);
             popup.draw(renderer, false);

@@ -137,13 +137,13 @@ fn fert_ok(fert: f32) -> bool {
 
 pub fn fert_label(fert: f32) -> &'static str {
     if fert <= FERT_NO_MAX {
-        "No"
+        t!("Fert: No")
     } else if fert <= FERT_LOW_MAX {
-        "Low"
+        t!("Fert: Low")
     } else if fert <= FERT_OK_MAX {
-        "OK"
+        t!("Fert: OK")
     } else {
-        "Over"
+        t!("Fert: Over")
     }
 }
 
@@ -674,21 +674,21 @@ pub fn inspect_lines(plant: &Plant) -> InspectLines {
     let mut out: InspectLines = heapless::Vec::new();
 
     if plant.stage == PlantStage::EmptyPot || plant.seed.is_none() {
-        push_line(&mut out, "Empty pot");
-        push_prefixed(&mut out, "Pot: ", pot_inspect_label(plant.pot));
+        push_line(&mut out, t!("Empty pot"));
+        push_prefixed(&mut out, t!("Pot: "), pot_inspect_label(plant.pot));
         return out;
     }
 
     let seed = plant.seed.unwrap();
     push_line(&mut out, seed_label(seed));
-    push_prefixed(&mut out, "Pot: ", pot_inspect_label(plant.pot));
+    push_prefixed(&mut out, t!("Pot: "), pot_inspect_label(plant.pot));
 
     if plant.stage.is_dead() {
-        push_line(&mut out, "Stage: Dead");
+        push_line(&mut out, t!("Stage: Dead"));
         return out;
     }
     if plant.stage == PlantStage::Dormant {
-        push_line(&mut out, "Stage: Dormant");
+        push_line(&mut out, t!("Stage: Dormant"));
         return out;
     }
 
@@ -699,36 +699,36 @@ pub fn inspect_lines(plant: &Plant) -> InspectLines {
     let recovering = wilted && !aged && debt <= spec.recover as f32;
 
     if recovering {
-        push_line(&mut out, "Stage: Recovering");
+        push_line(&mut out, t!("Stage: Recovering"));
         return out;
     }
 
-    push_prefixed(&mut out, "Stage: ", plant.stage.base().label());
+    push_prefixed(&mut out, t!("Stage: "), plant.stage.base().label());
 
     let status = if aged {
-        "Natural lifespan"
+        t!("Natural lifespan")
     } else if wilted {
         let remaining = spec.death as f32 - debt;
         if remaining <= (spec.death / 4) as f32 {
-            "Water: Critical"
+            t!("Water: Critical")
         } else {
-            "Water: Dry!"
+            t!("Water: Dry!")
         }
     } else {
         let wilt = spec.wilt as f32;
         if debt == 0.0 {
-            "Water: Full"
+            t!("Water: Full")
         } else if debt < wilt / 3.0 {
-            "Water: OK"
+            t!("Water: OK")
         } else if debt < wilt * 2.0 / 3.0 {
-            "Water: Low"
+            t!("Water: Low")
         } else {
-            "Water: Urgent"
+            t!("Water: Urgent")
         }
     };
     push_line(&mut out, status);
 
-    push_prefixed(&mut out, "Fert: ", fert_label(plant.fertilizer));
+    push_prefixed(&mut out, t!("Fert: "), fert_label(plant.fertilizer));
     out
 }
 

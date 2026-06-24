@@ -9,9 +9,10 @@ use crate::{
     ui::settings::{SettingItem, SettingValue, Settings, SettingsResult},
 };
 
-const SEASONS: &[&str] = &["Spring", "Summer", "Fall", "Winter"];
+const SEASONS: &[&str] = &[t!("Spring"), t!("Summer"), t!("Fall"), t!("Winter")];
 const WEATHERS: &[&str] = &[
-    "Clear", "Cloudy", "Overcast", "Windy", "Rain", "Storm", "Snow",
+    t!("Clear"), t!("Cloudy"), t!("Overcast"), t!("Windy"),
+    t!("Rain"), t!("Storm"), t!("Snow"),
 ];
 
 const DAY_IDX: usize = 0;

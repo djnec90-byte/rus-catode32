@@ -13,6 +13,8 @@ use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
 use micromath::F32Ext;
 
+use crate::t;
+
 use crate::{
     assets::character::PoseId,
     context::{GameContext, StatId},
@@ -208,8 +210,11 @@ impl HanjieScene {
         self.win_timer = 0.0;
 
         let mut text: String<48> = String::new();
-        let _ = text.push_str("Well done!\nTime: ");
-        format_time(&mut text, self.elapsed);
+        let _ = text.push_str(t!("Well done!"));
+        let _ = text.push('\n');
+        let mut time_buf: String<48> = String::new();
+        format_time(&mut time_buf, self.elapsed);
+        crate::i18n::substitute(&mut text, t!("Time: {v}"), &[("v", time_buf.as_str())]);
         self.win_popup.set_text(text.as_str(), false, true);
 
         self.character.set_pose(PoseId::SittingSideHappy);

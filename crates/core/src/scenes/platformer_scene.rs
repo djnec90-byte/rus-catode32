@@ -1297,8 +1297,16 @@ impl PlatformerScene {
     fn draw_level_summary(&self, renderer: &mut Renderer) {
         let mins = (self.level_time as u32) / 60;
         let secs = (self.level_time as u32) % 60;
+        let mut n_buf: String<8> = String::new();
+        let _ = write!(n_buf, "{}", self.level_num);
+        let mut time_buf: String<8> = String::new();
+        let _ = write!(time_buf, "{}:{:02}", mins, secs);
         let mut header: String<32> = String::new();
-        let _ = write!(header, "Level {} - {}:{:02}", self.level_num, mins, secs);
+        crate::i18n::substitute(
+            &mut header,
+            t!("Level {n} - {time}"),
+            &[("n", n_buf.as_str()), ("time", time_buf.as_str())],
+        );
         renderer.draw_text(&header, Point::new(0, 1));
 
         const ICON_W: i32 = 18;
@@ -1354,8 +1362,10 @@ impl PlatformerScene {
 
     fn draw_level_banner(&self, renderer: &mut Renderer) {
         let prog = (self.banner_timer / LEVEL_BANNER_DUR).min(1.0);
+        let mut n_buf: String<8> = String::new();
+        let _ = write!(n_buf, "{}", self.level_num);
         let mut text: String<16> = String::new();
-        let _ = write!(text, "Level {}", self.level_num);
+        crate::i18n::substitute(&mut text, t!("Level {n}"), &[("n", n_buf.as_str())]);
         let tw = text.len() as i32 * 8;
         let bx = (128 - tw) / 2;
         let by = 20 - (prog * LEVEL_BANNER_RISE) as i32;

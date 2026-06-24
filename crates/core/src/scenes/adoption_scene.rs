@@ -12,6 +12,7 @@ use core::fmt::Write;
 use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
 use crate::t;
+use crate::i18n::{substitute, to_lower};
 
 use crate::{
     assets::{character::PoseId, icons},
@@ -435,7 +436,7 @@ impl AdoptionScene {
         renderer.draw_rect(Point::new(4, 12), Size::new(120, 40), false);
         let q = t!("Is this the cat you want to adopt?");
         wrap_and_draw_confirm(renderer, q);
-        renderer.draw_text("[A]Yes [B]No", Point::new(20, 42));
+        renderer.draw_text(t!("[A]Yes [B]No"), Point::new(20, 42));
     }
 
     fn draw_moment(&self, renderer: &mut Renderer) {
@@ -546,75 +547,50 @@ fn profile_text(cand: &Candidate) -> String<PROFILE_TEXT_CAP> {
         PetGender::Tom => t!("His"),
         PetGender::Queen => t!("Her"),
     };
-    let possessive_lower = match cand.favs.pet_gender {
-        PetGender::Tom => "his",
-        PetGender::Queen => "her",
-    };
+    let possessive_lower: String<8> = to_lower(possessive);
     // Displayed sign uses `seed % 12`, not the stored `cand.favs.star_sign`.
     let displayed_sign = StarSign::from_index(cand.seed as u32 % 12);
     let temper = Temperament::from_dominant_index(dominant_trait_index(&cand.offsets));
     let weather = fav_weather_label(cand.favs.fav_weather);
 
+    let temper_lower: String<24> = to_lower(temper.label());
+    let sign_lower: String<24> = to_lower(displayed_sign.label());
+    let meal_lower: String<24> = to_lower(food_label(cand.favs.fav_meal));
+    let snack_lower: String<24> = to_lower(food_label(cand.favs.fav_snack));
+    let toy_lower: String<24> = to_lower(toy_label(cand.favs.fav_toy));
+
     let mut s: String<PROFILE_TEXT_CAP> = String::new();
-    let _ = write!(
+    substitute(
         &mut s,
-        "{name} is a {temper} {sign}, who loves {weather} weather.\n",
-        name = cand.name,
-        temper = temper.lower_label(),
-        sign = displayed_sign.lower_name(),
-        weather = weather,
+        t!("{name} is a {temper} {sign}, who loves {weather} weather."),
+        &[
+            ("name", cand.name),
+            ("temper", temper_lower.as_str()),
+            ("sign", sign_lower.as_str()),
+            ("weather", weather),
+        ],
     );
-    let _ = write!(
+    let _ = s.push('\n');
+    substitute(
         &mut s,
-        "{poss} favorite meal is {meal}. {poss} favorite snack is {snack}. And {poss_l} favorite toy is the {toy}.",
-        poss = possessive,
-        meal = food_label(cand.favs.fav_meal),
-        snack = food_label(cand.favs.fav_snack),
-        poss_l = possessive_lower,
-        toy = toy_label(cand.favs.fav_toy),
+        t!("{possessive} favorite meal is {meal}. {possessive} favorite snack is {snack}. And {possessive_lower} favorite toy is the {toy}."),
+        &[
+            ("possessive", possessive),
+            ("meal", meal_lower.as_str()),
+            ("snack", snack_lower.as_str()),
+            ("possessive_lower", possessive_lower.as_str()),
+            ("toy", toy_lower.as_str()),
+        ],
     );
     s
 }
 
 fn food_label(item: crate::context::FoodItem) -> &'static str {
-    use crate::context::FoodItem::*;
-    match item {
-        Kibble => "kibble",
-        Cod => "cod",
-        Haddock => "haddock",
-        Trout => "trout",
-        Shrimp => "shrimp",
-        Herring => "herring",
-        Turkey => "turkey",
-        Tuna => "tuna",
-        Salmon => "salmon",
-        Chicken => "chicken",
-        Liver => "liver",
-        Beef => "beef",
-        Lamb => "lamb",
-        Mackerel => "mackerel",
-        Carrots => "carrots",
-        Pumpkin => "pumpkin",
-        Treats => "treats",
-        FishBite => "fish bite",
-        Eggs => "eggs",
-        Nugget => "nugget",
-        Milk => "milk",
-        ChewStick => "chew stick",
-        Puree => "puree",
-    }
+    item.label()
 }
 
 fn toy_label(toy: crate::context::ToyVariant) -> &'static str {
-    use crate::context::ToyVariant::*;
-    match toy {
-        String_ => "string",
-        Feather => "feather",
-        Mouse => "mouse",
-        Ball => "ball",
-        Bubbles => "bubbles",
-        Laser => "laser",
-    }
+    toy.label()
 }
 
 /// Word-wrap a confirm prompt to ~14 chars/line and draw inside the dialog

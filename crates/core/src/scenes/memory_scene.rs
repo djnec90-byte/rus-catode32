@@ -303,7 +303,14 @@ impl MemoryScene {
         };
 
         let mut text: String<96> = String::new();
-        let _ = write!(text, "{}\n\nScore: {}\nBest: {}", rating, self.score, new_best);
+        let _ = text.push_str(rating);
+        let mut score_buf: String<8> = String::new();
+        let _ = write!(score_buf, "{}", self.score);
+        crate::i18n::substitute(&mut text, t!("\n\nScore: {n}"), &[("n", score_buf.as_str())]);
+        let _ = text.push('\n');
+        let mut best_buf: String<8> = String::new();
+        let _ = write!(best_buf, "{}", new_best);
+        crate::i18n::substitute(&mut text, t!("Best: {n}"), &[("n", best_buf.as_str())]);
         self.win_popup.set_text(text.as_str(), false, true);
 
         self.state = State::Win;

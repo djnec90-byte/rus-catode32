@@ -234,17 +234,37 @@ impl TicTacToeScene {
     }
 
     fn set_end_popup(&mut self) {
-        let msg: &str = match self.state {
-            State::PlayerWin => "You Win!\nA: New Game",
-            State::PetWin => "You Lose!\nA: New Game",
-            State::Draw => match self.draw_winner {
-                PLAYER => "Draw!\nYou had the\nlongest row\nA: New Game",
-                PET => "Draw!\nPet had the\nlongest row\nA: New Game",
-                _ => "Draw!\nA: New Game",
-            },
+        let mut msg: heapless::String<64> = heapless::String::new();
+        match self.state {
+            State::PlayerWin => {
+                let _ = msg.push_str(t!("You Win!"));
+                let _ = msg.push('\n');
+                let _ = msg.push_str(t!("A: New Game"));
+            }
+            State::PetWin => {
+                let _ = msg.push_str(t!("You Lose!"));
+                let _ = msg.push('\n');
+                let _ = msg.push_str(t!("A: New Game"));
+            }
+            State::Draw => {
+                let _ = msg.push_str(t!("Draw!"));
+                let _ = msg.push('\n');
+                match self.draw_winner {
+                    PLAYER => {
+                        let _ = msg.push_str(t!("You had the\nlongest row"));
+                        let _ = msg.push('\n');
+                    }
+                    PET => {
+                        let _ = msg.push_str(t!("Pet had the\nlongest row"));
+                        let _ = msg.push('\n');
+                    }
+                    _ => {}
+                }
+                let _ = msg.push_str(t!("A: New Game"));
+            }
             _ => return,
-        };
-        self.result_popup.set_text(msg, false, true);
+        }
+        self.result_popup.set_text(msg.as_str(), false, true);
     }
 
     fn score_cell(&self, cell: usize) -> i32 {

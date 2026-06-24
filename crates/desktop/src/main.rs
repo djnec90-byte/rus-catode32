@@ -83,15 +83,20 @@ fn main() {
     let mut sim_display = SimulatorDisplay::<Rgb888>::new(Size::new(WIDTH, HEIGHT));
     let output = OutputSettingsBuilder::new().scale(SCALE).build();
     let mut window = Window::new("catode32", &output);
+    // Prime the window so `events()` has a valid SDL window to pump from
+    // on the first iteration.
+    window.update(&sim_display);
+
+    // Buttons that received both KeyDown and KeyUp in a single pump are
+    // held pressed across one tick and released afterwards, so brief taps
+    // that land entirely within a frame still register.
+    let mut pending_release = [false; 8];
 
     'outer: loop {
         let frame_start = Instant::now();
 
-        // Tick the game first, then blit + pump events so a fresh frame is
-        // visible before we sleep.
-        game.tick();
-        blit(game.renderer(), &mut sim_display);
-        window.update(&sim_display);
+        let mut pressed_this_frame = [false; 8];
+        let mut released_this_frame = [false; 8];
 
         for ev in window.events() {
             match ev {
@@ -101,17 +106,40 @@ fn main() {
                         break 'outer;
                     }
                     if let Some(idx) = button_index(keycode) {
-                        set_desktop_button(idx, true);
+                        pressed_this_frame[idx] = true;
                     }
                 }
                 SimulatorEvent::KeyUp { keycode, .. } => {
                     if let Some(idx) = button_index(keycode) {
-                        set_desktop_button(idx, false);
+                        released_this_frame[idx] = true;
                     }
                 }
                 _ => {}
             }
         }
+
+        for idx in 0..8 {
+            if pressed_this_frame[idx] {
+                set_desktop_button(idx, true);
+                if released_this_frame[idx] {
+                    pending_release[idx] = true;
+                }
+            } else if released_this_frame[idx] {
+                set_desktop_button(idx, false);
+            }
+        }
+
+        game.tick();
+
+        for idx in 0..8 {
+            if pending_release[idx] {
+                set_desktop_button(idx, false);
+                pending_release[idx] = false;
+            }
+        }
+
+        blit(game.renderer(), &mut sim_display);
+        window.update(&sim_display);
 
         let elapsed = frame_start.elapsed();
         let target = Duration::from_millis(FRAME_MS);

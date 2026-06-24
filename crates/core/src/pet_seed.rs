@@ -36,6 +36,8 @@ impl StarSign {
         Self::ALL[(idx as usize) % Self::ALL.len()]
     }
 
+    /// Stable English identifier used as the save-file serialization key.
+    /// Do not translate — saves would break across language changes.
     pub fn name(self) -> &'static str {
         match self {
             StarSign::Aries => "Aries",
@@ -53,6 +55,27 @@ impl StarSign {
         }
     }
 
+    /// Translated display label for UI rendering.
+    pub fn label(self) -> &'static str {
+        match self {
+            StarSign::Aries => t!("Aries"),
+            StarSign::Taurus => t!("Taurus"),
+            StarSign::Gemini => t!("Gemini"),
+            StarSign::Cancer => t!("Cancer"),
+            StarSign::Leo => t!("Leo"),
+            StarSign::Virgo => t!("Virgo"),
+            StarSign::Libra => t!("Libra"),
+            StarSign::Scorpio => t!("Scorpio"),
+            StarSign::Sagittarius => t!("Sagittarius"),
+            StarSign::Capricorn => t!("Capricorn"),
+            StarSign::Aquarius => t!("Aquarius"),
+            StarSign::Pisces => t!("Pisces"),
+        }
+    }
+
+    /// Legacy ASCII lowercase used in a few places that still need a
+    /// `&'static str`. Prefer `to_lower(s.label())` for new code so the
+    /// embedded form respects the active translation.
     pub fn lower_name(self) -> &'static str {
         match self {
             StarSign::Aries => "aries",

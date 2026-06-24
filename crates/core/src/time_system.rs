@@ -1,5 +1,5 @@
 use crate::{
-    context::GameContext, temperature_system::get_temperature, weather_system::WeatherSystem,
+    context::GameContext, t, temperature_system::get_temperature, weather_system::WeatherSystem,
 };
 
 // game_minutes_per_second = 1/15.
@@ -19,12 +19,24 @@ pub enum Season {
 }
 
 impl Season {
+    /// Stable English identifier used as the save-file serialization key.
+    /// Do not translate — saves would break across language changes.
     pub fn name(self) -> &'static str {
         match self {
             Season::Winter => "Winter",
             Season::Spring => "Spring",
             Season::Summer => "Summer",
             Season::Fall => "Fall",
+        }
+    }
+
+    /// Translated display label for UI rendering.
+    pub fn label(self) -> &'static str {
+        match self {
+            Season::Winter => t!("Winter"),
+            Season::Spring => t!("Spring"),
+            Season::Summer => t!("Summer"),
+            Season::Fall => t!("Fall"),
         }
     }
 
@@ -56,6 +68,8 @@ pub enum Weather {
 }
 
 impl Weather {
+    /// Stable English identifier used as the save-file serialization key.
+    /// Do not translate — saves would break across language changes.
     pub fn name(self) -> &'static str {
         match self {
             Weather::Clear => "Clear",
@@ -65,6 +79,19 @@ impl Weather {
             Weather::Rain => "Rain",
             Weather::Storm => "Storm",
             Weather::Snow => "Snow",
+        }
+    }
+
+    /// Translated display label for UI rendering.
+    pub fn label(self) -> &'static str {
+        match self {
+            Weather::Clear => t!("Clear"),
+            Weather::Cloudy => t!("Cloudy"),
+            Weather::Overcast => t!("Overcast"),
+            Weather::Windy => t!("Windy"),
+            Weather::Rain => t!("Rain"),
+            Weather::Storm => t!("Storm"),
+            Weather::Snow => t!("Snow"),
         }
     }
 

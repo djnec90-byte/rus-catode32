@@ -54,7 +54,7 @@ const DEBUG: &[MenuItem<SceneId>] = &[
     MenuItem { label: t!("Time Speed"),  icon: Some(icons::WRENCH), submenu: None,             action: Some(SceneId::DebugTime),      confirm: None, confirm_on_vacation: None },
     MenuItem { label: t!("RGB LED"),     icon: Some(icons::WRENCH), submenu: None,             action: Some(SceneId::DebugLed),       confirm: None, confirm_on_vacation: None },
     MenuItem { label: t!("Power"),       icon: Some(icons::POWER),  submenu: None,             action: Some(SceneId::DebugPower),     confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Context",     icon: Some(icons::WRENCH), submenu: None,             action: Some(SceneId::DebugContext),   confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Context"), icon: Some(icons::WRENCH), submenu: None,             action: Some(SceneId::DebugContext),   confirm: None, confirm_on_vacation: None },
     MenuItem { label: t!("Wireless"),    icon: Some(icons::WIFI),   submenu: Some(WIRELESS),   action: None,                          confirm: None, confirm_on_vacation: None },
 ];
 

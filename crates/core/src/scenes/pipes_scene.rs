@@ -402,7 +402,11 @@ impl PipesScene {
     fn set_broken(&mut self) {
         self.state = State::Broken;
         self.end_timer = 0.0;
-        self.result_popup.set_text("Burst!\n\nA: New Game", false, true);
+        let mut text: String<48> = String::new();
+        let _ = text.push_str(t!("Burst!"));
+        let _ = text.push_str("\n\n");
+        let _ = text.push_str(t!("A: New Game"));
+        self.result_popup.set_text(text.as_str(), false, true);
     }
 
     fn set_win(&mut self) {
@@ -412,7 +416,13 @@ impl PipesScene {
         self.end_timer = 0.0;
         self.session_wins += 1;
         let mut text: String<48> = String::new();
-        let _ = write!(text, "Connected!\nWins: {}\nA: New Game", self.session_wins);
+        let _ = text.push_str(t!("Connected!"));
+        let _ = text.push('\n');
+        let mut n: String<8> = String::new();
+        let _ = write!(n, "{}", self.session_wins);
+        crate::i18n::substitute(&mut text, t!("Wins: {n}"), &[("n", n.as_str())]);
+        let _ = text.push('\n');
+        let _ = text.push_str(t!("A: New Game"));
         self.result_popup.set_text(text.as_str(), false, true);
     }
 

@@ -413,7 +413,7 @@ fn draw_confirm_dialog(renderer: &mut Renderer, confirm: &ConfirmState) {
             );
         }
     }
-    renderer.draw_text("[A]Yes [B]No", Point::new(20, 42));
+    renderer.draw_text(t!("[A]Yes [B]No"), Point::new(20, 42));
 }
 
 fn wrap_text(
@@ -593,7 +593,7 @@ fn build_page(
             }
             if ctx.medicine > 0 {
                 let mut label: String<LABEL_LEN> = String::new();
-                let _ = write!(&mut label, "Medicine ({})", ctx.medicine);
+                let _ = write!(&mut label, "{} ({})", t!("Medicine"), ctx.medicine);
                 let _ = items.push(Item {
                     label,
                     icon: Some(icons::PILL),

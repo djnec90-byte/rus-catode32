@@ -96,12 +96,16 @@ impl PetInfoScene {
         self.narrow_x = head_w + 6;
         let narrow_cpl = (((128 - self.narrow_x - 3) / CHAR_W) as usize).max(1);
 
-        // Pronouns from stored gender.
+        // Pronouns from stored gender. Lowercase forms are runtime-derived
+        // from the translated uppercase ones so languages with different
+        // pronouns (e.g. es "Ella" → "ella", de "Sie" → "sie") work.
         let gender = ctx.pet_gender.unwrap_or(PetGender::Queen);
-        let (she, she_l, her_cap, her, g_noun) = match gender {
-            PetGender::Tom => (t!("He"), "he", t!("His"), "his", t!("tom")),
-            PetGender::Queen => (t!("She"), "she", t!("Her"), "her", t!("queen")),
+        let (she, her_cap, g_noun) = match gender {
+            PetGender::Tom => (t!("He"), t!("His"), t!("tom")),
+            PetGender::Queen => (t!("She"), t!("Her"), t!("queen")),
         };
+        let she_l: String<8> = to_lower(she);
+        let her: String<8> = to_lower(her_cap);
 
         // Intro paragraph 1, floated beside headshot.
         let name = if ctx.pet_name.is_empty() {
@@ -111,15 +115,22 @@ impl PetInfoScene {
         };
         let days = ctx.day_number;
         let temper = current_temperament(ctx);
-        let sign = ctx
-            .star_sign
-            .map(|s| s.lower_name())
-            .unwrap_or("?");
+        let sign_lower: String<24> = match ctx.star_sign {
+            Some(s) => to_lower(s.label()),
+            None => {
+                let mut q: String<24> = String::new();
+                let _ = q.push('?');
+                q
+            }
+        };
 
+        let mut days_buf: String<8> = String::new();
+        let _ = write!(&mut days_buf, "{}", days);
         let mut intro1: String<96> = String::new();
-        let _ = write!(
+        substitute(
             &mut intro1,
-            "{name} is a {days} day old {g_noun}.",
+            t!("{name} is a {days} day old {gnoun}."),
+            &[("name", name), ("days", days_buf.as_str()), ("gnoun", g_noun)],
         );
         wrap_intro(
             &mut self.lines,
@@ -130,35 +141,50 @@ impl PetInfoScene {
         );
         push_blank(&mut self.lines);
 
+        let temper_lower: String<24> = to_lower(temper.label());
         let mut intro2: String<64> = String::new();
         substitute(
             &mut intro2,
             t!("{she} is a {temper} {sign}."),
-            &[("she", she), ("temper", temper.lower_label()), ("sign", sign)],
+            &[("she", she), ("temper", temper_lower.as_str()), ("sign", sign_lower.as_str())],
         );
         wrap_full(&mut self.lines, intro2.as_str(), FULL_CPL);
         push_blank(&mut self.lines);
 
-        // Body paragraphs.
-        let meal = food_display(ctx.fav_meal);
-        let snack = food_display(ctx.fav_snack);
-        let toy = toy_display(ctx.fav_toy);
-        let room = location_display(ctx.fav_location);
-        let weather = fav_weather_display(ctx.fav_weather);
+        // Body paragraphs. Each label is translated then lowercased so it
+        // reads naturally embedded in a sentence (e.g. "favorite meal is
+        // kibble").
+        let meal: String<24> = to_lower(food_label(ctx.fav_meal));
+        let snack: String<24> = to_lower(food_label(ctx.fav_snack));
+        let toy: String<24> = to_lower(toy_label(ctx.fav_toy));
+        let room: String<24> = to_lower(location_label(ctx.fav_location));
+        let weather = weather_label(ctx.fav_weather);
 
         let mut buf: String<96> = String::new();
 
-        let _ = write!(
+        substitute(
             &mut buf,
-            "{her_cap} favorite meal is {meal}, and {her} favorite snack is {snack}.",
+            t!("{Her} favorite meal is {meal}, and {her} favorite snack is {snack}."),
+            &[
+                ("Her", her_cap),
+                ("meal", meal.as_str()),
+                ("her", her.as_str()),
+                ("snack", snack.as_str()),
+            ],
         );
         wrap_full(&mut self.lines, buf.as_str(), FULL_CPL);
         push_blank(&mut self.lines);
         buf.clear();
 
-        let _ = write!(
+        substitute(
             &mut buf,
-            "{she} loves to hang out in the {room}, and {she_l} really enjoys {weather} days.",
+            t!("{She} loves to hang out in the {room}, and {she_l} really enjoys {weather} days."),
+            &[
+                ("She", she),
+                ("room", room.as_str()),
+                ("she_l", she_l.as_str()),
+                ("weather", weather),
+            ],
         );
         wrap_full(&mut self.lines, buf.as_str(), FULL_CPL);
         push_blank(&mut self.lines);
@@ -167,7 +193,7 @@ impl PetInfoScene {
         substitute(
             &mut buf,
             t!("Of all the toys, {she_l} loves to play with the {toy} the most."),
-            &[("she_l", she_l), ("toy", toy)],
+            &[("she_l", she_l.as_str()), ("toy", toy.as_str())],
         );
         wrap_full(&mut self.lines, buf.as_str(), FULL_CPL);
         push_blank(&mut self.lines);
@@ -200,7 +226,7 @@ impl PetInfoScene {
                     push_blank(&mut self.lines);
                 }
                 let mut sentence: String<64> = String::new();
-                expand_template(&mut sentence, template, she, her);
+                expand_template(&mut sentence, template, she, her.as_str());
                 wrap_full(&mut self.lines, sentence.as_str(), FULL_CPL);
                 any_mood = true;
             }
@@ -210,7 +236,7 @@ impl PetInfoScene {
             substitute(
                 &mut sentence,
                 t!("It seems like {she_l}'s feeling pretty great at the moment!"),
-                &[("she_l", she_l)],
+                &[("she_l", she_l.as_str())],
             );
             wrap_full(&mut self.lines, sentence.as_str(), FULL_CPL);
         }
@@ -222,7 +248,7 @@ impl PetInfoScene {
             substitute(
                 &mut s,
                 t!("{she} wishes {she_l} had more variety in {her} meals."),
-                &[("she", she), ("she_l", she_l), ("her", her)],
+                &[("she", she), ("she_l", she_l.as_str()), ("her", her.as_str())],
             );
             wrap_full(&mut self.lines, s.as_str(), FULL_CPL);
             push_blank(&mut self.lines);
@@ -505,40 +531,7 @@ fn expand_template(out: &mut String<64>, template: &str, she: &str, her: &str) {
     let _ = out.push_str(remaining);
 }
 
-/// Runtime template substitution for translated strings whose placeholder set
-/// varies between languages. Unlike `write!`, missing or unused names don't
-/// error: unknown `{name}` passes through unchanged, unused entries in `subs`
-/// are silently ignored.
-fn substitute<const N: usize>(
-    out: &mut String<N>,
-    template: &str,
-    subs: &[(&str, &str)],
-) {
-    let mut remaining = template;
-    while let Some(open) = remaining.find('{') {
-        let (head, tail) = remaining.split_at(open);
-        let _ = out.push_str(head);
-        if let Some(close) = tail.find('}') {
-            let key = &tail[1..close];
-            let mut matched = false;
-            for &(k, v) in subs {
-                if k == key {
-                    let _ = out.push_str(v);
-                    matched = true;
-                    break;
-                }
-            }
-            if !matched {
-                let _ = out.push_str(&tail[..=close]);
-            }
-            remaining = &tail[close + 1..];
-        } else {
-            let _ = out.push_str(tail);
-            remaining = "";
-        }
-    }
-    let _ = out.push_str(remaining);
-}
+use crate::i18n::{substitute, to_lower};
 
 /// Returns the dominant trait index (0..5) based on the live trait values.
 fn current_temperament(ctx: &GameContext) -> Temperament {
@@ -613,67 +606,37 @@ fn recent_meal_dominance(ctx: &GameContext) -> u8 {
 }
 
 // ----------------------------------------------------------------------
-// Display labels
-//
-// These are pre-lowercased because the body text always uses lowercase
-// labels. `Ball` becomes "yarn ball".
+// Display labels — return the translated label as-is. Callers lowercase
+// at the use-site so embedded forms ("favorite meal is kibble") work in
+// languages whose translated label differs in form from the source key.
 // ----------------------------------------------------------------------
 
-fn food_display(item: Option<FoodItem>) -> &'static str {
-    use FoodItem::*;
+fn food_label(item: Option<FoodItem>) -> &'static str {
     match item {
         None => "?",
-        Some(Kibble) => "kibble",
-        Some(Cod) => "cod",
-        Some(Haddock) => "haddock",
-        Some(Trout) => "trout",
-        Some(Shrimp) => "shrimp",
-        Some(Herring) => "herring",
-        Some(Turkey) => "turkey",
-        Some(Tuna) => "tuna",
-        Some(Salmon) => "salmon",
-        Some(Chicken) => "chicken",
-        Some(Liver) => "liver",
-        Some(Beef) => "beef",
-        Some(Lamb) => "lamb",
-        Some(Mackerel) => "mackerel",
-        Some(Carrots) => "carrots",
-        Some(Pumpkin) => "pumpkin",
-        Some(Treats) => "treats",
-        Some(FishBite) => "fish bite",
-        Some(Eggs) => "eggs",
-        Some(Nugget) => "nugget",
-        Some(Milk) => "milk",
-        Some(ChewStick) => "chew stick",
-        Some(Puree) => "puree",
+        Some(i) => i.label(),
     }
 }
 
-fn toy_display(toy: Option<ToyVariant>) -> &'static str {
-    use ToyVariant::*;
+fn toy_label(toy: Option<ToyVariant>) -> &'static str {
     match toy {
         None => "?",
-        Some(String_) => "string",
-        Some(Feather) => "feather",
-        Some(Mouse) => "mouse",
-        Some(Ball) => "yarn ball",
-        Some(Bubbles) => "bubbles",
-        Some(Laser) => "laser",
+        Some(t) => t.label(),
     }
 }
 
-fn location_display(loc: Option<SceneId>) -> &'static str {
+fn location_label(loc: Option<SceneId>) -> &'static str {
     match loc {
-        Some(SceneId::Inside) => "living room",
-        Some(SceneId::Bedroom) => "bedroom",
-        Some(SceneId::Kitchen) => "kitchen",
-        Some(SceneId::Outside) => "outside",
-        Some(SceneId::Treehouse) => "treehouse",
+        Some(SceneId::Inside) => t!("Living Room"),
+        Some(SceneId::Bedroom) => t!("Bedroom"),
+        Some(SceneId::Kitchen) => t!("Kitchen"),
+        Some(SceneId::Outside) => t!("Outside"),
+        Some(SceneId::Treehouse) => t!("Treehouse"),
         _ => "?",
     }
 }
 
-fn fav_weather_display(w: Option<FavWeather>) -> &'static str {
+fn weather_label(w: Option<FavWeather>) -> &'static str {
     match w {
         None => "?",
         Some(FavWeather::Sunny) => t!("sunny"),
