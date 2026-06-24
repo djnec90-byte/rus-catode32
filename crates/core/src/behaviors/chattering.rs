@@ -5,9 +5,11 @@ use crate::{
     behavior::{Behavior, BehaviorId, BehaviorState, NextBehavior},
     context::{GameContext, StatId},
     entities::character::Character,
-    rand,
     render::Renderer,
 };
+
+const CHATTER_DURATION: f32 = 10.0;
+const SETTLE_DURATION: f32 = 1.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Phase {
@@ -18,10 +20,7 @@ enum Phase {
 pub struct ChatteringBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
     pose_id: PoseId,
-    chatter_t: f32,
 }
 
 impl ChatteringBehavior {
@@ -29,10 +28,7 @@ impl ChatteringBehavior {
         Self {
             phase: Phase::Chattering,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 6.0,
             pose_id: PoseId::SittingSillySideAnnoyed,
-            chatter_t: 0.0,
         }
     }
 }
@@ -42,31 +38,32 @@ impl Behavior for ChatteringBehavior {
         BehaviorId::Chattering
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Chattering => (self.phase_timer / CHATTER_DURATION).clamp(0.0, 1.0),
+            Phase::Settling => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
     }
 
-    fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
+    fn enter(&mut self, _ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Chattering;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 5.0, 9.0);
         self.pose_id = PoseId::SittingSillySideAnnoyed;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
-        self.chatter_t += dt;
         match self.phase {
-            Phase::Chattering if self.phase_timer >= self.total - 1.5 => {
+            Phase::Chattering if self.phase_timer >= CHATTER_DURATION => {
                 self.phase = Phase::Settling;
                 self.phase_timer = 0.0;
                 self.pose_id = PoseId::SittingSideAloof;
             }
-            Phase::Settling if self.phase_timer >= 1.5 => return BehaviorState::Completed,
+            Phase::Settling if self.phase_timer >= SETTLE_DURATION => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running

@@ -18,7 +18,7 @@ use crate::{
 const FOOD_OFFSET_X: i32 = 34;
 const REJECTION_LOOK_DURATION: f32 = 4.5;
 const LOWER_DURATION: f32 = 1.0;
-const PAUSE_DURATION: f32 = 1.0;
+const PAUSE_DURATION: f32 = 1.5;
 
 const REJECTION_POSES: &[PoseId] = &[
     PoseId::StandingSideNeutralLookingDown,
@@ -109,7 +109,7 @@ impl Behavior for EatingBehavior {
         self.pose_id = PoseId::StandingSideHappy;
     }
 
-    fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
+    fn update(&mut self, ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
         self.phase_timer += dt;
         match self.phase {
             Phase::Lowering => {
@@ -118,11 +118,11 @@ impl Behavior for EatingBehavior {
                     self.phase_timer = 0.0;
                     if self.rejecting {
                         self.phase = Phase::Rejecting;
-                        let i = (rand::rand_range_u32(
-                            &mut 0xC0FFEE_u32.wrapping_add((self.food_y_progress * 1000.0) as u32),
+                        let i = rand::rand_range_u32(
+                            &mut ctx.rng,
                             0,
                             (REJECTION_POSES.len() as u32) - 1,
-                        )) as usize;
+                        ) as usize;
                         self.pose_id = REJECTION_POSES[i];
                     } else {
                         self.phase = Phase::PreEating;

@@ -5,6 +5,7 @@ use crate::{
     behaviors::{auto_select, ActiveBehavior},
     context::{FoodItem, GameContext},
     entities::character::Character,
+    println,
     render::Renderer,
 };
 
@@ -294,7 +295,9 @@ impl BehaviorManager {
 
     pub fn start(&mut self, ctx: &mut GameContext, character: &mut Character) {
         self.started = true;
-        ctx.current_behavior_name = Some(self.current.as_dyn().name());
+        let name = self.current.as_dyn().name();
+        ctx.current_behavior_name = Some(name);
+        println!("[\x1b[32mBehavior started\x1b[0m] {}", name);
         self.current.as_dyn_mut().enter(ctx, character);
     }
 
@@ -391,6 +394,7 @@ impl BehaviorManager {
             if ctx.pending_wake_greeting {
                 ctx.pending_wake_greeting = false;
                 if let Some(g) = wake_greeting(ctx) {
+                    println!("[WakeReact] Greeting picked");
                     g
                 } else {
                     auto_select(ctx)
@@ -424,7 +428,9 @@ impl BehaviorManager {
                 }
             }
         }
-        ctx.current_behavior_name = Some(self.current.as_dyn().name());
+        let name = self.current.as_dyn().name();
+        ctx.current_behavior_name = Some(name);
+        println!("[\x1b[32mBehavior started\x1b[0m] {}", name);
         self.current.as_dyn_mut().enter(ctx, character);
     }
 }
@@ -488,6 +494,7 @@ fn apply_sickness_accumulation(ctx: &mut GameContext, completing: BehaviorId) {
     }
     if delta > 0.0 {
         ctx.sickness = (ctx.sickness + delta).min(10.0);
+        println!("[Sickness] +{:.2} -> {:.2}", delta, ctx.sickness);
     }
 }
 

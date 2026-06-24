@@ -3,7 +3,7 @@ use crate::{
     behavior::{BehaviorId, NextBehavior},
     context::{GameContext, StatId},
     entities::character::Character,
-    rand,
+    println, rand,
     scene::SceneId,
     time_system::Weather,
 };
@@ -197,7 +197,15 @@ pub fn auto_select_scene_exit(ctx: &mut GameContext) -> Option<NextBehavior> {
         p = p.max(0.35);
     }
 
-    if rand::rand_f32(&mut ctx.rng) > p {
+    let roll = rand::rand_f32(&mut ctx.rng);
+    println!(
+        "Scene exit p={:.3} roll={:.3} ({:?}) weights: {:?}",
+        p,
+        roll,
+        current,
+        &weights[..]
+    );
+    if roll > p {
         return None;
     }
 

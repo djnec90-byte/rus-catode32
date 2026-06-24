@@ -32,7 +32,7 @@ pub mod zoomies;
 use crate::{
     behavior::{Behavior, BehaviorId, NextBehavior},
     context::GameContext,
-    rand,
+    println, rand,
     scene::SceneId,
 };
 
@@ -259,11 +259,17 @@ pub fn auto_select(ctx: &mut GameContext) -> NextBehavior {
         && can_trigger(BehaviorId::Meandering, ctx)
         && rand::rand_f32(&mut ctx.rng) <= meander_p
     {
+        println!("\x1b[32mRandomly meandering....\x1b[0m");
         return NextBehavior::Meandering;
     }
 
     // Scene-exit detour.
     if let Some(next) = common::auto_select_scene_exit(ctx) {
+        if let NextBehavior::GoTo(p) = &next {
+            if let Some(dest) = p.pending_scene {
+                println!("\x1b[32mScene exit -> {:?}\x1b[0m", dest);
+            }
+        }
         return next;
     }
 
@@ -272,16 +278,30 @@ pub fn auto_select(ctx: &mut GameContext) -> NextBehavior {
         && ctx.serenity > 25.0
         && rand::rand_f32(&mut ctx.rng) < (ctx.serenity - 25.0) / 150.0
     {
+        println!(
+            "\x1b[32mStaying idle (serenity: {:.1})\x1b[0m",
+            ctx.serenity
+        );
         return NextBehavior::Idle;
     }
+
+    println!(
+        "--------------------------------------------------------------------------------"
+    );
 
     // Gather eligible candidates.
     let mut candidates: heapless::Vec<(BehaviorId, u32), 16> = heapless::Vec::new();
     for &id in AUTO_SELECT_NAMES {
         if common::sick_blocks(id, ctx) {
+            println!(
+                "[Sickness] Blocking '{}' (sickness={:.2})",
+                id.name(),
+                ctx.sickness
+            );
             continue;
         }
         if !can_trigger(id, ctx) {
+            print_skip_reason(id, ctx);
             continue;
         }
         let mut p = priority(id, ctx);
@@ -299,8 +319,30 @@ pub fn auto_select(ctx: &mut GameContext) -> NextBehavior {
     }
 
     if candidates.is_empty() {
+        println!(
+            "--------------------------------------------------------------------------------"
+        );
         return NextBehavior::Idle;
     }
+
+    // Per-candidate priority dump, ascending so the lowest (most likely) is first.
+    let mut sorted = candidates.clone();
+    sorted.sort_unstable_by_key(|e| e.1);
+    for (id, p) in sorted.iter() {
+        if let Some(idx) = ctx.recent_index(*id) {
+            println!(
+                ">> {}: priority= {} (+{} recency)",
+                id.name(),
+                p,
+                50 - (idx as i32) * 10
+            );
+        } else {
+            println!(">> {}: priority= {}", id.name(), p);
+        }
+    }
+    println!(
+        "--------------------------------------------------------------------------------"
+    );
 
     // Bin priorities (ceil to nearest 10) and randomly pick within the lowest bin.
     let mut best_bin = u32::MAX;
@@ -318,6 +360,18 @@ pub fn auto_select(ctx: &mut GameContext) -> NextBehavior {
     }
     let pick = rand::rand_range_u32(&mut ctx.rng, 0, (tied.len() - 1) as u32) as usize;
     let chosen = tied[pick];
+    if tied.len() > 1 {
+        let mut names: heapless::Vec<&'static str, 16> = heapless::Vec::new();
+        for id in tied.iter() {
+            let _ = names.push(id.name());
+        }
+        println!(
+            ">> Selected: {} (from bin tied at {}: {:?})",
+            chosen.name(),
+            best_bin,
+            &names[..]
+        );
+    }
     if chosen == BehaviorId::Playing {
         let solo = playing::solo_toys_in_inventory(ctx);
         if !solo.is_empty() {
@@ -327,6 +381,56 @@ pub fn auto_select(ctx: &mut GameContext) -> NextBehavior {
         }
     }
     to_next_default(chosen)
+}
+
+fn print_skip_reason(id: BehaviorId, ctx: &GameContext) {
+    match id {
+        BehaviorId::Sleeping => println!("Skipping sleeping. Energy: {:6.4}", ctx.energy),
+        BehaviorId::Napping => println!("Skipping napping. Energy: {:6.4}", ctx.energy),
+        BehaviorId::Zoomies => println!(
+            "Skipping zoomies. Energy: {:6.4}, Playfulness: {:6.4}",
+            ctx.energy, ctx.playfulness
+        ),
+        BehaviorId::Vocalizing => println!(
+            "Skipping vocalizing. Energy: {:6.4}, Playfulness: {:6.4}, Fullness: {:6.4}, Comfort: {:6.4}, Fulfillment: {:6.4}, Affection: {:6.4}, Sociability: {:6.4}",
+            ctx.energy, ctx.playfulness, ctx.fullness, ctx.comfort, ctx.fulfillment, ctx.affection, ctx.sociability
+        ),
+        BehaviorId::Hunting => println!(
+            "Skipping hunting. Energy: {:6.4}, Playfulness: {:6.4}, Fullness: {:6.4}",
+            ctx.energy, ctx.playfulness, ctx.fullness
+        ),
+        BehaviorId::Playing => println!("Skipping playing. Playfulness: {:6.4} or no solo toys.", ctx.playfulness),
+        BehaviorId::Investigating => println!("Skipping investigating. Curiosity: {:6.4}", ctx.curiosity),
+        BehaviorId::Observing => println!("Skipping observing. Curiosity: {:6.4}", ctx.curiosity),
+        BehaviorId::SelfGrooming => println!(
+            "Skipping self grooming. Cleanliness: {:6.4}, Energy: {:6.4}",
+            ctx.cleanliness, ctx.energy
+        ),
+        BehaviorId::Stretching => println!("Skipping stretching. Comfort: {:6.2}", ctx.comfort),
+        BehaviorId::Pacing => println!(
+            "Skipping pacing. Comfort: {:6.4}, Serenity: {:6.4}",
+            ctx.comfort, ctx.serenity
+        ),
+        BehaviorId::Sulking => println!(
+            "Skipping sulking. Fulfillment: {:6.4}, Affection: {:6.4}, Fullness: {:6.4}, Comfort: {:6.4}",
+            ctx.fulfillment, ctx.affection, ctx.fullness, ctx.comfort
+        ),
+        BehaviorId::Mischief => println!(
+            "Skipping mischief. Mischievousness: {:6.4}, Maturity: {:6.4}, Playfulness: {:6.4}, Energy: {:6.4}",
+            ctx.mischievousness, ctx.maturity, ctx.playfulness, ctx.energy
+        ),
+        BehaviorId::Hiding => println!(
+            "Skipping hiding. Courage: {:6.4}, Affection: {:6.4}, Energy: {:6.4}",
+            ctx.courage, ctx.affection, ctx.energy
+        ),
+        BehaviorId::Lounging => println!(
+            "Skipping lounging. Focus: {:6.4}, Serenity: {:6.4}",
+            ctx.focus, ctx.serenity
+        ),
+        BehaviorId::Startled => println!("Skipping startled. Courage: {:6.4}", ctx.courage),
+        BehaviorId::Meandering => println!("Skipping meandering. Energy: {:6.4}", ctx.energy),
+        _ => {}
+    }
 }
 
 fn to_next_default(id: BehaviorId) -> NextBehavior {

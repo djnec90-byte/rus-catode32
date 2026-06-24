@@ -60,6 +60,28 @@ pub enum StatId {
 }
 
 impl StatId {
+    pub fn name(self) -> &'static str {
+        match self {
+            StatId::Fullness => "fullness",
+            StatId::Energy => "energy",
+            StatId::Comfort => "comfort",
+            StatId::Playfulness => "playfulness",
+            StatId::Focus => "focus",
+            StatId::Fulfillment => "fulfillment",
+            StatId::Cleanliness => "cleanliness",
+            StatId::Intelligence => "intelligence",
+            StatId::Maturity => "maturity",
+            StatId::Affection => "affection",
+            StatId::Fitness => "fitness",
+            StatId::Serenity => "serenity",
+            StatId::Courage => "courage",
+            StatId::Loyalty => "loyalty",
+            StatId::Mischievousness => "mischievousness",
+            StatId::Curiosity => "curiosity",
+            StatId::Sociability => "sociability",
+        }
+    }
+
     fn affected_by_sickness(self) -> bool {
         matches!(
             self,
@@ -888,6 +910,7 @@ impl GameContext {
     /// Stats near their ceiling resist further increases; stats near the floor
     /// resist further decreases.
     pub fn apply_stat_changes(&mut self, changes: &[(StatId, f32)]) {
+        use crate::println;
         use micromath::F32Ext;
         const EXP: f32 = 0.7;
         let sickness = self.sickness;
@@ -914,6 +937,15 @@ impl GameContext {
                 d *= room.powf(EXP);
             }
             let new_val = (cur + d).clamp(0.0, 100.0);
+            let color = if d >= 0.0 { "\x1b[32m" } else { "\x1b[31m" };
+            println!(
+                "[\x1b[36mStat\x1b[0m] {}: {:.1} {}{:+.2}\x1b[0m -> {:.1}",
+                stat.name(),
+                cur,
+                color,
+                d,
+                new_val
+            );
             *self.stat_mut(stat) = new_val;
         }
         self.recompute_health();

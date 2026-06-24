@@ -4,7 +4,7 @@ use crate::{
     behaviors::common,
     context::{GameContext, StatId},
     entities::character::Character,
-    rand,
+    println, rand,
     scene::SceneId,
     time_system::Weather,
 };
@@ -115,6 +115,10 @@ impl IdleBehavior {
         } else {
             pool[roll]
         };
+        println!(
+            "[idle] scene={:?} weight={} picked={:?}",
+            ctx.last_main_scene, weight, self.pose_id
+        );
     }
 }
 
