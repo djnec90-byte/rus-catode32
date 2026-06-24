@@ -102,7 +102,12 @@ impl Behavior for BeingGroomedBehavior {
         }
     }
 
-    fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
+    fn update(
+        &mut self,
+        ctx: &mut GameContext,
+        character: &mut Character,
+        dt: f32,
+    ) -> BehaviorState {
         self.phase_timer += dt;
         match self.phase {
             Phase::Accepting => {
@@ -120,10 +125,12 @@ impl Behavior for BeingGroomedBehavior {
                     self.phase = Phase::Satisfied;
                     self.phase_timer = 0.0;
                     self.pose_id = PoseId::SittingSideHappy;
+                    character.play_bursts(&mut ctx.rng, 5);
                 }
             }
             Phase::Satisfied => {
                 if self.phase_timer >= SATISFY_DURATION {
+                    character.play_bursts(&mut ctx.rng, 5);
                     return BehaviorState::Completed;
                 }
             }

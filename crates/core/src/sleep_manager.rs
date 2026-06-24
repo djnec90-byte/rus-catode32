@@ -8,7 +8,9 @@
 //!   - Any button press wakes the device; the wake press is consumed so it
 //!     does not register as a game action.
 //!   - On wake, set `ctx.pending_wake_greeting` so the pet greets the
-//!     returning player on its next behavior pick.
+//!     returning player on its next behavior pick, and signal the active
+//!     scene's behavior manager to wind down quickly so the greeting fires
+//!     promptly rather than at the next natural completion.
 //!
 //! TODO(deep_sleep): implement a "deep" mode (true MCU light/deep sleep with
 //! GPIO IRQ wake) once esp-hal's sleep APIs are wired up.
@@ -20,13 +22,6 @@
 //! GPIO IRQ + light sleep to match that intent. Until then the
 //! screen-off saving (~1-2 mA) is the only real power benefit of basic
 //! mode.
-//!
-//! TODO(fast_forward_wake): mark the current behavior almost-done on
-//! wake so the wake greeting fires shortly after the screen comes back
-//! on. Plumb an accessor from `SceneManager` down to the active
-//! `BehaviorManager` once the scene enum exposes one. Until then the
-//! greeting still happens, just at the current behavior's natural
-//! completion.
 
 use crate::platform::time::{Duration, Instant};
 use crate::println;
@@ -154,5 +149,9 @@ impl SleepManager {
         buttons.consume_all();
         // Greet the returning player on the next behavior pick.
         ctx.pending_wake_greeting = true;
+        // Tell the active behavior to wind down fast. Sleeping / napping
+        // either honor this (rouse in ~3s) or veto the greeting and stay
+        // asleep based on serenity (matches the MicroPython port).
+        scene_manager.mark_behavior_almost_done(ctx);
     }
 }

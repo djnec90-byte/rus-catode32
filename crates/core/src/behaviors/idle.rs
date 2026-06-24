@@ -20,9 +20,18 @@ const NEUTRAL: &[PoseId] = &[
     PoseId::StandingSideNeutralLookingDown,
 ];
 
+// Python: HAPPY_POSES = NEUTRAL_POSES + (extras...)
 const HAPPY: &[PoseId] = &[
+    // NEUTRAL
     PoseId::SittingSideNeutral,
+    PoseId::SittingSideLookingDown,
     PoseId::SittingForwardNeutral,
+    PoseId::SittingForwardSleepy,
+    PoseId::SittingForwardContent,
+    PoseId::SittingSillySideNeutral,
+    PoseId::StandingSideNeutral,
+    PoseId::StandingSideNeutralLookingDown,
+    // extras
     PoseId::StandingSideHappy,
     PoseId::SittingForwardAloof,
     PoseId::SittingForwardHappy,
@@ -32,9 +41,18 @@ const HAPPY: &[PoseId] = &[
     PoseId::SittingSillySideAloof,
 ];
 
+// Python: UPSET_POSES = NEUTRAL_POSES + (extras...)
 const UPSET: &[PoseId] = &[
+    // NEUTRAL
     PoseId::SittingSideNeutral,
+    PoseId::SittingSideLookingDown,
     PoseId::SittingForwardNeutral,
+    PoseId::SittingForwardSleepy,
+    PoseId::SittingForwardContent,
+    PoseId::SittingSillySideNeutral,
+    PoseId::StandingSideNeutral,
+    PoseId::StandingSideNeutralLookingDown,
+    // extras
     PoseId::StandingSideAngry,
     PoseId::SittingSideAngry,
     PoseId::SittingSideAnnoyed,
@@ -102,16 +120,37 @@ impl IdleBehavior {
 
     fn pick_new_pose(&mut self, ctx: &mut GameContext) {
         let pool = Self::pose_pool(ctx);
-        let weight = Self::look_away_weight(ctx.last_main_scene);
-        let look_away_slots = weight as usize * LOOK_AWAY_POSES.len();
-        let total = pool.len() + look_away_slots;
+        let weight = Self::look_away_weight(ctx.last_main_scene) as usize;
+        // Python excludes the current pose from the candidate list when it's
+        // in the pool and the pool has at least 2 entries.
+        let current = self.pose_id;
+        let exclude = pool.len() > 1 && pool.iter().any(|p| *p == current);
+        let pool_slots = if exclude { pool.len() - 1 } else { pool.len() };
+        // Each weight unit appends both LOOK_AWAY poses.
+        let look_away_slots = weight * LOOK_AWAY_POSES.len();
+        let total = pool_slots + look_away_slots;
         let roll = if total == 0 {
             0
         } else {
             rand::rand_range_u32(&mut ctx.rng, 0, total as u32 - 1) as usize
         };
-        self.pose_id = if roll >= pool.len() {
-            LOOK_AWAY_POSES[(roll - pool.len()) % LOOK_AWAY_POSES.len()]
+        self.pose_id = if roll >= pool_slots {
+            LOOK_AWAY_POSES[(roll - pool_slots) % LOOK_AWAY_POSES.len()]
+        } else if exclude {
+            // Walk the pool skipping `current` and pick by index.
+            let mut i = 0;
+            let mut chosen = pool[0];
+            for &p in pool {
+                if p == current {
+                    continue;
+                }
+                if i == roll {
+                    chosen = p;
+                    break;
+                }
+                i += 1;
+            }
+            chosen
         } else {
             pool[roll]
         };

@@ -17,8 +17,9 @@ enum Phase {
 pub struct SelfGroomingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    prepare_duration: f32,
+    groom_duration: f32,
+    finish_duration: f32,
     pose_id: PoseId,
 }
 
@@ -27,8 +28,9 @@ impl SelfGroomingBehavior {
         Self {
             phase: Phase::Preparing,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 10.0,
+            prepare_duration: 2.0,
+            groom_duration: 25.0,
+            finish_duration: 2.0,
             pose_id: PoseId::SittingSideNeutral,
         }
     }
@@ -49,7 +51,11 @@ impl Behavior for SelfGroomingBehavior {
         BehaviorId::SelfGrooming
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Preparing => 0.0,
+            Phase::Grooming => (self.phase_timer / self.groom_duration).clamp(0.0, 1.0),
+            Phase::Finishing => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -58,26 +64,28 @@ impl Behavior for SelfGroomingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Preparing;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 9.0, 14.0);
-        self.pose_id = PoseId::SittingSideAloof;
+        self.prepare_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 3.0);
+        self.groom_duration = rand::rand_range_f32(&mut ctx.rng, 10.0, 45.0);
+        self.finish_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 3.0);
+        self.pose_id = PoseId::SittingSideNeutral;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
-            Phase::Preparing if self.phase_timer >= 1.5 => {
+            Phase::Preparing if self.phase_timer >= self.prepare_duration => {
                 self.phase = Phase::Grooming;
                 self.phase_timer = 0.0;
                 self.pose_id = PoseId::SittingLickingSideLickingLeg;
             }
-            Phase::Grooming if self.phase_timer >= self.total - 3.0 => {
+            Phase::Grooming if self.phase_timer >= self.groom_duration => {
                 self.phase = Phase::Finishing;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingSideAloof;
+                self.pose_id = PoseId::SittingSideHappy;
             }
-            Phase::Finishing if self.phase_timer >= 2.0 => return BehaviorState::Completed,
+            Phase::Finishing if self.phase_timer >= self.finish_duration => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running

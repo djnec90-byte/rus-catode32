@@ -109,7 +109,12 @@ impl Behavior for EatingBehavior {
         self.pose_id = PoseId::StandingSideHappy;
     }
 
-    fn update(&mut self, ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
+    fn update(
+        &mut self,
+        ctx: &mut GameContext,
+        character: &mut Character,
+        dt: f32,
+    ) -> BehaviorState {
         self.phase_timer += dt;
         match self.phase {
             Phase::Lowering => {
@@ -154,6 +159,18 @@ impl Behavior for EatingBehavior {
             }
             Phase::PostEating => {
                 if self.phase_timer >= PAUSE_DURATION {
+                    // Kitchen-location burst (Python apply_location_bonus).
+                    if !self.rejecting
+                        && matches!(ctx.last_main_scene, crate::scene::SceneId::Kitchen)
+                    {
+                        let is_fav = if let EatingSource::Item(item) = self.source {
+                            ctx.fav_meal == Some(item) || ctx.fav_snack == Some(item)
+                        } else {
+                            false
+                        };
+                        let count = if is_fav { 8 } else { 5 };
+                        character.play_bursts(&mut ctx.rng, count);
+                    }
                     return BehaviorState::Completed;
                 }
             }

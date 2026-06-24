@@ -1,9 +1,15 @@
+use embedded_graphics::prelude::Point;
+
 use crate::{
-    assets::character::PoseId,
+    assets::{
+        character::PoseId,
+        icons::{QUESTION_MARK, QUESTION_MARK_FILL, QUESTION_MARK_H, QUESTION_MARK_W},
+    },
     behavior::{Behavior, BehaviorId, BehaviorState, NextBehavior},
     context::{GameContext, StatId},
     entities::character::Character,
     rand,
+    render::{Renderer, SpriteOpts},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -16,8 +22,9 @@ enum Phase {
 pub struct InvestigatingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    approach_duration: f32,
+    sniff_duration: f32,
+    react_duration: f32,
     pose_id: PoseId,
 }
 
@@ -26,9 +33,10 @@ impl InvestigatingBehavior {
         Self {
             phase: Phase::Approaching,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 7.0,
-            pose_id: PoseId::StandingSideSniffing,
+            approach_duration: 2.0,
+            sniff_duration: 16.0,
+            react_duration: 2.0,
+            pose_id: PoseId::SittingSideLookingDown,
         }
     }
 
@@ -51,7 +59,11 @@ impl Behavior for InvestigatingBehavior {
         BehaviorId::Investigating
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Approaching => 0.0,
+            Phase::Sniffing => (self.phase_timer / self.sniff_duration).clamp(0.0, 1.0),
+            Phase::Reacting => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -60,26 +72,28 @@ impl Behavior for InvestigatingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Approaching;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 6.0, 10.0);
-        self.pose_id = PoseId::StandingSideNeutral;
+        self.approach_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 4.0);
+        self.sniff_duration = rand::rand_range_f32(&mut ctx.rng, 13.0, 20.0);
+        self.react_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 3.0);
+        self.pose_id = PoseId::SittingSideLookingDown;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
-            Phase::Approaching if self.phase_timer >= 2.0 => {
+            Phase::Approaching if self.phase_timer >= self.approach_duration => {
                 self.phase = Phase::Sniffing;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::StandingSideSniffing;
+                self.pose_id = PoseId::LeaningForwardSideNeutral;
             }
-            Phase::Sniffing if self.phase_timer >= self.total - 4.0 => {
+            Phase::Sniffing if self.phase_timer >= self.sniff_duration => {
                 self.phase = Phase::Reacting;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingForwardShocked;
+                self.pose_id = PoseId::SittingSideLookingDown;
             }
-            Phase::Reacting if self.phase_timer >= 2.0 => return BehaviorState::Completed,
+            Phase::Reacting if self.phase_timer >= self.react_duration => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running
@@ -105,5 +119,48 @@ impl Behavior for InvestigatingBehavior {
             (StatId::Fulfillment, 0.05 * progress),
         ];
         ctx.apply_stat_changes(&bonus);
+    }
+
+    fn draw(
+        &self,
+        renderer: &mut Renderer,
+        _ctx: &GameContext,
+        char_screen: Point,
+        mirror_h: bool,
+    ) {
+        if matches!(self.phase, Phase::Reacting) {
+            return;
+        }
+        let qmark_y = char_screen.y - 42;
+        let qmark_x = if mirror_h {
+            char_screen.x + 18
+        } else {
+            char_screen.x - QUESTION_MARK_W as i32 - 18
+        };
+        let pos = Point::new(qmark_x, qmark_y);
+        // Punch-through fill behind the outline (matches draw_sprite_obj's
+        // fill_frames handling in the Python renderer).
+        renderer.draw_sprite_raw(
+            QUESTION_MARK_FILL,
+            QUESTION_MARK_W,
+            QUESTION_MARK_H,
+            pos,
+            SpriteOpts {
+                transparent: true,
+                transparent_color: true,
+                invert: true,
+                ..Default::default()
+            },
+        );
+        renderer.draw_sprite_raw(
+            QUESTION_MARK,
+            QUESTION_MARK_W,
+            QUESTION_MARK_H,
+            pos,
+            SpriteOpts {
+                transparent: true,
+                ..Default::default()
+            },
+        );
     }
 }

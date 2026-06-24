@@ -27,8 +27,9 @@ enum Phase {
 pub struct NappingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    settle_duration: f32,
+    nap_duration: f32,
+    wake_duration: f32,
     pose_id: PoseId,
     nap_pose: PoseId,
     z_timer: f32,
@@ -39,9 +40,10 @@ impl NappingBehavior {
         Self {
             phase: Phase::Settling,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 20.0,
-            pose_id: PoseId::LayingSideNeutral,
+            settle_duration: 3.0,
+            nap_duration: 20.0,
+            wake_duration: 3.0,
+            pose_id: PoseId::SittingSideLookingDown,
             nap_pose: PoseId::SleepingSideModest,
             z_timer: 0.0,
         }
@@ -89,7 +91,11 @@ impl Behavior for NappingBehavior {
     }
 
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Settling => 0.0,
+            Phase::Napping => (self.phase_timer / self.nap_duration).clamp(0.0, 1.0),
+            Phase::Waking => 1.0,
+        }
     }
 
     fn pose(&self) -> PoseId {
@@ -99,38 +105,40 @@ impl Behavior for NappingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _character: &mut Character) {
         self.phase = Phase::Settling;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 20.0, 40.0);
+        self.settle_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 5.0);
+        // Python init: uniform(30, 120), but start() overrides with randint(12, 45).
+        // The runtime value is the start() override, so we match that.
+        self.nap_duration = rand::rand_range_u32(&mut ctx.rng, 12, 45) as f32;
+        self.wake_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 5.0);
         self.nap_pose = common::pick_pose(&mut ctx.rng, NAP_POSES);
-        self.pose_id = PoseId::LayingSideNeutral;
+        self.pose_id = PoseId::SittingSideLookingDown;
     }
 
     fn update(
         &mut self,
         ctx: &mut GameContext,
-        _character: &mut Character,
+        character: &mut Character,
         dt: f32,
     ) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         self.z_timer += dt;
         match self.phase {
-            Phase::Settling if self.phase_timer >= 2.5 => {
+            Phase::Settling if self.phase_timer >= self.settle_duration => {
                 self.phase = Phase::Napping;
                 self.phase_timer = 0.0;
                 self.pose_id = self.nap_pose;
-            }
-            Phase::Napping if self.phase_timer >= self.total - 6.0 => {
-                self.phase = Phase::Waking;
-                self.phase_timer = 0.0;
-                self.pose_id = PoseId::LayingSideNeutral;
-                ctx.pending_wake_greeting = true;
-                // Opportunistic save at the wake transition.
-                // `save_if_needed` checks the elapsed timer itself, so it's a
-                // no-op for short naps.
                 crate::save::save_if_needed(ctx);
             }
-            Phase::Waking if self.phase_timer >= 2.5 => {
+            Phase::Napping if self.phase_timer >= self.nap_duration => {
+                self.phase = Phase::Waking;
+                self.phase_timer = 0.0;
+                // Python does NOT change pose on wake; the nap pose is kept.
+            }
+            Phase::Waking if self.phase_timer >= self.wake_duration => {
+                // Bedroom-location burst (Python apply_location_bonus).
+                if ctx.last_main_scene == SceneId::Bedroom {
+                    character.play_bursts(&mut ctx.rng, 5);
+                }
                 return BehaviorState::Completed;
             }
             _ => {}
@@ -258,9 +266,19 @@ impl Behavior for NappingBehavior {
         renderer.draw_text("z", Point::new(base_x, base_y + wave as i32));
     }
 
-    fn mark_almost_done(&mut self) {
-        self.phase = Phase::Waking;
-        self.phase_timer = 0.0;
-        self.elapsed = self.total - 2.0;
+    fn mark_almost_done(&mut self, ctx: &mut GameContext) {
+        // Only meaningful while still napping; let settling/waking finish.
+        if self.phase != Phase::Napping {
+            return;
+        }
+        // Lighter sleep, so the stay-asleep ceiling is lower than for sleeping.
+        let stay_chance = 0.05 + (ctx.serenity / 100.0) * 0.45;
+        if rand::rand_f32(&mut ctx.rng) < stay_chance {
+            // Cancel the wake greeting; the pet stays asleep.
+            ctx.pending_wake_greeting = false;
+            return;
+        }
+        // Rouse in ~3 seconds.
+        self.nap_duration = self.phase_timer + 3.0;
     }
 }

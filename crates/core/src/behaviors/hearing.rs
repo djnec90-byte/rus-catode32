@@ -19,21 +19,17 @@ enum Phase {
 pub struct HearingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    listen_duration: f32,
     pose_id: PoseId,
-    icon: Option<&'static str>,
 }
 
 impl HearingBehavior {
-    pub fn new(icon: Option<&'static str>) -> Self {
+    pub fn new(_icon: Option<&'static str>) -> Self {
         Self {
             phase: Phase::Noticing,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 4.0,
+            listen_duration: 3.0,
             pose_id: PoseId::SittingForwardShocked,
-            icon,
         }
     }
 }
@@ -43,7 +39,10 @@ impl Behavior for HearingBehavior {
         BehaviorId::Hearing
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Noticing => 0.0,
+            Phase::Listening => (self.phase_timer / self.listen_duration).clamp(0.0, 1.0),
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -52,21 +51,22 @@ impl Behavior for HearingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Noticing;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 3.5, 5.5);
+        self.listen_duration = rand::rand_range_f32(&mut ctx.rng, 2.0, 4.0);
         self.pose_id = PoseId::SittingForwardShocked;
     }
 
-    fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
+    fn update(&mut self, ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
         self.phase_timer += dt;
         match self.phase {
-            Phase::Noticing if self.phase_timer >= 1.0 => {
-                self.phase = Phase::Listening;
-                self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingForwardNeutral;
+            Phase::Noticing => {
+                let threshold = rand::rand_range_f32(&mut ctx.rng, 0.5, 1.0);
+                if self.phase_timer >= threshold {
+                    self.phase = Phase::Listening;
+                    self.phase_timer = 0.0;
+                    self.pose_id = PoseId::SittingSillySideAloof;
+                }
             }
-            Phase::Listening if self.phase_timer >= self.total - 1.0 => {
+            Phase::Listening if self.phase_timer >= self.listen_duration => {
                 return BehaviorState::Completed
             }
             _ => {}
@@ -98,13 +98,9 @@ impl Behavior for HearingBehavior {
         if self.phase != Phase::Noticing {
             return;
         }
-        let icon = self
-            .icon
-            .and_then(BubbleIcon::from_name)
-            .unwrap_or(BubbleIcon::Question);
         bubble::draw_above_char(
             renderer,
-            icon,
+            BubbleIcon::Question,
             char_screen.x,
             char_screen.y,
             0.0,

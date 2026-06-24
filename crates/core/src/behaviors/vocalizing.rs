@@ -23,8 +23,9 @@ enum Phase {
 pub struct VocalizingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    windup_duration: f32,
+    vocalize_duration: f32,
+    settle_duration: f32,
     pose_id: PoseId,
 }
 
@@ -33,8 +34,9 @@ impl VocalizingBehavior {
         Self {
             phase: Phase::WindingUp,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 6.0,
+            windup_duration: 1.5,
+            vocalize_duration: 10.0,
+            settle_duration: 2.0,
             pose_id: PoseId::SittingForwardNeutral,
         }
     }
@@ -119,7 +121,11 @@ impl Behavior for VocalizingBehavior {
         BehaviorId::Vocalizing
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::WindingUp => 0.0,
+            Phase::Vocalizing => (self.phase_timer / self.vocalize_duration).clamp(0.0, 1.0),
+            Phase::Settling => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -128,18 +134,20 @@ impl Behavior for VocalizingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::WindingUp;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 5.0, 9.0);
+        self.windup_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 2.0);
+        // Python __init__ sets vocalize_duration = uniform(6, 24) but start()
+        // overrides with randint(6, 15). Runtime value is the override.
+        self.vocalize_duration = rand::rand_range_u32(&mut ctx.rng, 6, 15) as f32;
+        self.settle_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 3.0);
         self.pose_id = PoseId::SittingForwardNeutral;
 
         ctx.pending_popup_icon = Some(pick_icon(ctx));
     }
 
     fn update(&mut self, ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
-            Phase::WindingUp if self.phase_timer >= 1.0 => {
+            Phase::WindingUp if self.phase_timer >= self.windup_duration => {
                 self.phase = Phase::Vocalizing;
                 self.phase_timer = 0.0;
                 self.pose_id = PoseId::YellingForwardLiftAndYell;
@@ -149,12 +157,14 @@ impl Behavior for VocalizingBehavior {
                 // value that drives the on-screen bubble.
                 ctx.pending_vocalize_broadcast = ctx.pending_popup_icon;
             }
-            Phase::Vocalizing if self.phase_timer >= self.total - 2.0 => {
+            Phase::Vocalizing if self.phase_timer >= self.vocalize_duration => {
                 self.phase = Phase::Settling;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingForwardAloof;
+                self.pose_id = PoseId::SittingSideNeutral;
             }
-            Phase::Settling if self.phase_timer >= 1.5 => return BehaviorState::Completed,
+            Phase::Settling if self.phase_timer >= self.settle_duration => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running

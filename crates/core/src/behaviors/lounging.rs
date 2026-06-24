@@ -12,16 +12,15 @@ use crate::{
 const NEUTRAL_LOUNGE: &[PoseId] = &[
     PoseId::LayingSideNeutral,
     PoseId::LayingSideNeutral2,
-    PoseId::LayingSideContent,
-    PoseId::LayingSideBored,
-    PoseId::LayingSideAloof,
 ];
 
+// Added when all four happy gates are met (fullness, comfort, affection, serenity).
+// Python: HAPPY_LOUNGE_POSES = NEUTRAL_LOUNGE_POSES + (aloof, happy).
 const HAPPY_LOUNGE: &[PoseId] = &[
-    PoseId::LayingSideHappy,
-    PoseId::LayingSideContent,
-    PoseId::LayingSideBliss,
+    PoseId::LayingSideNeutral,
+    PoseId::LayingSideNeutral2,
     PoseId::LayingSideAloof,
+    PoseId::LayingSideHappy,
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -34,8 +33,9 @@ enum Phase {
 pub struct LoungingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    settle_duration: f32,
+    lounge_duration: f32,
+    rouse_duration: f32,
     pose_id: PoseId,
     lounge_pose: PoseId,
 }
@@ -45,10 +45,11 @@ impl LoungingBehavior {
         Self {
             phase: Phase::Settling,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 18.0,
-            pose_id: PoseId::SittingSideNeutral,
-            lounge_pose: PoseId::LayingSideContent,
+            settle_duration: 6.0,
+            lounge_duration: 60.0,
+            rouse_duration: 3.0,
+            pose_id: PoseId::KneadingSideNeutral,
+            lounge_pose: PoseId::LayingSideNeutral,
         }
     }
 
@@ -72,7 +73,11 @@ impl Behavior for LoungingBehavior {
         BehaviorId::Lounging
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Settling => 0.0,
+            Phase::Lounging => (self.phase_timer / self.lounge_duration).clamp(0.0, 1.0),
+            Phase::Rousing => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -81,32 +86,34 @@ impl Behavior for LoungingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Settling;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 20.0, 45.0);
+        self.settle_duration = rand::rand_range_f32(&mut ctx.rng, 4.0, 10.0);
+        self.lounge_duration = rand::rand_range_f32(&mut ctx.rng, 30.0, 120.0);
+        self.rouse_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 5.0);
         let happy = ctx.fullness >= 50.0
             && ctx.comfort >= 50.0
             && ctx.affection >= 60.0
             && ctx.serenity >= 60.0;
         let pool = if happy { HAPPY_LOUNGE } else { NEUTRAL_LOUNGE };
         self.lounge_pose = common::pick_pose(&mut ctx.rng, pool);
-        self.pose_id = PoseId::SittingSideAloof;
+        self.pose_id = PoseId::KneadingSideNeutral;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
-            Phase::Settling if self.phase_timer >= 2.0 => {
+            Phase::Settling if self.phase_timer >= self.settle_duration => {
                 self.phase = Phase::Lounging;
                 self.phase_timer = 0.0;
                 self.pose_id = self.lounge_pose;
             }
-            Phase::Lounging if self.phase_timer >= self.total - 3.0 => {
+            Phase::Lounging if self.phase_timer >= self.lounge_duration => {
                 self.phase = Phase::Rousing;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::LayingSideNeutral;
+                self.pose_id = PoseId::LeaningForwardSideStretch;
             }
-            Phase::Rousing if self.phase_timer >= 3.0 => return BehaviorState::Completed,
+            Phase::Rousing if self.phase_timer >= self.rouse_duration => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running
@@ -114,14 +121,17 @@ impl Behavior for LoungingBehavior {
 
     fn next(&self, ctx: &GameContext) -> Option<NextBehavior> {
         let mut rng = ctx.rng;
-        let r = rand::rand_f32(&mut rng);
-        if ctx.comfort < 50.0 && r < 0.4 {
-            Some(NextBehavior::Kneading)
-        } else if ctx.energy < 40.0 && r < 0.7 {
-            Some(NextBehavior::Napping)
-        } else {
-            None
+        // Low serenity -> more likely to knead. 0% at serenity=100, 35% at serenity=0.
+        let kneading_p = (100.0 - ctx.serenity) * 0.35;
+        if rand::rand_f32(&mut rng) * 100.0 < kneading_p {
+            return Some(NextBehavior::Kneading);
         }
+        // Low energy -> more likely to nap. 0% at energy=100, 45% at energy=0.
+        let napping_p = (100.0 - ctx.energy) * 0.45;
+        if rand::rand_f32(&mut rng) * 100.0 < napping_p {
+            return Some(NextBehavior::Napping);
+        }
+        None
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {

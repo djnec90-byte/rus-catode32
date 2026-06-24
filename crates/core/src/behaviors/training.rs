@@ -7,6 +7,26 @@ use crate::{
     rand,
 };
 
+const REJECTION_DURATION: f32 = 5.0;
+
+const REJECTION_POSES: &[PoseId] = &[
+    PoseId::StandingSideNeutralLookingDown,
+    PoseId::SittingSideLookingDown,
+    PoseId::LayingSideNeutral2,
+    PoseId::LayingSideBored,
+    PoseId::SittingSillySideNeutral,
+    PoseId::StandingSideAnnoyed,
+    PoseId::LayingSideAnnoyed,
+    PoseId::LayingSideContent,
+    PoseId::SittingLickingSideLickingLeg,
+];
+
+const BEGGING_POSES: &[PoseId] = &[
+    PoseId::BeggingSideArmUp,
+    PoseId::BeggingSideArmUp2,
+    PoseId::BeggingSideDemanding,
+];
+
 fn rejection_chance(ctx: &GameContext) -> f32 {
     // Rejection thresholds: energy 30, focus 30, courage 25, sociability 25.
     let mut complement: f32 = 1.0;
@@ -37,12 +57,15 @@ pub struct TrainingBehavior {
     kind: TrainingKind,
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    warmup_duration: f32,
+    train_duration: f32,
+    cooldown_duration: f32,
     pose_id: PoseId,
-    alt_pose: PoseId,
+    begging_pair: [PoseId; 2],
+    begging_index: usize,
+    pose_timer: f32,
+    pose_duration: f32,
     rejected: bool,
-    swap_t: f32,
 }
 
 impl TrainingBehavior {
@@ -51,12 +74,15 @@ impl TrainingBehavior {
             kind,
             phase: Phase::WarmingUp,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 12.0,
-            pose_id: PoseId::BeggingSideArmUp,
-            alt_pose: PoseId::BeggingSideArmUp2,
+            warmup_duration: 3.0,
+            train_duration: 20.0,
+            cooldown_duration: 3.0,
+            pose_id: PoseId::StandingSideNeutral,
+            begging_pair: [PoseId::BeggingSideArmUp, PoseId::BeggingSideArmUp2],
+            begging_index: 0,
+            pose_timer: 0.0,
+            pose_duration: 2.0,
             rejected: false,
-            swap_t: 0.0,
         }
     }
 }
@@ -66,7 +92,12 @@ impl Behavior for TrainingBehavior {
         BehaviorId::Training
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::WarmingUp => 0.0,
+            Phase::Training => (self.phase_timer / self.train_duration).clamp(0.0, 1.0),
+            Phase::CoolingDown => 1.0,
+            Phase::Rejecting => (self.phase_timer / REJECTION_DURATION).clamp(0.0, 1.0),
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -75,51 +106,68 @@ impl Behavior for TrainingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         let p = rejection_chance(ctx);
         self.rejected = rand::rand_f32(&mut ctx.rng) < p;
-        self.phase = if self.rejected {
-            Phase::Rejecting
-        } else {
-            Phase::WarmingUp
-        };
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 10.0, 16.0);
-        let poses = [
-            PoseId::BeggingSideArmUp,
-            PoseId::BeggingSideArmUp2,
-            PoseId::BeggingSideDemanding,
-        ];
+        self.warmup_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 5.0);
+        self.train_duration = rand::rand_range_f32(&mut ctx.rng, 10.0, 30.0);
+        self.cooldown_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 5.0);
+
+        if self.rejected {
+            self.phase = Phase::Rejecting;
+            let i = rand::rand_range_u32(&mut ctx.rng, 0, (REJECTION_POSES.len() as u32) - 1)
+                as usize;
+            self.pose_id = REJECTION_POSES[i];
+            return;
+        }
+
+        self.phase = Phase::WarmingUp;
+        // Python: idx = randint(0, 2); offset = randint(1, 2);
+        // pair = [BEGGING[idx], BEGGING[(idx + offset) % 3]]
         let i = rand::rand_range_u32(&mut ctx.rng, 0, 2) as usize;
-        let j = (i + 1) % 3;
-        self.pose_id = if self.rejected {
-            PoseId::SittingSideAnnoyed
-        } else {
-            poses[i]
-        };
-        self.alt_pose = poses[j];
+        let offset = rand::rand_range_u32(&mut ctx.rng, 1, 2) as usize;
+        let j = (i + offset) % 3;
+        self.begging_pair = [BEGGING_POSES[i], BEGGING_POSES[j]];
+        self.begging_index = 0;
+        self.pose_timer = 0.0;
+        self.pose_duration = rand::rand_range_f32(&mut ctx.rng, 1.5, 2.5);
+        self.pose_id = PoseId::StandingSideNeutral;
     }
 
-    fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
+    fn update(
+        &mut self,
+        ctx: &mut GameContext,
+        character: &mut Character,
+        dt: f32,
+    ) -> BehaviorState {
         self.phase_timer += dt;
-        self.swap_t += dt;
         match self.phase {
-            Phase::Rejecting if self.phase_timer >= 3.0 => return BehaviorState::Completed,
-            Phase::WarmingUp if self.phase_timer >= 1.5 => {
+            Phase::Rejecting if self.phase_timer >= REJECTION_DURATION => {
+                return BehaviorState::Completed;
+            }
+            Phase::WarmingUp if self.phase_timer >= self.warmup_duration => {
                 self.phase = Phase::Training;
                 self.phase_timer = 0.0;
+                self.begging_index = 0;
+                self.pose_id = self.begging_pair[0];
             }
             Phase::Training => {
-                if self.swap_t >= 1.5 {
-                    self.swap_t = 0.0;
-                    core::mem::swap(&mut self.pose_id, &mut self.alt_pose);
+                self.pose_timer += dt;
+                if self.pose_timer >= self.pose_duration {
+                    self.begging_index = 1 - self.begging_index;
+                    self.pose_timer = 0.0;
+                    self.pose_duration = rand::rand_range_f32(&mut ctx.rng, 1.5, 2.5);
+                    self.pose_id = self.begging_pair[self.begging_index];
                 }
-                if self.phase_timer >= self.total - 2.0 {
+                if self.phase_timer >= self.train_duration {
                     self.phase = Phase::CoolingDown;
                     self.phase_timer = 0.0;
-                    self.pose_id = PoseId::SittingSideAloof;
+                    self.pose_id = PoseId::SittingSideLookingDown;
+                    character.play_bursts(&mut ctx.rng, 5);
                 }
             }
-            Phase::CoolingDown if self.phase_timer >= 2.0 => return BehaviorState::Completed,
+            Phase::CoolingDown if self.phase_timer >= self.cooldown_duration => {
+                character.play_bursts(&mut ctx.rng, 5);
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running

@@ -269,7 +269,9 @@ pub trait Behavior {
     }
 
     /// Wind down quickly on wake-from-sleep. Only sleeping / napping override.
-    fn mark_almost_done(&mut self) {}
+    /// Implementations may consult / clear `ctx.pending_wake_greeting` to honor
+    /// or veto the wake transition based on the cat's state.
+    fn mark_almost_done(&mut self, _ctx: &mut GameContext) {}
 
     /// True if this behavior steals the d-pad while it's running. The location
     /// scene uses this to suppress camera panning so the player can steer the
@@ -329,8 +331,8 @@ impl BehaviorManager {
         self.swap_to(next, ctx, character);
     }
 
-    pub fn mark_almost_done(&mut self) {
-        self.current.as_dyn_mut().mark_almost_done();
+    pub fn mark_almost_done(&mut self, ctx: &mut GameContext) {
+        self.current.as_dyn_mut().mark_almost_done(ctx);
     }
 
     pub fn current_id(&self) -> BehaviorId {

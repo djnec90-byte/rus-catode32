@@ -10,8 +10,6 @@ pub struct GoToBehavior {
     params: GoToParams,
     pose_id: PoseId,
     walker_accum: f32,
-    arrived: bool,
-    arrival_t: f32,
 }
 
 impl GoToBehavior {
@@ -20,8 +18,6 @@ impl GoToBehavior {
             params,
             pose_id: PoseId::WalkingSideNeutral,
             walker_accum: 0.0,
-            arrived: false,
-            arrival_t: 0.0,
         }
     }
 }
@@ -32,11 +28,7 @@ impl Behavior for GoToBehavior {
     }
 
     fn progress(&self) -> f32 {
-        if self.arrived {
-            1.0
-        } else {
-            0.5
-        }
+        0.5
     }
 
     fn pose(&self) -> PoseId {
@@ -44,7 +36,7 @@ impl Behavior for GoToBehavior {
     }
 
     fn enter(&mut self, _ctx: &mut GameContext, character: &mut Character) {
-        self.pose_id = PoseId::WalkingSideDetermined;
+        self.pose_id = PoseId::WalkingSideNeutral;
         character.mirror_h = self.params.target_x > character.pos.x;
     }
 
@@ -54,16 +46,6 @@ impl Behavior for GoToBehavior {
         character: &mut Character,
         dt: f32,
     ) -> BehaviorState {
-        if self.arrived {
-            self.arrival_t += dt;
-            if self.arrival_t >= 0.5 {
-                if let Some(scene) = self.params.pending_scene {
-                    ctx.pending_scene = Some(scene);
-                }
-                return BehaviorState::Completed;
-            }
-            return BehaviorState::Running;
-        }
         let dir = if character.pos.x < self.params.target_x {
             1
         } else {
@@ -78,8 +60,11 @@ impl Behavior for GoToBehavior {
             &mut self.walker_accum,
         );
         if common::distance_to(character, self.params.target_x) <= 1 {
-            self.arrived = true;
-            self.pose_id = PoseId::SittingSideNeutral;
+            character.pos.x = self.params.target_x;
+            if let Some(scene) = self.params.pending_scene {
+                ctx.pending_scene = Some(scene);
+            }
+            return BehaviorState::Completed;
         }
         BehaviorState::Running
     }

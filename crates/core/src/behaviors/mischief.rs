@@ -7,6 +7,11 @@ use crate::{
     rand,
 };
 
+const PLOT_DURATION: f32 = 1.5;
+const MISCHIEF_DURATION: f32 = 8.0;
+const SATISFY_DURATION: f32 = 1.5;
+const ZOOM_SPEED: f32 = 50.0;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Phase {
     Plotting,
@@ -14,17 +19,23 @@ enum Phase {
     Satisfied,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Sub {
+    Running,
+    Kneading,
+}
+
 pub struct MischiefBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
     pose_id: PoseId,
     dir: i32,
-    speed: f32,
+    dir_change_timer: f32,
+    dir_change_interval: f32,
     walker_accum: f32,
-    sub_t: f32,
-    knead_phase: bool,
+    sub: Sub,
+    sub_timer: f32,
+    sub_duration: f32,
 }
 
 impl MischiefBehavior {
@@ -32,14 +43,14 @@ impl MischiefBehavior {
         Self {
             phase: Phase::Plotting,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 12.0,
-            pose_id: PoseId::SittingSideAloof,
+            pose_id: PoseId::LeaningForwardSidePounce,
             dir: 1,
-            speed: 35.0,
+            dir_change_timer: 0.0,
+            dir_change_interval: 1.5,
             walker_accum: 0.0,
-            sub_t: 0.0,
-            knead_phase: false,
+            sub: Sub::Running,
+            sub_timer: 0.0,
+            sub_duration: 0.0,
         }
     }
 
@@ -61,7 +72,11 @@ impl Behavior for MischiefBehavior {
         BehaviorId::Mischief
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Plotting => 0.0,
+            Phase::Mischief => (self.phase_timer / MISCHIEF_DURATION).clamp(0.0, 1.0),
+            Phase::Satisfied => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -70,11 +85,14 @@ impl Behavior for MischiefBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Plotting;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 10.0, 18.0);
         self.dir = if rand::rand_bool(&mut ctx.rng, 0.5) { 1 } else { -1 };
-        self.speed = rand::rand_range_f32(&mut ctx.rng, 30.0, 45.0);
-        self.pose_id = PoseId::SittingSideAloof;
+        self.dir_change_timer = 0.0;
+        self.dir_change_interval = rand::rand_range_f32(&mut ctx.rng, 1.0, 2.5);
+        self.walker_accum = 0.0;
+        self.sub = Sub::Running;
+        self.sub_timer = 0.0;
+        self.sub_duration = 0.0;
+        self.pose_id = PoseId::LeaningForwardSidePounce;
     }
 
     fn update(
@@ -83,56 +101,98 @@ impl Behavior for MischiefBehavior {
         character: &mut Character,
         dt: f32,
     ) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
-        self.sub_t += dt;
         match self.phase {
-            Phase::Plotting if self.phase_timer >= 1.5 => {
+            Phase::Plotting if self.phase_timer >= PLOT_DURATION => {
                 self.phase = Phase::Mischief;
                 self.phase_timer = 0.0;
+                self.sub = Sub::Running;
+                self.sub_timer = 0.0;
+                self.sub_duration = rand::rand_range_f32(&mut ctx.rng, 1.5, 3.0);
                 self.pose_id = PoseId::RunningSideAngry;
+                character.mirror_h = self.dir > 0;
             }
             Phase::Mischief => {
-                if !self.knead_phase {
-                    let bounced = common::step_walker(
-                        character,
-                        ctx,
-                        self.dir,
-                        self.speed,
-                        dt,
-                        &mut self.walker_accum,
-                    );
-                    if bounced {
-                        self.dir = -self.dir;
+                let x_min = ctx.scene_x_min + 20;
+                let x_max = ctx.scene_x_max - 20;
+                self.sub_timer += dt;
+
+                match self.sub {
+                    Sub::Running => {
+                        self.walker_accum += ZOOM_SPEED * dt;
+                        let whole = self.walker_accum as i32;
+                        if whole != 0 {
+                            self.walker_accum -= whole as f32;
+                            character.pos.x += whole * self.dir.signum();
+                        }
+                        character.mirror_h = self.dir > 0;
+
+                        if character.pos.x <= x_min {
+                            character.pos.x = x_min;
+                            self.dir = 1;
+                            self.dir_change_timer = 0.0;
+                            self.dir_change_interval =
+                                rand::rand_range_f32(&mut ctx.rng, 1.0, 2.5);
+                            character.mirror_h = true;
+                        } else if character.pos.x >= x_max {
+                            character.pos.x = x_max;
+                            self.dir = -1;
+                            self.dir_change_timer = 0.0;
+                            self.dir_change_interval =
+                                rand::rand_range_f32(&mut ctx.rng, 1.0, 2.5);
+                            character.mirror_h = false;
+                        }
+
+                        self.dir_change_timer += dt;
+                        if self.dir_change_timer >= self.dir_change_interval {
+                            self.dir = -self.dir;
+                            self.dir_change_timer = 0.0;
+                            self.dir_change_interval =
+                                rand::rand_range_f32(&mut ctx.rng, 1.0, 2.5);
+                            character.mirror_h = self.dir > 0;
+                        }
+
+                        if self.sub_timer >= self.sub_duration {
+                            self.sub = Sub::Kneading;
+                            self.sub_timer = 0.0;
+                            self.sub_duration = rand::rand_range_f32(&mut ctx.rng, 0.4, 0.8);
+                            self.pose_id = PoseId::KneadingSideAngry;
+                        }
+                    }
+                    Sub::Kneading => {
+                        if self.sub_timer >= self.sub_duration {
+                            self.sub = Sub::Running;
+                            self.sub_timer = 0.0;
+                            self.sub_duration = rand::rand_range_f32(&mut ctx.rng, 1.5, 3.0);
+                            self.pose_id = PoseId::RunningSideAngry;
+                            character.mirror_h = self.dir > 0;
+                        }
                     }
                 }
-                if self.sub_t > 2.0 {
-                    self.sub_t = 0.0;
-                    self.knead_phase = !self.knead_phase;
-                    self.pose_id = if self.knead_phase {
-                        PoseId::KneadingSideAngry
-                    } else {
-                        PoseId::RunningSideAngry
-                    };
-                }
-                if self.phase_timer >= self.total - 1.0 {
+
+                if self.phase_timer >= MISCHIEF_DURATION {
                     self.phase = Phase::Satisfied;
                     self.phase_timer = 0.0;
-                    self.pose_id = PoseId::SittingSillySideAloof;
+                    self.pose_id = PoseId::SittingSillySideAnnoyed;
                 }
             }
-            Phase::Satisfied if self.phase_timer >= 1.0 => return BehaviorState::Completed,
+            Phase::Satisfied if self.phase_timer >= SATISFY_DURATION => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running
     }
 
     fn next(&self, ctx: &GameContext) -> Option<NextBehavior> {
-        if ctx.energy < 25.0 {
-            Some(NextBehavior::Hiding)
-        } else {
-            Some(NextBehavior::Pacing)
+        // Retreat if the pet's nerve broke and it's now depleted.
+        if ctx.courage < 60.0 && ctx.affection < 40.0 && ctx.energy < 40.0 {
+            let mut rng = ctx.rng;
+            if rand::rand_f32(&mut rng) < 0.4 {
+                return Some(NextBehavior::Hiding);
+            }
         }
+        Some(NextBehavior::Pacing)
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {

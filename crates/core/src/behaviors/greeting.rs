@@ -6,10 +6,13 @@ use crate::{
     behaviors::common,
     context::{GameContext, StatId},
     entities::character::Character,
-    rand,
     render::Renderer,
     ui::bubble::{self, BubbleIcon},
 };
+
+const WALK_SPEED: f32 = 20.0;
+const SNIFF_DURATION: f32 = 3.5;
+const REACT_DURATION: f32 = 2.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Phase {
@@ -21,11 +24,13 @@ enum Phase {
 pub struct GreetingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
     pose_id: PoseId,
+    sniff_pose: PoseId,
     target_x: Option<i32>,
     walker_accum: f32,
+    familiarity: f32,
+    bubble_icon: BubbleIcon,
+    bubble_progress: f32,
 }
 
 impl GreetingBehavior {
@@ -33,12 +38,33 @@ impl GreetingBehavior {
         Self {
             phase: Phase::Sniffing,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 6.0,
             pose_id: PoseId::StandingSideSniffing,
+            sniff_pose: PoseId::StandingSideSniffing,
             target_x: None,
             walker_accum: 0.0,
+            familiarity: 0.0,
+            bubble_icon: BubbleIcon::Question,
+            bubble_progress: 0.0,
         }
+    }
+
+    fn start_sniff(&mut self, _ctx: &GameContext) {
+        // TODO(friendship): Once the friendship system is ported, derive
+        // familiarity from `ctx.get_friendship_level(peer_mac)` using the
+        // current visit's peer MAC. See `visit_manager.py` for the Python
+        // implementation. Until then familiarity stays at 0.0 and the pet
+        // always shows the neutral question bubble + neutral react pose
+        // (matches Python behavior for a first encounter).
+        self.familiarity = 0.0;
+        self.bubble_icon = if self.familiarity >= 0.5 {
+            BubbleIcon::Heart
+        } else {
+            BubbleIcon::Question
+        };
+        self.phase = Phase::Sniffing;
+        self.phase_timer = 0.0;
+        self.bubble_progress = 0.0;
+        self.pose_id = self.sniff_pose;
     }
 }
 
@@ -47,28 +73,33 @@ impl Behavior for GreetingBehavior {
         BehaviorId::Greeting
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Walking => 0.0,
+            Phase::Sniffing => self.bubble_progress,
+            Phase::Reacting => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
     }
 
-    fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
-        // Pull a one-shot target_x from the context if one's been
-        // staged (visit greeting / proximity sniff). Falls back to
-        // an in-place sniff when no target was provided.
-        if let Some(tx) = ctx.pending_greeting_target_x.take() {
-            self.target_x = Some(tx);
-        }
-        self.phase = if self.target_x.is_some() {
-            Phase::Walking
-        } else {
-            Phase::Sniffing
-        };
+    fn enter(&mut self, ctx: &mut GameContext, character: &mut Character) {
+        // Pull a one-shot target_x from the context if one's been staged
+        // (visit greeting / proximity sniff). Falls back to an in-place sniff
+        // when no target was provided.
+        self.target_x = ctx.pending_greeting_target_x.take();
+        self.sniff_pose = PoseId::StandingSideSniffing;
+        self.walker_accum = 0.0;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 5.0, 8.0);
-        self.pose_id = PoseId::StandingSideSniffing;
+        self.bubble_progress = 0.0;
+
+        if let Some(tx) = self.target_x {
+            character.mirror_h = tx > character.pos.x;
+            self.pose_id = PoseId::WalkingSideNeutral;
+            self.phase = Phase::Walking;
+        } else {
+            self.start_sniff(ctx);
+        }
     }
 
     fn update(
@@ -77,7 +108,6 @@ impl Behavior for GreetingBehavior {
         character: &mut Character,
         dt: f32,
     ) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
             Phase::Walking => {
@@ -87,22 +117,31 @@ impl Behavior for GreetingBehavior {
                         character,
                         ctx,
                         dir,
-                        14.0,
+                        WALK_SPEED,
                         dt,
                         &mut self.walker_accum,
                     );
                     if common::distance_to(character, tx) <= 1 {
-                        self.phase = Phase::Sniffing;
-                        self.phase_timer = 0.0;
+                        character.pos.x = tx;
+                        self.start_sniff(ctx);
                     }
                 }
             }
-            Phase::Sniffing if self.phase_timer >= 2.5 => {
-                self.phase = Phase::Reacting;
-                self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingForwardHappy;
+            Phase::Sniffing => {
+                self.bubble_progress = (self.phase_timer / SNIFF_DURATION).min(1.0);
+                if self.phase_timer >= SNIFF_DURATION {
+                    self.phase = Phase::Reacting;
+                    self.phase_timer = 0.0;
+                    self.pose_id = if self.familiarity >= 0.5 {
+                        PoseId::SittingSideHappy
+                    } else {
+                        PoseId::SittingSideNeutral
+                    };
+                }
             }
-            Phase::Reacting if self.phase_timer >= 2.0 => return BehaviorState::Completed,
+            Phase::Reacting if self.phase_timer >= REACT_DURATION => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running
@@ -121,10 +160,10 @@ impl Behavior for GreetingBehavior {
         if matches!(self.phase, Phase::Sniffing) {
             bubble::draw_above_char(
                 renderer,
-                BubbleIcon::Question,
+                self.bubble_icon,
                 char_screen.x,
                 char_screen.y,
-                self.progress(),
+                self.bubble_progress,
                 mirror_h,
             );
         }

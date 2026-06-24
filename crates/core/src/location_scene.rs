@@ -23,7 +23,7 @@ use crate::{
     sky::SkyRenderer,
     ui::{
         bubble::{self, BubbleIcon, Corner},
-        burst::BurstEffect,
+        burst::HEAL_STYLE,
         location_menu::{GardeningAction, LocationAction, LocationMenu, LocationMenuResult},
         popup::Popup,
     },
@@ -100,7 +100,6 @@ pub struct LocationScene {
     pub behaviors: BehaviorManager,
     menu: LocationMenu,
     menu_active: bool,
-    burst: BurstEffect,
     placement: PlacementMode,
     selection: PlantSelectionMode,
     plant_bursts: PlantBursts,
@@ -159,7 +158,6 @@ impl LocationScene {
             behaviors: BehaviorManager::new(),
             menu: LocationMenu::new(),
             menu_active: false,
-            burst: BurstEffect::new(),
             placement: PlacementMode::new(),
             selection: PlantSelectionMode::new(),
             plant_bursts: PlantBursts::new(),
@@ -709,6 +707,12 @@ impl LocationScene {
 
     /// World-tick used by callers (e.g. the big-menu overlay) that want the
     /// scene to keep advancing while input is being consumed elsewhere. Runs
+    /// Tell the active behavior to wind down quickly (wake from device sleep).
+    /// Forwarded by the `Scene` trait method of the same name.
+    pub fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
+        self.behaviors.mark_almost_done(ctx);
+    }
+
     /// the same world updates as `update` but without reading the player's
     /// buttons, dispatching menu/placement input, or returning a scene swap.
     pub fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
@@ -733,7 +737,6 @@ impl LocationScene {
         self.character.set_pose(pose);
         self.character.animate(dt);
         self.character.eye_override = self.behaviors.current_eye_frame_override();
-        self.burst.update(dt);
         self.plant_bursts.update(dt);
         if self.placement.active() {
             self.placement.update(dt);
@@ -799,7 +802,6 @@ impl LocationScene {
         self.character.set_pose(pose);
         self.character.animate(dt);
         self.character.eye_override = self.behaviors.current_eye_frame_override();
-        self.burst.update(dt);
         self.plant_bursts.update(dt);
         if self.placement.active() {
             self.placement.update(dt);
@@ -1078,7 +1080,7 @@ impl LocationScene {
                     ctx.medicine -= 1;
                     ctx.medicine_pending = true;
                     if first_dose {
-                        self.burst.trigger_heal(&mut ctx.rng, 10);
+                        self.character.play_bursts_styled(&mut ctx.rng, 10, HEAL_STYLE);
                     }
                 }
             }
@@ -1244,7 +1246,7 @@ impl LocationScene {
         self.behaviors
             .draw_overlay(renderer, ctx, screen, self.character.mirror_h);
         self.character.draw_sick_overlay(renderer, camera_offset, ctx);
-        self.burst.draw(renderer, screen);
+        self.character.draw_bursts(renderer, screen);
         self.plant_bursts.draw(ctx, renderer, &self.environment);
     }
 

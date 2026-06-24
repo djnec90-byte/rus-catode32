@@ -21,6 +21,13 @@ pub const EXCLAIM_W: u16 = 8;
 pub const EXCLAIM_H: u16 = 16;
 pub const EXCLAIM: &[u8] = b"\x20\x70\xf8\xf8\xf8\x7c\x7c\x3c\x3c\x1c\x08\x00\x06\x0f\x0f\x06";
 
+// 10x16 question mark with fill, shown above the cat during the Investigating
+// behavior's approaching/sniffing phases.
+pub const QUESTION_MARK_W: u16 = 10;
+pub const QUESTION_MARK_H: u16 = 16;
+pub const QUESTION_MARK: &[u8] = b"\x1f\x00\x20\x80\x40\x40\x84\x40\x84\x40\x88\x80\x79\x00\x12\x00\x12\x00\x0a\x00\x04\x00\x00\x00\x03\x00\x04\x80\x04\x80\x03\x00";
+pub const QUESTION_MARK_FILL: &[u8] = b"\x1f\x00\x3f\x80\x7f\xc0\xff\xc0\xff\xc0\xff\x80\x7f\x00\x1e\x00\x1e\x00\x0e\x00\x04\x00\x00\x00\x03\x00\x07\x80\x07\x80\x03\x00";
+
 // Small 7x7 burst sprite frames (used by BurstEffect with `play_bursts(HEAL)`).
 pub const HEAL_W: u16 = 7;
 pub const HEAL_H: u16 = 7;

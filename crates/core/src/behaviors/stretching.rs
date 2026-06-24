@@ -16,8 +16,9 @@ enum Phase {
 pub struct StretchingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    prepare_duration: f32,
+    stretch_duration: f32,
+    relax_duration: f32,
     pose_id: PoseId,
 }
 
@@ -26,9 +27,10 @@ impl StretchingBehavior {
         Self {
             phase: Phase::Preparing,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 6.0,
-            pose_id: PoseId::SittingSideNeutral,
+            prepare_duration: 1.0,
+            stretch_duration: 6.0,
+            relax_duration: 8.0,
+            pose_id: PoseId::StandingSideNeutral,
         }
     }
 
@@ -48,7 +50,11 @@ impl Behavior for StretchingBehavior {
         BehaviorId::Stretching
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Preparing => 0.0,
+            Phase::Stretching => (self.phase_timer / self.stretch_duration).clamp(0.0, 1.0),
+            Phase::Relaxing => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -57,26 +63,28 @@ impl Behavior for StretchingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Preparing;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 5.0, 9.0);
-        self.pose_id = PoseId::SittingSideNeutral;
+        self.prepare_duration = rand::rand_range_f32(&mut ctx.rng, 0.5, 2.0);
+        self.stretch_duration = rand::rand_range_f32(&mut ctx.rng, 3.0, 12.0);
+        self.relax_duration = rand::rand_range_f32(&mut ctx.rng, 5.0, 15.0);
+        self.pose_id = PoseId::StandingSideNeutral;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
-            Phase::Preparing if self.phase_timer >= 1.5 => {
+            Phase::Preparing if self.phase_timer >= self.prepare_duration => {
                 self.phase = Phase::Stretching;
                 self.phase_timer = 0.0;
                 self.pose_id = PoseId::LeaningForwardSideStretch;
             }
-            Phase::Stretching if self.phase_timer >= self.total - 4.5 => {
+            Phase::Stretching if self.phase_timer >= self.stretch_duration => {
                 self.phase = Phase::Relaxing;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingSideAloof;
+                self.pose_id = PoseId::StandingSideNeutral;
             }
-            Phase::Relaxing if self.phase_timer >= 1.5 => return BehaviorState::Completed,
+            Phase::Relaxing if self.phase_timer >= self.relax_duration => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running

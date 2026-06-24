@@ -17,8 +17,9 @@ enum Phase {
 pub struct ObservingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    notice_duration: f32,
+    watch_duration: f32,
+    lose_interest_duration: f32,
     pose_id: PoseId,
 }
 
@@ -27,9 +28,10 @@ impl ObservingBehavior {
         Self {
             phase: Phase::Noticing,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 10.0,
-            pose_id: PoseId::SittingForwardNeutral,
+            notice_duration: 4.0,
+            watch_duration: 22.0,
+            lose_interest_duration: 4.0,
+            pose_id: PoseId::SittingSideLookingDown,
         }
     }
 
@@ -48,7 +50,11 @@ impl Behavior for ObservingBehavior {
         BehaviorId::Observing
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Noticing => 0.0,
+            Phase::Watching => (self.phase_timer / self.watch_duration).clamp(0.0, 1.0),
+            Phase::LosingInterest => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -57,26 +63,28 @@ impl Behavior for ObservingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Noticing;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 8.0, 14.0);
-        self.pose_id = PoseId::SittingForwardShocked;
+        self.notice_duration = rand::rand_range_f32(&mut ctx.rng, 2.0, 6.0);
+        self.watch_duration = rand::rand_range_f32(&mut ctx.rng, 15.0, 30.0);
+        self.lose_interest_duration = rand::rand_range_f32(&mut ctx.rng, 2.0, 6.0);
+        self.pose_id = PoseId::SittingSideLookingDown;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
-            Phase::Noticing if self.phase_timer >= 1.5 => {
+            Phase::Noticing if self.phase_timer >= self.notice_duration => {
                 self.phase = Phase::Watching;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingForwardNeutral;
+                self.pose_id = PoseId::LeaningForwardSideNeutral;
             }
-            Phase::Watching if self.phase_timer >= self.total - 2.5 => {
+            Phase::Watching if self.phase_timer >= self.watch_duration => {
                 self.phase = Phase::LosingInterest;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingForwardAloof;
+                self.pose_id = PoseId::SittingSillySideNeutral;
             }
-            Phase::LosingInterest if self.phase_timer >= 2.0 => return BehaviorState::Completed,
+            Phase::LosingInterest if self.phase_timer >= self.lose_interest_duration => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running
@@ -84,14 +92,13 @@ impl Behavior for ObservingBehavior {
 
     fn next(&self, ctx: &GameContext) -> Option<NextBehavior> {
         let mut rng = ctx.rng;
-        let r = rand::rand_f32(&mut rng);
-        if ctx.playfulness > 50.0 && r < 0.4 {
-            Some(NextBehavior::Chattering)
-        } else if ctx.focus > 40.0 && r < 0.7 {
-            Some(NextBehavior::Investigating)
-        } else {
-            None
+        if ctx.playfulness > 60.0 && rand::rand_f32(&mut rng) < 0.4 {
+            return Some(NextBehavior::Chattering);
         }
+        if ctx.focus > 55.0 && rand::rand_f32(&mut rng) < 0.3 {
+            return Some(NextBehavior::Investigating);
+        }
+        None
     }
 
     fn apply_completion_bonus(&self, ctx: &mut GameContext, progress: f32) {

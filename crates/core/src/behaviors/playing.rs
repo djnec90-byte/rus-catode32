@@ -419,7 +419,7 @@ impl PlayingBehavior {
             Phase::Watching => self.update_watching(ctx, dt, offset),
             Phase::Pouncing => self.update_pounce(ctx, character, dt, true),
             Phase::Recovering => self.update_recovering(ctx, dt, offset),
-            Phase::Catching => self.update_catching(),
+            Phase::Catching => self.update_catching(ctx, character),
             _ => {}
         }
     }
@@ -484,9 +484,10 @@ impl PlayingBehavior {
         let _ = dt;
     }
 
-    fn update_catching(&mut self) {
+    fn update_catching(&mut self, ctx: &mut GameContext, character: &mut Character) {
         if self.phase_timer >= POUNCE_CATCH_DURATION {
             self.progress_v = 1.0;
+            character.play_bursts(&mut ctx.rng, 5);
             self.completed_natural = true;
         }
     }
@@ -763,7 +764,7 @@ impl PlayingBehavior {
             Phase::Watching => self.update_string_physics(ctx, character, dt),
             Phase::Pouncing => self.update_string_pounce(ctx, character, dt),
             Phase::Recovering => self.update_string_recovering(ctx, character, dt),
-            Phase::Catching => self.update_catching(),
+            Phase::Catching => self.update_catching(ctx, character),
             _ => {}
         }
     }
@@ -869,9 +870,10 @@ impl PlayingBehavior {
         let _ = dt;
     }
 
-    fn update_bubbles_catching(&mut self) {
+    fn update_bubbles_catching(&mut self, ctx: &mut GameContext, character: &mut Character) {
         if self.phase_timer >= POUNCE_CATCH_DURATION && self.bubbles.is_empty() {
             self.progress_v = 1.0;
+            character.play_bursts(&mut ctx.rng, 5);
             self.completed_natural = true;
         }
     }
@@ -880,7 +882,7 @@ impl PlayingBehavior {
         self.update_bubble_particles(dt, self.play_char_y);
 
         if matches!(self.phase, Phase::Catching) {
-            self.update_bubbles_catching();
+            self.update_bubbles_catching(ctx, character);
             return;
         }
 

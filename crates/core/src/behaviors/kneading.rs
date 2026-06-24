@@ -7,11 +7,6 @@ use crate::{
     rand,
 };
 
-const KNEAD_POSES: &[PoseId] = &[
-    PoseId::KneadingSideNeutral,
-    PoseId::KneadingSideHappy,
-];
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Phase {
     Kneading,
@@ -21,8 +16,8 @@ enum Phase {
 pub struct KneadingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    knead_duration: f32,
+    settle_duration: f32,
     pose_id: PoseId,
 }
 
@@ -31,8 +26,8 @@ impl KneadingBehavior {
         Self {
             phase: Phase::Kneading,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 8.0,
+            knead_duration: 25.0,
+            settle_duration: 2.0,
             pose_id: PoseId::KneadingSideNeutral,
         }
     }
@@ -43,7 +38,10 @@ impl Behavior for KneadingBehavior {
         BehaviorId::Kneading
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Kneading => (self.phase_timer / self.knead_duration).clamp(0.0, 1.0),
+            Phase::Settling => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -52,21 +50,22 @@ impl Behavior for KneadingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Kneading;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 6.0, 12.0);
-        self.pose_id = KNEAD_POSES[rand::rand_range_u32(&mut ctx.rng, 0, 1) as usize];
+        self.knead_duration = rand::rand_range_f32(&mut ctx.rng, 10.0, 45.0);
+        self.settle_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 4.0);
+        self.pose_id = PoseId::KneadingSideNeutral;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
-            Phase::Kneading if self.phase_timer >= self.total - 2.0 => {
+            Phase::Kneading if self.phase_timer >= self.knead_duration => {
                 self.phase = Phase::Settling;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::LayingSideContent;
+                self.pose_id = PoseId::LeaningForwardSideNeutral;
             }
-            Phase::Settling if self.phase_timer >= 2.0 => return BehaviorState::Completed,
+            Phase::Settling if self.phase_timer >= self.settle_duration => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running

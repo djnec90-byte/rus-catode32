@@ -6,6 +6,10 @@ use crate::{
     rand,
 };
 
+const FIND_DURATION: f32 = 1.5;
+const HIDE_DURATION: f32 = 12.0;
+const EMERGE_DURATION: f32 = 1.5;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Phase {
     FindingSpot,
@@ -16,8 +20,6 @@ enum Phase {
 pub struct HidingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
     pose_id: PoseId,
 }
 
@@ -26,9 +28,7 @@ impl HidingBehavior {
         Self {
             phase: Phase::FindingSpot,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 12.0,
-            pose_id: PoseId::SittingSideAnnoyed,
+            pose_id: PoseId::LayingSideBored,
         }
     }
 
@@ -52,35 +52,38 @@ impl Behavior for HidingBehavior {
         BehaviorId::Hiding
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::FindingSpot => 0.0,
+            Phase::Hiding => (self.phase_timer / HIDE_DURATION).clamp(0.0, 1.0),
+            Phase::Emerging => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
     }
 
-    fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
+    fn enter(&mut self, _ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::FindingSpot;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 10.0, 18.0);
-        self.pose_id = PoseId::SittingBackBackNeutral;
+        self.pose_id = PoseId::LayingSideBored;
     }
 
     fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         match self.phase {
-            Phase::FindingSpot if self.phase_timer >= 2.0 => {
+            Phase::FindingSpot if self.phase_timer >= FIND_DURATION => {
                 self.phase = Phase::Hiding;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::LayingSideAnnoyed;
+                self.pose_id = PoseId::LayingSideContent;
             }
-            Phase::Hiding if self.phase_timer >= self.total - 2.0 => {
+            Phase::Hiding if self.phase_timer >= HIDE_DURATION => {
                 self.phase = Phase::Emerging;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingSideLookingDown;
+                self.pose_id = PoseId::LayingSideBored;
             }
-            Phase::Emerging if self.phase_timer >= 2.0 => return BehaviorState::Completed,
+            Phase::Emerging if self.phase_timer >= EMERGE_DURATION => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running

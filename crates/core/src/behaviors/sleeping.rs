@@ -29,8 +29,10 @@ enum Phase {
 pub struct SleepingBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    considering_duration: f32,
+    settle_duration: f32,
+    sleep_duration: f32,
+    wake_duration: f32,
     pose_id: PoseId,
     sleep_pose: PoseId,
     z_timer: f32,
@@ -41,9 +43,11 @@ impl SleepingBehavior {
         Self {
             phase: Phase::Considering,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 50.0,
-            pose_id: PoseId::SittingForwardSleepy,
+            considering_duration: 2.0,
+            settle_duration: 5.0,
+            sleep_duration: 240.0,
+            wake_duration: 5.0,
+            pose_id: PoseId::SittingSideLookingDown,
             sleep_pose: PoseId::SleepingSideModest,
             z_timer: 0.0,
         }
@@ -91,7 +95,11 @@ impl Behavior for SleepingBehavior {
     }
 
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Considering | Phase::Settling => 0.0,
+            Phase::Sleeping => (self.phase_timer / self.sleep_duration).clamp(0.0, 1.0),
+            Phase::Waking => 1.0,
+        }
     }
 
     fn pose(&self) -> PoseId {
@@ -101,43 +109,45 @@ impl Behavior for SleepingBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _character: &mut Character) {
         self.phase = Phase::Considering;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 45.0, 90.0);
+        self.considering_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 4.0);
+        self.settle_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 10.0);
+        self.sleep_duration = rand::rand_range_u32(&mut ctx.rng, 120, 360) as f32;
+        self.wake_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 10.0);
         self.sleep_pose = common::pick_pose(&mut ctx.rng, SLEEP_POSES);
-        self.pose_id = PoseId::SittingForwardSleepy;
+        self.pose_id = PoseId::SittingSideLookingDown;
     }
 
     fn update(
         &mut self,
         ctx: &mut GameContext,
-        _character: &mut Character,
+        character: &mut Character,
         dt: f32,
     ) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         self.z_timer += dt;
         match self.phase {
-            Phase::Considering if self.phase_timer >= 3.0 => {
+            Phase::Considering if self.phase_timer >= self.considering_duration => {
                 self.phase = Phase::Settling;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::LayingSideNeutral;
+                self.pose_id = PoseId::LeaningForwardSideNeutral;
             }
-            Phase::Settling if self.phase_timer >= 3.0 => {
+            Phase::Settling if self.phase_timer >= self.settle_duration => {
                 self.phase = Phase::Sleeping;
                 self.phase_timer = 0.0;
                 self.pose_id = self.sleep_pose;
             }
-            Phase::Sleeping if self.phase_timer >= self.total - 9.0 => {
+            Phase::Sleeping if self.phase_timer >= self.sleep_duration => {
                 self.phase = Phase::Waking;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::LayingSideNeutral;
-                ctx.pending_wake_greeting = true;
-                // Opportunistic save at the wake transition.
-                // `save_if_needed` checks the elapsed timer itself, so it's a
-                // no-op for short naps.
-                crate::save::save_if_needed(ctx);
+                // Python does NOT change pose on wake; the sleep pose is kept.
             }
-            Phase::Waking if self.phase_timer >= 3.0 => {
+            Phase::Waking if self.phase_timer >= self.wake_duration => {
+                // Opportunistic save at the wake transition.
+                crate::save::save_if_needed(ctx);
+                // Bedroom-location burst (Python apply_location_bonus).
+                if ctx.last_main_scene == SceneId::Bedroom {
+                    character.play_bursts(&mut ctx.rng, 5);
+                }
                 return BehaviorState::Completed;
             }
             _ => {}
@@ -276,10 +286,18 @@ impl Behavior for SleepingBehavior {
         }
     }
 
-    fn mark_almost_done(&mut self) {
-        // Skip directly to the waking phase so the wake greeting fires quickly.
-        self.phase = Phase::Waking;
-        self.phase_timer = 0.0;
-        self.elapsed = self.total - 3.0;
+    fn mark_almost_done(&mut self, ctx: &mut GameContext) {
+        // Only meaningful while still sleeping; let considering/settling/waking finish.
+        if self.phase != Phase::Sleeping {
+            return;
+        }
+        // More serene cats sleep more deeply and are less likely to stir.
+        let stay_chance = 0.1 + (ctx.serenity / 100.0) * 0.7;
+        if rand::rand_f32(&mut ctx.rng) < stay_chance {
+            ctx.pending_wake_greeting = false;
+            return;
+        }
+        // Rouse in ~3 seconds.
+        self.sleep_duration = self.phase_timer + 3.0;
     }
 }

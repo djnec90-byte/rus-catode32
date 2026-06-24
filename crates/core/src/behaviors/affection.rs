@@ -127,9 +127,15 @@ impl Behavior for AffectionBehavior {
         }
     }
 
-    fn update(&mut self, _ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
+    fn update(
+        &mut self,
+        ctx: &mut GameContext,
+        character: &mut Character,
+        dt: f32,
+    ) -> BehaviorState {
         self.phase_timer += dt;
         if self.phase_timer >= self.duration {
+            character.play_bursts(&mut ctx.rng, 5);
             BehaviorState::Completed
         } else {
             BehaviorState::Running

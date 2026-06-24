@@ -2,7 +2,8 @@
 //!
 //! By default each particle animates through the 5-frame `BURST1` sparkle at
 //! 8 fps (0.625s per particle), with a 0.5s stagger between particles plus a
-//! small jitter.
+//! small jitter. Multiple groups can be active concurrently — each call to
+//! `trigger_*` adds an independent group anchored at the draw-time `base`.
 
 use embedded_graphics::prelude::Point;
 use heapless::Vec;
@@ -13,7 +14,8 @@ use crate::{
     render::{Renderer, Sprite, SpriteOpts},
 };
 
-const MAX_PARTICLES: usize = 12;
+const MAX_PARTICLES_PER_GROUP: usize = 12;
+const MAX_GROUPS: usize = 4;
 
 #[derive(Clone, Copy)]
 struct Particle {
@@ -67,25 +69,14 @@ pub const HEAL_STYLE: BurstStyle = BurstStyle {
 const HEAL_FRAMES: &[&[u8]] = &[icons::HEAL_FRAME];
 const HEAL_FILL_FRAMES: &[&[u8]] = &[icons::HEAL_FILL];
 
-pub struct BurstEffect {
-    particles: Vec<Particle, MAX_PARTICLES>,
+#[derive(Clone)]
+struct Group {
+    particles: Vec<Particle, MAX_PARTICLES_PER_GROUP>,
     timer: f32,
     style: BurstStyle,
 }
 
-impl BurstEffect {
-    pub fn new() -> Self {
-        Self {
-            particles: Vec::new(),
-            timer: 0.0,
-            style: DEFAULT_STYLE,
-        }
-    }
-
-    pub fn active(&self) -> bool {
-        !self.particles.is_empty()
-    }
-
+impl Group {
     fn total_duration(&self) -> f32 {
         let max_delay = self
             .particles
@@ -93,6 +84,32 @@ impl BurstEffect {
             .map(|p| p.delay)
             .fold(0.0_f32, |a, b| a.max(b));
         max_delay + self.style.total()
+    }
+
+    fn expired(&self) -> bool {
+        self.timer >= self.total_duration()
+    }
+}
+
+pub struct BurstEffect {
+    groups: Vec<Group, MAX_GROUPS>,
+}
+
+impl BurstEffect {
+    pub fn new() -> Self {
+        Self {
+            groups: Vec::new(),
+        }
+    }
+
+    pub fn active(&self) -> bool {
+        !self.groups.is_empty()
+    }
+
+    /// Character-style spread (Python default): dx in [-35, 35], dy in [-50,
+    /// -20], stagger 0.5s + up to 0.25s jitter.
+    pub fn trigger_character(&mut self, rng: &mut u32, count: usize, style: BurstStyle) {
+        self.trigger_with(rng, count, style, -35.0, 35.0, -50.0, -20.0, 0.5);
     }
 
     /// HEAL sparkles around the character: wide spread, drifting upward.
@@ -117,78 +134,95 @@ impl BurstEffect {
         spread_y_max: f32,
         stagger: f32,
     ) {
-        self.particles.clear();
-        self.timer = 0.0;
-        self.style = style;
-        let n = count.min(MAX_PARTICLES);
+        // Drop the oldest still-running group if we're at capacity, so a fresh
+        // call always lands.
+        if self.groups.len() == MAX_GROUPS {
+            self.groups.remove(0);
+        }
+        let mut group = Group {
+            particles: Vec::new(),
+            timer: 0.0,
+            style,
+        };
+        let n = count.min(MAX_PARTICLES_PER_GROUP);
         for i in 0..n {
             let dx = rand::rand_range_f32(rng, spread_x_min, spread_x_max) as i16;
             let dy = rand::rand_range_f32(rng, spread_y_min, spread_y_max) as i16;
             // Keep the jitter proportional so non-default stagger values
             // still scale.
             let jitter = rand::rand_range_f32(rng, 0.0, stagger * 0.5);
-            let _ = self.particles.push(Particle {
+            let _ = group.particles.push(Particle {
                 dx,
                 dy,
                 delay: i as f32 * stagger + jitter,
             });
         }
+        let _ = self.groups.push(group);
     }
 
     pub fn update(&mut self, dt: f32) {
-        if self.particles.is_empty() {
+        if self.groups.is_empty() {
             return;
         }
-        self.timer += dt;
-        if self.timer >= self.total_duration() {
-            self.particles.clear();
-            self.timer = 0.0;
+        for g in self.groups.iter_mut() {
+            g.timer += dt;
+        }
+        // Retain only groups that still have remaining lifetime.
+        let mut i = 0;
+        while i < self.groups.len() {
+            if self.groups[i].expired() {
+                self.groups.remove(i);
+            } else {
+                i += 1;
+            }
         }
     }
 
     pub fn draw(&self, renderer: &mut Renderer, anchor: Point) {
-        if self.particles.is_empty() {
+        if self.groups.is_empty() {
             return;
         }
-        let hw = (self.style.width / 2) as i32;
-        let hh = (self.style.height / 2) as i32;
-        let total = self.style.total();
-        let n_frames = self.style.frames.len();
-        for p in &self.particles {
-            let elapsed = self.timer - p.delay;
-            if elapsed < 0.0 || elapsed >= total {
-                continue;
-            }
-            let frame_idx = ((elapsed / self.style.frame_dur) as usize).min(n_frames - 1);
-            let pos = Point::new(
-                anchor.x + p.dx as i32 - hw,
-                anchor.y + p.dy as i32 - hh,
-            );
-            if let Some(fill_frames) = self.style.fill_frames {
-                let fi = frame_idx.min(fill_frames.len() - 1);
+        for g in &self.groups {
+            let hw = (g.style.width / 2) as i32;
+            let hh = (g.style.height / 2) as i32;
+            let total = g.style.total();
+            let n_frames = g.style.frames.len();
+            for p in &g.particles {
+                let elapsed = g.timer - p.delay;
+                if elapsed < 0.0 || elapsed >= total {
+                    continue;
+                }
+                let frame_idx = ((elapsed / g.style.frame_dur) as usize).min(n_frames - 1);
+                let pos = Point::new(
+                    anchor.x + p.dx as i32 - hw,
+                    anchor.y + p.dy as i32 - hh,
+                );
+                if let Some(fill_frames) = g.style.fill_frames {
+                    let fi = frame_idx.min(fill_frames.len() - 1);
+                    renderer.draw_sprite_raw(
+                        fill_frames[fi],
+                        g.style.width,
+                        g.style.height,
+                        pos,
+                        SpriteOpts {
+                            transparent: true,
+                            transparent_color: true,
+                            invert: true,
+                            ..Default::default()
+                        },
+                    );
+                }
                 renderer.draw_sprite_raw(
-                    fill_frames[fi],
-                    self.style.width,
-                    self.style.height,
+                    g.style.frames[frame_idx],
+                    g.style.width,
+                    g.style.height,
                     pos,
                     SpriteOpts {
                         transparent: true,
-                        transparent_color: true,
-                        invert: true,
                         ..Default::default()
                     },
                 );
             }
-            renderer.draw_sprite_raw(
-                self.style.frames[frame_idx],
-                self.style.width,
-                self.style.height,
-                pos,
-                SpriteOpts {
-                    transparent: true,
-                    ..Default::default()
-                },
-            );
         }
     }
 }

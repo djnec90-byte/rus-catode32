@@ -64,6 +64,11 @@ pub trait Scene {
     /// timers, behaviors, and animations keep moving while the player navigates
     /// the menu. Default is a no-op (the scene pauses).
     fn tick_background(&mut self, _ctx: &mut GameContext, _dt: f32) {}
+
+    /// Tell the active behavior (if any) to wind down quickly. Called on the
+    /// wake side of basic sleep so the wake greeting fires promptly. Default
+    /// is a no-op; location-style scenes delegate to their behavior manager.
+    fn mark_behavior_almost_done(&mut self, _ctx: &mut GameContext) {}
 }
 
 pub struct SceneManager {
@@ -174,6 +179,13 @@ impl SceneManager {
     /// Behavior-requested scene changes mid-sleep are intentionally dropped.
     pub fn sleep_update(&mut self, ctx: &mut GameContext, buttons: &mut Buttons, dt: f32) {
         let _ = self.current.as_scene_mut().update(ctx, buttons, dt);
+    }
+
+    /// Forward a "wind down" signal to the current scene's active behavior.
+    /// Called by `SleepManager` on wake so napping/sleeping can decide whether
+    /// to honor the wake greeting or stay asleep.
+    pub fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
+        self.current.as_scene_mut().mark_behavior_almost_done(ctx);
     }
 
     pub fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, dt_ms: u64) {

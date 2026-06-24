@@ -6,6 +6,7 @@ use crate::{
     character::{draw_pose, pose_layout, PoseAnim},
     context::GameContext,
     render::{Renderer, SpriteOpts},
+    ui::burst::{BurstEffect, BurstStyle, DEFAULT_STYLE},
 };
 
 pub struct Character {
@@ -19,6 +20,9 @@ pub struct Character {
     /// Vertical render offset applied at draw time. Negative values lift the
     /// sprite up; used to sink the cat into the cat bed during sleep/nap.
     pub draw_y_offset: i32,
+    /// Burst sparkle effects spawned by behaviors via `play_bursts()`. Each
+    /// call adds a new group; up to 4 can run concurrently.
+    bursts: BurstEffect,
     /// Free-running counter feeding the sick sweat-line frame index.
     sweat_timer: f32,
 }
@@ -32,8 +36,24 @@ impl Character {
             anim: PoseAnim::new(1),
             eye_override: None,
             draw_y_offset: 0,
+            bursts: BurstEffect::new(),
             sweat_timer: 0.0,
         }
+    }
+
+    /// Spawn a sparkle burst group around the character (matches Python
+    /// `Character.play_bursts`). Uses the default BURST1 sparkle.
+    pub fn play_bursts(&mut self, rng: &mut u32, count: usize) {
+        self.bursts.trigger_character(rng, count, DEFAULT_STYLE);
+    }
+
+    /// Spawn a styled burst (e.g. HEAL for medicine).
+    pub fn play_bursts_styled(&mut self, rng: &mut u32, count: usize, style: BurstStyle) {
+        self.bursts.trigger_character(rng, count, style);
+    }
+
+    pub fn draw_bursts(&self, renderer: &mut Renderer, screen: Point) {
+        self.bursts.draw(renderer, screen);
     }
 
     pub fn reseed_anim(&mut self) {
@@ -57,6 +77,7 @@ impl Character {
 
     pub fn animate(&mut self, dt: f32) {
         self.anim.update(self.pose_id.data(), dt);
+        self.bursts.update(dt);
         self.sweat_timer += dt;
     }
 

@@ -366,6 +366,10 @@ impl Scene for VacationBeachScene {
         self.state.tick(ctx, scaled);
     }
 
+    fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
+        self.base.mark_behavior_almost_done(ctx);
+    }
+
     fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
         if self.base.menu_active() {
             self.base.draw_menu(renderer);

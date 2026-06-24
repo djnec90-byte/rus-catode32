@@ -26,8 +26,8 @@ enum Phase {
 pub struct StartledBehavior {
     phase: Phase,
     phase_timer: f32,
-    elapsed: f32,
-    total: f32,
+    startled_duration: f32,
+    recover_duration: f32,
     pose_id: PoseId,
     wobble_timer: f32,
     wobble_angle: f32,
@@ -38,8 +38,8 @@ impl StartledBehavior {
         Self {
             phase: Phase::Startled,
             phase_timer: 0.0,
-            elapsed: 0.0,
-            total: 3.0,
+            startled_duration: 10.0,
+            recover_duration: 2.0,
             pose_id: PoseId::SittingForwardShocked,
             wobble_timer: 0.0,
             wobble_angle: 0.0,
@@ -66,7 +66,10 @@ impl Behavior for StartledBehavior {
         BehaviorId::Startled
     }
     fn progress(&self) -> f32 {
-        (self.elapsed / self.total).clamp(0.0, 1.0)
+        match self.phase {
+            Phase::Startled => (self.phase_timer / self.startled_duration).clamp(0.0, 1.0),
+            Phase::Recovering => 1.0,
+        }
     }
     fn pose(&self) -> PoseId {
         self.pose_id
@@ -75,15 +78,14 @@ impl Behavior for StartledBehavior {
     fn enter(&mut self, ctx: &mut GameContext, _: &mut Character) {
         self.phase = Phase::Startled;
         self.phase_timer = 0.0;
-        self.elapsed = 0.0;
-        self.total = rand::rand_range_f32(&mut ctx.rng, 2.5, 4.0);
+        self.startled_duration = rand::rand_range_f32(&mut ctx.rng, 5.0, 15.0);
+        self.recover_duration = rand::rand_range_f32(&mut ctx.rng, 1.0, 3.0);
         self.pose_id = PoseId::SittingForwardShocked;
         self.wobble_timer = 0.0;
         self.wobble_angle = 0.0;
     }
 
     fn update(&mut self, ctx: &mut GameContext, _: &mut Character, dt: f32) -> BehaviorState {
-        self.elapsed += dt;
         self.phase_timer += dt;
         if self.phase == Phase::Startled {
             self.wobble_timer += dt;
@@ -94,12 +96,14 @@ impl Behavior for StartledBehavior {
             }
         }
         match self.phase {
-            Phase::Startled if self.phase_timer >= self.total - 1.0 => {
+            Phase::Startled if self.phase_timer >= self.startled_duration => {
                 self.phase = Phase::Recovering;
                 self.phase_timer = 0.0;
-                self.pose_id = PoseId::SittingSideLookingDown;
+                self.pose_id = PoseId::SittingForwardNeutral;
             }
-            Phase::Recovering if self.phase_timer >= 1.0 => return BehaviorState::Completed,
+            Phase::Recovering if self.phase_timer >= self.recover_duration => {
+                return BehaviorState::Completed;
+            }
             _ => {}
         }
         BehaviorState::Running
