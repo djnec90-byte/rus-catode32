@@ -7,6 +7,7 @@
 use embedded_graphics::prelude::{Point, Size};
 use heapless::Vec;
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     assets::{items::FISH1, minigame_character::SITCAT1},
@@ -141,7 +142,7 @@ pub struct MazeScene {
 impl MazeScene {
     pub fn new() -> Self {
         let mut win_popup = Popup::new(14, 16, 100, 32);
-        win_popup.set_text("Found it!", false, true);
+        win_popup.set_text(t!("Found it!"), false, true);
         Self {
             win_popup,
             maze: [0; MAX_CELLS],

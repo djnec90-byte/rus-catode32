@@ -6,6 +6,7 @@ use core::fmt::Write as _;
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     assets::character::PoseId,
@@ -60,15 +61,15 @@ enum LightsOutAction {
 }
 
 const SIZE_ITEMS: &[MenuItem<LightsOutAction>] = &[
-    MenuItem { label: "4x4 Easy",   icon: None, submenu: None, action: Some(LightsOutAction::Size4), confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "5x5 Normal", icon: None, submenu: None, action: Some(LightsOutAction::Size5), confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "6x6 Hard",   icon: None, submenu: None, action: Some(LightsOutAction::Size6), confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("4x4 Easy"),   icon: None, submenu: None, action: Some(LightsOutAction::Size4), confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("5x5 Normal"), icon: None, submenu: None, action: Some(LightsOutAction::Size5), confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("6x6 Hard"),   icon: None, submenu: None, action: Some(LightsOutAction::Size6), confirm: None, confirm_on_vacation: None },
 ];
 
 const OPTIONS_ITEMS: &[MenuItem<LightsOutAction>] = &[
-    MenuItem { label: "Retry",     icon: None, submenu: None,             action: Some(LightsOutAction::Retry),    confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "New Board", icon: None, submenu: None,             action: Some(LightsOutAction::NewBoard), confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Grid Size", icon: None, submenu: Some(SIZE_ITEMS), action: None,                            confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Retry"),     icon: None, submenu: None,             action: Some(LightsOutAction::Retry),    confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("New Board"), icon: None, submenu: None,             action: Some(LightsOutAction::NewBoard), confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Grid Size"), icon: None, submenu: Some(SIZE_ITEMS), action: None,                            confirm: None, confirm_on_vacation: None },
 ];
 
 pub struct LightsOutScene {

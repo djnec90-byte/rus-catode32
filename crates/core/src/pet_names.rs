@@ -1,5 +1,7 @@
 //! Cat name pools. Ports the three lists in `scenes/adoption.py`.
 
+use crate::t;
+
 pub const TOM_NAMES: &[&str] = &[
     "Jasper", "Orion", "Bennie", "Winston", "Reginald", "Odie", "Beasley",
     "Yoshi", "Zeus", "Zeke", "Leo", "Ajax", "Java", "Rio", "Gizmo", "Loki",
@@ -12,14 +14,14 @@ pub const QUEEN_NAMES: &[&str] = &[
     "Bean", "Lyra", "Tressym", "Angel", "Callie", "Honey", "Piper", "Roxie",
     "Daisy", "Jasmine", "Lizzy", "Daphnie", "Paprika", "Mocha", "Cocoa",
     "Luna", "Peaches", "Kiki", "Suki", "Cleo", "Violet", "Lilith", "Buffie",
-    "Piper", "Star", "Maya", "Hidey", "Bubbles", "Rose", "Fiona",
+    "Piper", "Star", "Maya", "Hidey", t!("Bubbles"), t!("Rose"), "Fiona",
 ];
 
 pub const EITHER_NAMES: &[&str] = &[
     "Juno", "Jessie", "Remy", "Jiji", "Turtle", "Bandit", "Fuzzy", "June",
     "Koko", "Noodle", "Pixel", "Scratches", "Scraps", "Silver", "Sushi",
     "Tiger", "Tux", "Umi", "Whiskers", "Ziggy", "Patch", "Midnight", "Gato",
-    "Hunter", "Pepper", "Bengie", "Kitty", "Snowball", "Star", "Artemis",
+    t!("Hunter"), "Pepper", "Bengie", "Kitty", "Snowball", "Star", "Artemis",
     "Tang", "Titch", "Rainbow", "Speedy", "Lemony", "Milkshake", "Jingles",
     "Muffin", "Taco", "Turbo", "Speedy", "Ash", "Copper", "Cloud", "Dusk",
     "Echo", "Hero", "Karma", "Lynx", "Marble", "Mittens", "Mocha", "Mint",

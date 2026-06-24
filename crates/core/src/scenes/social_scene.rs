@@ -34,6 +34,7 @@ use core::fmt::Write as _;
 
 use embedded_graphics::prelude::Point;
 use heapless::{String, Vec};
+use crate::t;
 
 use crate::{
     context::{GameContext, VisitRole, VisitState, PET_NAME_MAX},
@@ -283,7 +284,7 @@ impl SocialScene {
     }
 
     fn draw_inviting(&self, renderer: &mut Renderer, peer_name: &str, elapsed: f32) {
-        renderer.draw_text("Inviting...", Point::new(0, 0));
+        renderer.draw_text(t!("Inviting..."), Point::new(0, 0));
         renderer.draw_text(peer_name, Point::new(0, 16));
         let remaining = (INVITE_TIMEOUT - elapsed).max(0.0);
         let mut line: String<24> = String::new();

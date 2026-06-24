@@ -8,6 +8,7 @@ use core::fmt::Write as _;
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
+use crate::t;
 
 use crate::{
     assets::{
@@ -495,29 +496,29 @@ fn push_count(
 
 fn pot_label(p: PotSize) -> &'static str {
     match p {
-        PotSize::Small => "Small pot",
-        PotSize::Medium => "Medium pot",
-        PotSize::Large => "Large pot",
-        PotSize::Planter => "Planter box",
+        PotSize::Small => t!("Small pot"),
+        PotSize::Medium => t!("Medium pot"),
+        PotSize::Large => t!("Large pot"),
+        PotSize::Planter => t!("Planter box"),
     }
 }
 
 fn seed_label(s: SeedKind) -> &'static str {
     match s {
-        SeedKind::CatGrass => "Cat Grass",
-        SeedKind::Freesia => "Freesia",
-        SeedKind::Rose => "Rose",
-        SeedKind::Sunflower => "Sunflower",
+        SeedKind::CatGrass => t!("Cat Grass"),
+        SeedKind::Freesia => t!("Freesia"),
+        SeedKind::Rose => t!("Rose"),
+        SeedKind::Sunflower => t!("Sunflower"),
     }
 }
 
 fn scene_label(s: SceneId) -> &'static str {
     match s {
-        SceneId::Inside => "To Inside",
-        SceneId::Outside => "To Outside",
-        SceneId::Bedroom => "To Bedroom",
-        SceneId::Kitchen => "To Kitchen",
-        SceneId::Treehouse => "To Treehouse",
+        SceneId::Inside => t!("To Inside"),
+        SceneId::Outside => t!("To Outside"),
+        SceneId::Bedroom => t!("To Bedroom"),
+        SceneId::Kitchen => t!("To Kitchen"),
+        SceneId::Treehouse => t!("To Treehouse"),
         _ => "To ???",
     }
 }
@@ -551,33 +552,33 @@ fn build_page(
             if is_vacation {
                 push_item(
                     items,
-                    "Go home",
+                    t!("Go home"),
                     Some(icons::HOUSE),
                     Some(LocationAction::GoHome),
                     None,
-                    Some("Ready to go home?"),
+                    Some(t!("Ready to go home?")),
                 );
             }
-            push_item(items, "Affection", Some(icons::HEART), None, Some(Page::Affection), None);
-            push_item(items, "Train", Some(icons::HAND), None, Some(Page::Train), None);
-            push_item(items, "Feed", Some(icons::MEAL), None, Some(Page::Feed), None);
-            push_item(items, "Play", Some(icons::TOYS), None, Some(Page::Play), None);
+            push_item(items, t!("Affection"), Some(icons::HEART), None, Some(Page::Affection), None);
+            push_item(items, t!("Train"), Some(icons::HAND), None, Some(Page::Train), None);
+            push_item(items, t!("Feed"), Some(icons::MEAL), None, Some(Page::Feed), None);
+            push_item(items, t!("Play"), Some(icons::TOYS), None, Some(Page::Play), None);
             if has_surfaces {
-                push_item(items, "Gardening", Some(icons::TREES), None, Some(Page::Gardening), None);
+                push_item(items, t!("Gardening"), Some(icons::TREES), None, Some(Page::Gardening), None);
             }
         }
         Page::Affection => {
-            push_item(items, "Pets", Some(icons::HAND), Some(LocationAction::Affection(AffectionVariant::Pets)), None, None);
-            push_item(items, "Scratch", Some(icons::HAND), Some(LocationAction::Affection(AffectionVariant::Scratching)), None, None);
-            push_item(items, "Kiss", Some(icons::HEART), Some(LocationAction::Affection(AffectionVariant::Kiss)), None, None);
-            push_item(items, "Psst psst", Some(icons::HEART_BUBBLE), Some(LocationAction::Attention(AttentionVariant::Psst)), None, None);
-            push_item(items, "Groom", Some(icons::HAND), Some(LocationAction::Groom), None, None);
+            push_item(items, t!("Pets"), Some(icons::HAND), Some(LocationAction::Affection(AffectionVariant::Pets)), None, None);
+            push_item(items, t!("Scratch"), Some(icons::HAND), Some(LocationAction::Affection(AffectionVariant::Scratching)), None, None);
+            push_item(items, t!("Kiss"), Some(icons::HEART), Some(LocationAction::Affection(AffectionVariant::Kiss)), None, None);
+            push_item(items, t!("Psst psst"), Some(icons::HEART_BUBBLE), Some(LocationAction::Attention(AttentionVariant::Psst)), None, None);
+            push_item(items, t!("Groom"), Some(icons::HAND), Some(LocationAction::Groom), None, None);
         }
         Page::Train => {
-            push_item(items, "Intelligence", Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Intelligence)), None, None);
-            push_item(items, "Behavior", Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Behavior)), None, None);
-            push_item(items, "Fitness", Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Fitness)), None, None);
-            push_item(items, "Sociability", Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Sociability)), None, None);
+            push_item(items, t!("Intelligence"), Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Intelligence)), None, None);
+            push_item(items, t!("Behavior"), Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Behavior)), None, None);
+            push_item(items, t!("Fitness"), Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Fitness)), None, None);
+            push_item(items, t!("Sociability"), Some(icons::HAND), Some(LocationAction::Train(TrainingKind::Sociability)), None, None);
         }
         Page::Feed => {
             let has_meals = (0..FoodItem::Mackerel as usize + 1)
@@ -585,10 +586,10 @@ fn build_page(
             let has_snacks = (FoodItem::Carrots as usize..FoodItem::Puree as usize + 1)
                 .any(|i| ctx.food_stock[i] > 0);
             if has_meals {
-                push_item(items, "Meals", Some(icons::MEAL), None, Some(Page::FeedMeals), None);
+                push_item(items, t!("Meals"), Some(icons::MEAL), None, Some(Page::FeedMeals), None);
             }
             if has_snacks {
-                push_item(items, "Snacks", Some(icons::KIBBLE), None, Some(Page::FeedSnacks), None);
+                push_item(items, t!("Snacks"), Some(icons::KIBBLE), None, Some(Page::FeedSnacks), None);
             }
             if ctx.medicine > 0 {
                 let mut label: String<LABEL_LEN> = String::new();
@@ -598,10 +599,10 @@ fn build_page(
                     icon: Some(icons::PILL),
                     action: Some(LocationAction::Medicine),
                     submenu: None,
-                    confirm: Some("Give medicine?"),
+                    confirm: Some(t!("Give medicine?")),
                 });
             }
-            push_item(items, "Store...", None, Some(LocationAction::GoToStore), None, None);
+            push_item(items, t!("Store..."), None, Some(LocationAction::GoToStore), None, None);
         }
         Page::FeedMeals => {
             push_food_items(items, ctx, true);
@@ -612,7 +613,7 @@ fn build_page(
         Page::Play => {
             push_item(
                 items,
-                "Hand",
+                t!("Hand"),
                 Some(icons::HAND),
                 Some(LocationAction::Play(PlayVariant::Hand)),
                 None,
@@ -624,7 +625,7 @@ fn build_page(
                 let action = LocationAction::Play(toy.variant.to_play_variant());
                 push_item(items, label, Some(icon), Some(action), None, None);
             }
-            push_item(items, "Store...", None, Some(LocationAction::GoToStore), None, None);
+            push_item(items, t!("Store..."), None, Some(LocationAction::GoToStore), None, None);
         }
         Page::Gardening => {
             let has_any_plants = current_scene
@@ -633,18 +634,18 @@ fn build_page(
             let has_any_pot = ctx.pots.iter().any(|n| *n > 0);
             let has_any_seed = ctx.seeds.iter().any(|n| *n > 0);
             if has_any_plants {
-                push_item(items, "Tend", Some(icons::TREES),
+                push_item(items, t!("Tend"), Some(icons::TREES),
                           Some(LocationAction::Gardening(GardeningAction::StartTend)), None, None);
             }
             if has_any_pot {
-                push_item(items, "Place Pot", Some(icons::TREES), None,
+                push_item(items, t!("Place Pot"), Some(icons::TREES), None,
                           Some(Page::GardeningPlacePot), None);
             }
             if has_any_seed {
-                push_item(items, "Plant Seed", Some(icons::TREES), None,
+                push_item(items, t!("Plant Seed"), Some(icons::TREES), None,
                           Some(Page::GardeningPlantSeed), None);
             }
-            push_item(items, "Store...", None, Some(LocationAction::GoToStore), None, None);
+            push_item(items, t!("Store..."), None, Some(LocationAction::GoToStore), None, None);
         }
         Page::GardeningPlacePot => {
             for &pot in ALL_POTS {
@@ -673,11 +674,11 @@ fn build_page(
                     })
                     .unwrap_or(false);
                 if has_empty_pot {
-                    push_item(items, "In Pot", Some(icons::TREES), None,
+                    push_item(items, t!("In Pot"), Some(icons::TREES), None,
                               Some(Page::GardeningPlantSeedInPot), None);
                 }
                 if outside {
-                    push_item(items, "In Ground", Some(icons::TREES), None,
+                    push_item(items, t!("In Ground"), Some(icons::TREES), None,
                               Some(Page::GardeningPlantSeedInGround), None);
                 }
             }
@@ -753,7 +754,7 @@ fn build_page(
             };
             push_item(
                 items,
-                "Around Here",
+                t!("Around Here"),
                 None,
                 Some(LocationAction::Gardening(GardeningAction::MoveHere(plant.id))),
                 None,
@@ -777,13 +778,13 @@ fn build_page(
 }
 
 fn build_tend_items(items: &mut Vec<Item, MAX_PAGE_ITEMS>, ctx: &GameContext, plant: &Plant) {
-    push_item(items, "Inspect", None, None, Some(Page::GardeningInspect), None);
+    push_item(items, t!("Inspect"), None, None, Some(Page::GardeningInspect), None);
 
     let alive = plant.stage != PlantStage::EmptyPot && !plant.stage.is_dead();
     if alive {
         push_item(
             items,
-            "Water",
+            t!("Water"),
             None,
             Some(LocationAction::Gardening(GardeningAction::Water(plant.id))),
             None,
@@ -792,7 +793,7 @@ fn build_tend_items(items: &mut Vec<Item, MAX_PAGE_ITEMS>, ctx: &GameContext, pl
         if ctx.fertilizer > 0 {
             push_item(
                 items,
-                "Fertilize",
+                t!("Fertilize"),
                 None,
                 Some(LocationAction::Gardening(GardeningAction::Fertilize(plant.id))),
                 None,
@@ -802,23 +803,23 @@ fn build_tend_items(items: &mut Vec<Item, MAX_PAGE_ITEMS>, ctx: &GameContext, pl
     }
 
     if plant.pot != PotKind::Ground {
-        push_item(items, "Move", None, None, Some(Page::GardeningMove), None);
+        push_item(items, t!("Move"), None, None, Some(Page::GardeningMove), None);
     }
 
     // Repot is available when at least one larger pot is in inventory (or, for
     // small/young stages, any other pot).
     if plant.pot != PotKind::Ground && repot_has_options(ctx, plant) {
-        push_item(items, "Repot", None, None, Some(Page::GardeningRepot), None);
+        push_item(items, t!("Repot"), None, None, Some(Page::GardeningRepot), None);
     }
 
     let needs_confirm = plant.stage != PlantStage::EmptyPot && !plant.stage.is_dead();
     push_item(
         items,
-        "Pluck",
+        t!("Pluck"),
         None,
         Some(LocationAction::Gardening(GardeningAction::Pluck(plant.id))),
         None,
-        if needs_confirm { Some("Remove plant?") } else { None },
+        if needs_confirm { Some(t!("Remove plant?")) } else { None },
     );
 }
 

@@ -1,4 +1,5 @@
 use embedded_graphics::prelude::Point;
+use crate::t;
 
 use crate::{
     assets::character::PoseId,
@@ -1106,7 +1107,7 @@ impl LocationScene {
             }
             GardeningAction::PlantSeedInPot(seed) => {
                 if !ctx.owns_tool(crate::context::ToolKind::Spade) {
-                    self.show_popup("You need the Spade to plant seeds. Buy one at the store!");
+                    self.show_popup(t!("You need the Spade to plant seeds. Buy one at the store!"));
                     return None;
                 }
                 self.pending_ground_seed = Some(seed);
@@ -1115,12 +1116,12 @@ impl LocationScene {
                         .enter(ctx, self.scene_id, SelectionFilter::EmptyPot, None);
                 if !found {
                     self.pending_ground_seed = None;
-                    self.show_popup("No empty pots in this location");
+                    self.show_popup(t!("No empty pots in this location"));
                 }
             }
             GardeningAction::PlantSeedInGround(seed) => {
                 if !ctx.owns_tool(crate::context::ToolKind::Spade) {
-                    self.show_popup("You need the Spade to plant seeds. Buy one at the store!");
+                    self.show_popup(t!("You need the Spade to plant seeds. Buy one at the store!"));
                     return None;
                 }
                 self.pending_ground_seed = Some(seed);
@@ -1145,7 +1146,7 @@ impl LocationScene {
             GardeningAction::Water(id) => {
                 if !ctx.owns_tool(crate::context::ToolKind::WateringCan) {
                     self.show_popup(
-                        "You need the Watering Can to water plants. Buy one at the store!",
+                        t!("You need the Watering Can to water plants. Buy one at the store!"),
                     );
                     return None;
                 }

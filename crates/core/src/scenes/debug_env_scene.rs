@@ -1,3 +1,5 @@
+use crate::t;
+
 use crate::{
     context::GameContext,
     input::Buttons,
@@ -75,13 +77,13 @@ impl DebugEnvScene {
 
     fn open_with(&mut self, ctx: &GameContext) {
         let items = [
-            SettingItem::int("Day", ctx.day_number as i32, 0, 9_999_999, 1),
-            SettingItem::int("Hour", ctx.time_hours as i32, 0, 23, 1),
-            SettingItem::int("Min", ctx.time_minutes as i32, 0, 55, 5),
-            SettingItem::choice("Season", season_to_index(ctx.season), SEASONS),
-            SettingItem::choice("Moon", ctx.moon_phase as usize, &MOON_PHASES),
-            SettingItem::choice("Weather", weather_to_index(ctx.weather), WEATHERS),
-            SettingItem::int("Temp", ctx.temperature as i32, -20, 50, 1),
+            SettingItem::int(t!("Day"), ctx.day_number as i32, 0, 9_999_999, 1),
+            SettingItem::int(t!("Hour"), ctx.time_hours as i32, 0, 23, 1),
+            SettingItem::int(t!("Min"), ctx.time_minutes as i32, 0, 55, 5),
+            SettingItem::choice(t!("Season"), season_to_index(ctx.season), SEASONS),
+            SettingItem::choice(t!("Moon"), ctx.moon_phase as usize, &MOON_PHASES),
+            SettingItem::choice(t!("Weather"), weather_to_index(ctx.weather), WEATHERS),
+            SettingItem::int(t!("Temp"), ctx.temperature as i32, -20, 50, 1),
         ];
         self.settings.open(&items);
     }

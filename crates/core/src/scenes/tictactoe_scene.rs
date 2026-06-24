@@ -3,6 +3,7 @@
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     assets::{
@@ -447,10 +448,10 @@ impl TicTacToeScene {
     fn draw_score(&self, r: &mut Renderer) {
         let score_x = 62;
         let mut buf: String<8> = String::new();
-        r.draw_text("You", Point::new(score_x, 4));
+        r.draw_text(t!("You"), Point::new(score_x, 4));
         format_score(&mut buf, self.player_score);
         r.draw_text(buf.as_str(), Point::new(score_x, 12));
-        r.draw_text("Pet", Point::new(score_x + 28, 4));
+        r.draw_text(t!("Pet"), Point::new(score_x + 28, 4));
         buf.clear();
         format_score(&mut buf, self.pet_score);
         r.draw_text(buf.as_str(), Point::new(score_x + 28, 12));

@@ -44,6 +44,14 @@ c3 = [
 # Host-side build: skips esp-* deps, swaps platform modules for std-backed shims.
 desktop = []
 
+# Language selection — exactly one should be active. Defaults to English.
+lang-en = ["catode32-i18n-macros/lang-en"]
+lang-de = ["catode32-i18n-macros/lang-de"]
+lang-es = ["catode32-i18n-macros/lang-es"]
+lang-fr = ["catode32-i18n-macros/lang-fr"]
+lang-it = ["catode32-i18n-macros/lang-it"]
+lang-nl = ["catode32-i18n-macros/lang-nl"]
+
 [dependencies]
 esp-hal = { version = "1.1.1", default-features = false, features = ["rt"], optional = true }
 esp-println = { version = "0.17.0", default-features = false, features = ["auto"], optional = true }
@@ -62,3 +70,4 @@ micromath = "2"
 smart-leds = "0.4.0"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 serde-json-core = "0.6"
+catode32-i18n-macros = { path = "../i18n-macros", default-features = false }

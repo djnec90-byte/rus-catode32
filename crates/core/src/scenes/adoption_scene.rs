@@ -11,6 +11,7 @@ use core::fmt::Write;
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
+use crate::t;
 
 use crate::{
     assets::{character::PoseId, icons},
@@ -366,7 +367,7 @@ impl AdoptionScene {
     // ------------------------------------------------------------------
 
     fn draw_grid(&self, renderer: &mut Renderer) {
-        let title = "Adoptable Pets";
+        let title = t!("Adoptable Pets");
         let title_x = (128 - title.len() as i32 * 8) / 2;
         renderer.draw_text(title, Point::new(title_x, 0));
 
@@ -425,14 +426,14 @@ impl AdoptionScene {
 
     fn draw_profile(&self, renderer: &mut Renderer) {
         self.popup.draw(renderer, true);
-        renderer.draw_text("[A]Adopt [B]Back", Point::new(0, 56));
+        renderer.draw_text(t!("[A]Adopt [B]Back"), Point::new(0, 56));
     }
 
     fn draw_confirm(&self, renderer: &mut Renderer) {
         // Same look as `ui::menu::draw_confirm_dialog`.
         renderer.fill_rect_off(Point::new(5, 13), Size::new(118, 38));
         renderer.draw_rect(Point::new(4, 12), Size::new(120, 40), false);
-        let q = "Is this the cat you want to adopt?";
+        let q = t!("Is this the cat you want to adopt?");
         wrap_and_draw_confirm(renderer, q);
         renderer.draw_text("[A]Yes [B]No", Point::new(20, 42));
     }
@@ -533,17 +534,17 @@ fn dominant_trait_index(offs: &[i32; 5]) -> usize {
 
 fn fav_weather_label(w: FavWeather) -> &'static str {
     match w {
-        FavWeather::Sunny => "sunny",
-        FavWeather::Rainy => "rainy",
-        FavWeather::Snowy => "snowy",
-        FavWeather::Overcast => "cloudy",
+        FavWeather::Sunny => t!("sunny"),
+        FavWeather::Rainy => t!("rainy"),
+        FavWeather::Snowy => t!("snowy"),
+        FavWeather::Overcast => t!("cloudy"),
     }
 }
 
 fn profile_text(cand: &Candidate) -> String<PROFILE_TEXT_CAP> {
     let possessive = match cand.favs.pet_gender {
-        PetGender::Tom => "His",
-        PetGender::Queen => "Her",
+        PetGender::Tom => t!("His"),
+        PetGender::Queen => t!("Her"),
     };
     let possessive_lower = match cand.favs.pet_gender {
         PetGender::Tom => "his",

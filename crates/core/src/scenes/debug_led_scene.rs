@@ -1,3 +1,5 @@
+use crate::t;
+
 use crate::{
     context::GameContext,
     input::Buttons,
@@ -51,10 +53,10 @@ fn read_int(settings: &Settings, idx: usize) -> u8 {
 impl Scene for DebugLedScene {
     fn enter(&mut self, _ctx: &mut GameContext) {
         let items = [
-            SettingItem::choice("Toggle", 0, TOGGLE_OPTIONS),
-            SettingItem::int("R", 255, 0, 255, STEP),
-            SettingItem::int("G", 255, 0, 255, STEP),
-            SettingItem::int("B", 255, 0, 255, STEP),
+            SettingItem::choice(t!("Toggle"), 0, TOGGLE_OPTIONS),
+            SettingItem::int(t!("R"), 255, 0, 255, STEP),
+            SettingItem::int(t!("G"), 255, 0, 255, STEP),
+            SettingItem::int(t!("B"), 255, 0, 255, STEP),
         ];
         self.settings.open(&items);
     }

@@ -1,0 +1,25 @@
+[package]
+name = "catode32-i18n-macros"
+version = "0.10.0"
+edition = "2021"
+description = "Compile-time translation macros for catode32"
+license = "MIT"
+repository = "https://github.com/moonbench/catode32"
+
+[lib]
+proc-macro = true
+
+[features]
+default = ["lang-en"]
+lang-en = []
+lang-de = []
+lang-es = []
+lang-fr = []
+lang-it = []
+lang-nl = []
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["full"] }
+serde_json = "1"

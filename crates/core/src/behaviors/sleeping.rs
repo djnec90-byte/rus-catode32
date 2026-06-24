@@ -1,4 +1,5 @@
 use embedded_graphics::prelude::Point;
+use crate::t;
 
 use crate::{
     assets::character::PoseId,
@@ -282,7 +283,7 @@ impl Behavior for SleepingBehavior {
             let wave = (self.z_timer * WAVE_SPEED - phase_offset).sin() * WAVE_AMP;
             let x = base_x + i * SPACING_X;
             let y = base_y + i * SPACING_Y + wave as i32;
-            renderer.draw_text("z", Point::new(x, y));
+            renderer.draw_text(t!("z"), Point::new(x, y));
         }
     }
 

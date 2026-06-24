@@ -17,6 +17,9 @@ macro_rules! println {
 
 pub mod platform;
 
+/// Compile-time translation lookup; see `catode32_i18n_macros::t`.
+pub use catode32_i18n_macros::t;
+
 pub mod assets;
 pub mod behavior;
 pub mod behaviors;

@@ -4,6 +4,7 @@ use core::fmt::Write as _;
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
+use crate::t;
 
 use crate::{
     assets::minigame_assets::{
@@ -24,7 +25,7 @@ enum PipesAction {
 }
 
 const OPTIONS_ITEMS: &[MenuItem<PipesAction>] = &[
-    MenuItem { label: "New Board", icon: None, submenu: None, action: Some(PipesAction::NewBoard), confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("New Board"), icon: None, submenu: None, action: Some(PipesAction::NewBoard), confirm: None, confirm_on_vacation: None },
 ];
 
 const CELL: i32 = 9;

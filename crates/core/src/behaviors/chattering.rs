@@ -1,4 +1,5 @@
 use embedded_graphics::prelude::Point;
+use crate::t;
 
 use crate::{
     assets::character::PoseId,
@@ -97,7 +98,7 @@ impl Behavior for ChatteringBehavior {
             let raw = self.phase_timer - i as f32 * 0.3;
             let age = raw - (raw / CYCLE).floor() * CYCLE;
             if age < ON_DURATION {
-                renderer.draw_text("ek", Point::new(base_x, base_y - i * 9));
+                renderer.draw_text(t!("ek"), Point::new(base_x, base_y - i * 9));
             }
         }
     }

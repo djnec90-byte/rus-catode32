@@ -4,6 +4,8 @@
 //! Lookups `pot_sprite()` and `plant_sprite()` return `Option<&'static Sprite>`
 //! so callers can short-circuit empty / dead / dormant states.
 
+use crate::t;
+
 use crate::{
     context::{PotSize, SeedKind},
     render::Sprite,
@@ -147,10 +149,10 @@ impl PotKind {
 
     pub fn label(self) -> &'static str {
         match self {
-            PotKind::Small => "Small",
-            PotKind::Medium => "Medium",
-            PotKind::Large => "Large",
-            PotKind::Planter => "Planter",
+            PotKind::Small => t!("Small"),
+            PotKind::Medium => t!("Medium"),
+            PotKind::Large => t!("Large"),
+            PotKind::Planter => t!("Planter"),
             PotKind::Ground => "Ground",
         }
     }

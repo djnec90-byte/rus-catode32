@@ -5,6 +5,7 @@ use core::fmt::Write as _;
 use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     assets::{minigame_assets::PAW_SMALL1, minigame_character::CAT_AVATAR1},
@@ -537,9 +538,9 @@ impl Scene for BreakoutScene {
         }
 
         match self.state {
-            State::Ready => renderer.draw_text("A: Start", Point::new(32, 30)),
-            State::Win => renderer.draw_text("WIN!", Point::new(50, 30)),
-            State::Lose => renderer.draw_text("GAME OVER", Point::new(34, 30)),
+            State::Ready => renderer.draw_text(t!("A: Start"), Point::new(32, 30)),
+            State::Win => renderer.draw_text(t!("WIN!"), Point::new(50, 30)),
+            State::Lose => renderer.draw_text(t!("GAME OVER"), Point::new(34, 30)),
             State::Playing => {}
         }
     }

@@ -1,4 +1,5 @@
 use embedded_graphics::prelude::{Point, Size};
+use crate::t;
 
 use crate::{
     context::{GameContext, PowerAction},
@@ -16,9 +17,9 @@ struct Entry {
 }
 
 const ENTRIES: &[Entry] = &[
-    Entry { label: "Reboot",      action: PowerAction::Reboot },
-    Entry { label: "Light Sleep", action: PowerAction::LightSleep },
-    Entry { label: "Deep Sleep",  action: PowerAction::DeepSleep },
+    Entry { label: t!("Reboot"),      action: PowerAction::Reboot },
+    Entry { label: t!("Light Sleep"), action: PowerAction::LightSleep },
+    Entry { label: t!("Deep Sleep"),  action: PowerAction::DeepSleep },
 ];
 
 pub struct DebugPowerScene {

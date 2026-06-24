@@ -4,6 +4,7 @@ use core::fmt::Write;
 
 use embedded_graphics::prelude::Point;
 use heapless::{String, Vec};
+use crate::t;
 
 use crate::{
     assets::{
@@ -98,8 +99,8 @@ impl PetInfoScene {
         // Pronouns from stored gender.
         let gender = ctx.pet_gender.unwrap_or(PetGender::Queen);
         let (she, she_l, her_cap, her, g_noun) = match gender {
-            PetGender::Tom => ("He", "he", "His", "his", "tom"),
-            PetGender::Queen => ("She", "she", "Her", "her", "queen"),
+            PetGender::Tom => (t!("He"), "he", t!("His"), "his", t!("tom")),
+            PetGender::Queen => (t!("She"), "she", t!("Her"), "her", t!("queen")),
         };
 
         // Intro paragraph 1, floated beside headshot.
@@ -130,10 +131,10 @@ impl PetInfoScene {
         push_blank(&mut self.lines);
 
         let mut intro2: String<64> = String::new();
-        let _ = write!(
+        substitute(
             &mut intro2,
-            "{she} is a {temper} {sign}.",
-            temper = temper.lower_label(),
+            t!("{she} is a {temper} {sign}."),
+            &[("she", she), ("temper", temper.lower_label()), ("sign", sign)],
         );
         wrap_full(&mut self.lines, intro2.as_str(), FULL_CPL);
         push_blank(&mut self.lines);
@@ -163,9 +164,10 @@ impl PetInfoScene {
         push_blank(&mut self.lines);
         buf.clear();
 
-        let _ = write!(
+        substitute(
             &mut buf,
-            "Of all the toys, {she_l} loves to play with the {toy} the most.",
+            t!("Of all the toys, {she_l} loves to play with the {toy} the most."),
+            &[("she_l", she_l), ("toy", toy)],
         );
         wrap_full(&mut self.lines, buf.as_str(), FULL_CPL);
         push_blank(&mut self.lines);
@@ -173,17 +175,17 @@ impl PetInfoScene {
 
         // Sickness.
         if ctx.sickness >= 7.0 {
-            let _ = write!(&mut buf, "{she} feels very sick.");
+            substitute(&mut buf, t!("{she} feels very sick."), &[("she", she)]);
             wrap_full(&mut self.lines, buf.as_str(), FULL_CPL);
             push_blank(&mut self.lines);
             buf.clear();
         } else if ctx.sickness >= 3.0 {
-            let _ = write!(&mut buf, "{she} feels pretty sick.");
+            substitute(&mut buf, t!("{she} feels pretty sick."), &[("she", she)]);
             wrap_full(&mut self.lines, buf.as_str(), FULL_CPL);
             push_blank(&mut self.lines);
             buf.clear();
         } else if ctx.sickness > 0.0 {
-            let _ = write!(&mut buf, "{she} feels a little sick.");
+            substitute(&mut buf, t!("{she} feels a little sick."), &[("she", she)]);
             wrap_full(&mut self.lines, buf.as_str(), FULL_CPL);
             push_blank(&mut self.lines);
             buf.clear();
@@ -205,9 +207,10 @@ impl PetInfoScene {
         }
         if !any_mood {
             let mut sentence: String<64> = String::new();
-            let _ = write!(
+            substitute(
                 &mut sentence,
-                "It seems like {she_l}'s feeling pretty great at the moment!",
+                t!("It seems like {she_l}'s feeling pretty great at the moment!"),
+                &[("she_l", she_l)],
             );
             wrap_full(&mut self.lines, sentence.as_str(), FULL_CPL);
         }
@@ -216,9 +219,10 @@ impl PetInfoScene {
         // Meal variety: 4+ of last 5 meals are the same kind.
         if recent_meal_dominance(ctx) >= 4 {
             let mut s: String<64> = String::new();
-            let _ = write!(
+            substitute(
                 &mut s,
-                "{she} wishes {she_l} had more variety in {her} meals.",
+                t!("{she} wishes {she_l} had more variety in {her} meals."),
+                &[("she", she), ("she_l", she_l), ("her", her)],
             );
             wrap_full(&mut self.lines, s.as_str(), FULL_CPL);
             push_blank(&mut self.lines);
@@ -227,7 +231,7 @@ impl PetInfoScene {
         // Familiar location.
         if ctx.in_familiar_location {
             let mut s: String<32> = String::new();
-            let _ = write!(&mut s, "{she} feels at home here.");
+            substitute(&mut s, t!("{she} feels at home here."), &[("she", she)]);
             wrap_full(&mut self.lines, s.as_str(), FULL_CPL);
             push_blank(&mut self.lines);
         }
@@ -244,7 +248,7 @@ impl PetInfoScene {
         push_blank(&mut self.lines);
         push_blank(&mut self.lines);
         let mut cn: String<LINE_CAP> = String::new();
-        let _ = cn.push_str("Change Name");
+        let _ = cn.push_str(t!("Change Name"));
         let _ = self.lines.push(cn);
 
         self.max_scroll = self.lines.len().saturating_sub(VISIBLE);
@@ -501,6 +505,41 @@ fn expand_template(out: &mut String<64>, template: &str, she: &str, her: &str) {
     let _ = out.push_str(remaining);
 }
 
+/// Runtime template substitution for translated strings whose placeholder set
+/// varies between languages. Unlike `write!`, missing or unused names don't
+/// error: unknown `{name}` passes through unchanged, unused entries in `subs`
+/// are silently ignored.
+fn substitute<const N: usize>(
+    out: &mut String<N>,
+    template: &str,
+    subs: &[(&str, &str)],
+) {
+    let mut remaining = template;
+    while let Some(open) = remaining.find('{') {
+        let (head, tail) = remaining.split_at(open);
+        let _ = out.push_str(head);
+        if let Some(close) = tail.find('}') {
+            let key = &tail[1..close];
+            let mut matched = false;
+            for &(k, v) in subs {
+                if k == key {
+                    let _ = out.push_str(v);
+                    matched = true;
+                    break;
+                }
+            }
+            if !matched {
+                let _ = out.push_str(&tail[..=close]);
+            }
+            remaining = &tail[close + 1..];
+        } else {
+            let _ = out.push_str(tail);
+            remaining = "";
+        }
+    }
+    let _ = out.push_str(remaining);
+}
+
 /// Returns the dominant trait index (0..5) based on the live trait values.
 fn current_temperament(ctx: &GameContext) -> Temperament {
     let values = [
@@ -524,24 +563,24 @@ fn current_temperament(ctx: &GameContext) -> Temperament {
 /// All mood checks, in order.
 fn mood_checks(ctx: &GameContext) -> [(f32, f32, &'static str); 18] {
     [
-        (ctx.health, 35.0, "{s}'s not feeling {h} best."),
-        (ctx.fullness, 30.0, "{s}'s feeling hungry."),
-        (ctx.energy, 30.0, "{s}'s feeling tired."),
-        (ctx.comfort, 30.0, "{s} seems uncomfortable."),
-        (ctx.cleanliness, 25.0, "{s}'s feeling grubby."),
-        (ctx.fitness, 20.0, "{s}'s feeling sluggish."),
-        (ctx.focus, 25.0, "{s}'s feeling scattered."),
-        (ctx.intelligence, 20.0, "{s}'s understimulated."),
-        (ctx.curiosity, 25.0, "{s}'s feeling bored."),
-        (ctx.playfulness, 30.0, "{s}'s not feeling playful."),
-        (ctx.affection, 25.0, "{s} wants more attention."),
-        (ctx.fulfillment, 25.0, "{s}'s feeling unfulfilled."),
-        (ctx.serenity, 25.0, "{s} seems restless."),
-        (ctx.sociability, 20.0, "{s}'s been withdrawn."),
-        (ctx.courage, 20.0, "{s}'s been timid lately."),
-        (ctx.loyalty, 20.0, "{s} seems detached."),
-        (ctx.mischievousness, 20.0, "{s}'s been very subdued."),
-        (ctx.maturity, 20.0, "{s}'s been impulsive."),
+        (ctx.health, 35.0, t!("{s}'s not feeling {h} best.")),
+        (ctx.fullness, 30.0, t!("{s}'s feeling hungry.")),
+        (ctx.energy, 30.0, t!("{s}'s feeling tired.")),
+        (ctx.comfort, 30.0, t!("{s} seems uncomfortable.")),
+        (ctx.cleanliness, 25.0, t!("{s}'s feeling grubby.")),
+        (ctx.fitness, 20.0, t!("{s}'s feeling sluggish.")),
+        (ctx.focus, 25.0, t!("{s}'s feeling scattered.")),
+        (ctx.intelligence, 20.0, t!("{s}'s understimulated.")),
+        (ctx.curiosity, 25.0, t!("{s}'s feeling bored.")),
+        (ctx.playfulness, 30.0, t!("{s}'s not feeling playful.")),
+        (ctx.affection, 25.0, t!("{s} wants more attention.")),
+        (ctx.fulfillment, 25.0, t!("{s}'s feeling unfulfilled.")),
+        (ctx.serenity, 25.0, t!("{s} seems restless.")),
+        (ctx.sociability, 20.0, t!("{s}'s been withdrawn.")),
+        (ctx.courage, 20.0, t!("{s}'s been timid lately.")),
+        (ctx.loyalty, 20.0, t!("{s} seems detached.")),
+        (ctx.mischievousness, 20.0, t!("{s}'s been very subdued.")),
+        (ctx.maturity, 20.0, t!("{s}'s been impulsive.")),
     ]
 }
 
@@ -637,9 +676,9 @@ fn location_display(loc: Option<SceneId>) -> &'static str {
 fn fav_weather_display(w: Option<FavWeather>) -> &'static str {
     match w {
         None => "?",
-        Some(FavWeather::Sunny) => "sunny",
-        Some(FavWeather::Rainy) => "rainy",
-        Some(FavWeather::Snowy) => "snowy",
-        Some(FavWeather::Overcast) => "cloudy",
+        Some(FavWeather::Sunny) => t!("sunny"),
+        Some(FavWeather::Rainy) => t!("rainy"),
+        Some(FavWeather::Snowy) => t!("snowy"),
+        Some(FavWeather::Overcast) => t!("cloudy"),
     }
 }

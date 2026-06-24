@@ -6,6 +6,7 @@
 //! same `Buttons::is_pressed` / `was_just_pressed` API works unchanged.
 
 use crate::platform::time::{Duration, Instant};
+use crate::t;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(usize)]
@@ -37,9 +38,9 @@ impl Button {
             Button::Up => "U",
             Button::Down => "D",
             Button::Left => "L",
-            Button::Right => "R",
+            Button::Right => t!("R"),
             Button::A => "A",
-            Button::B => "B",
+            Button::B => t!("B"),
             Button::Menu1 => "M1",
             Button::Menu2 => "M2",
         }

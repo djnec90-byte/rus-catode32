@@ -636,6 +636,7 @@ pub fn scene_plant_health_score(ctx: &GameContext, scene: SceneId) -> i32 {
 // ---------------------------------------------------------------------------
 
 use heapless::String;
+use crate::t;
 
 pub const INSPECT_LINE_LEN: usize = 16;
 pub const INSPECT_MAX_LINES: usize = 5;
@@ -643,10 +644,10 @@ pub type InspectLines = heapless::Vec<String<INSPECT_LINE_LEN>, INSPECT_MAX_LINE
 
 fn seed_label(seed: SeedKind) -> &'static str {
     match seed {
-        SeedKind::CatGrass => "Cat Grass",
-        SeedKind::Freesia => "Freesia",
-        SeedKind::Rose => "Rose",
-        SeedKind::Sunflower => "Sunflower",
+        SeedKind::CatGrass => t!("Cat Grass"),
+        SeedKind::Freesia => t!("Freesia"),
+        SeedKind::Rose => t!("Rose"),
+        SeedKind::Sunflower => t!("Sunflower"),
     }
 }
 

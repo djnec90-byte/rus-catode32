@@ -7,6 +7,7 @@ use core::fmt::Write as _;
 use crate::platform::power::software_reset;
 use crate::println;
 use heapless::String;
+use crate::t;
 
 use crate::{
     context::GameContext,
@@ -81,11 +82,11 @@ impl DebugContextScene {
     fn open_settings(&mut self, ctx: &GameContext) {
         let coins = ctx.coins.clamp(COINS_MIN, COINS_MAX);
         let items = [
-            SettingItem::action("Save now"),
-            SettingItem::int("Coins", coins, COINS_MIN, COINS_MAX, COINS_STEP),
-            SettingItem::action("Seed"),
+            SettingItem::action(t!("Save now")),
+            SettingItem::int(t!("Coins"), coins, COINS_MIN, COINS_MAX, COINS_STEP),
+            SettingItem::action(t!("Seed")),
             SettingItem::action("Reset plants"),
-            SettingItem::action("Reset stats"),
+            SettingItem::action(t!("Reset stats")),
             SettingItem::action("Delete context"),
         ];
         self.settings.open(&items);
@@ -133,11 +134,11 @@ impl DebugContextScene {
                 self.mode = Mode::SavedNotice;
             }
             IDX_SEED => self.open_seed_keyboard(ctx),
-            IDX_RESET_PLANTS => self.open_confirm(PendingConfirm::ResetPlants, "Reset all plants?"),
-            IDX_RESET_STATS => self.open_confirm(PendingConfirm::ResetStats, "Reset all stats to defaults?"),
+            IDX_RESET_PLANTS => self.open_confirm(PendingConfirm::ResetPlants, t!("Reset all plants?")),
+            IDX_RESET_STATS => self.open_confirm(PendingConfirm::ResetStats, t!("Reset all stats to defaults?")),
             IDX_FACTORY_RESET => self.open_confirm(
                 PendingConfirm::FactoryReset,
-                "Factory reset?\nAll data lost!",
+                t!("Factory reset?\nAll data lost!"),
             ),
             _ => {}
         }

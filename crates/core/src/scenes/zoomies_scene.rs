@@ -5,6 +5,7 @@ use core::fmt::Write as _;
 use embedded_graphics::prelude::Point;
 use heapless::{String, Vec};
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     assets::{
@@ -814,7 +815,7 @@ impl Scene for ZoomiesScene {
         self.draw_player(renderer);
 
         for bt in &self.bonus_texts {
-            renderer.draw_text("+100", Point::new(bt.x as i32, bt.y as i32));
+            renderer.draw_text(t!("+100"), Point::new(bt.x as i32, bt.y as i32));
         }
 
         self.draw_score(renderer);
@@ -823,7 +824,7 @@ impl Scene for ZoomiesScene {
             // Start prompt: "A to jump\n\nHold for\nhigh jumps!"
             use crate::ui::popup::Popup;
             let mut popup = Popup::new(14, 10, 100, 48);
-            popup.set_text("A to jump\n\nHold for\nhigh jumps!", false, true);
+            popup.set_text(t!("A to jump\n\nHold for\nhigh jumps!"), false, true);
             popup.draw(renderer, false);
         } else if self.is_hit {
             use crate::ui::popup::Popup;

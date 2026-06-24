@@ -1,4 +1,5 @@
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     context::GameContext,
@@ -30,7 +31,7 @@ impl Scene for DebugTimeScene {
     fn enter(&mut self, ctx: &mut GameContext) {
         let current = (ctx.time_speed * DIVISOR as f32).round() as i32;
         let items = [SettingItem::fixed(
-            "Speed",
+            t!("Speed"),
             current.clamp(SPEED_MIN, SPEED_MAX),
             SPEED_MIN,
             SPEED_MAX,

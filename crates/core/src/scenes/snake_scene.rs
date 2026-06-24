@@ -5,6 +5,7 @@ use core::fmt::Write as _;
 use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     assets::minigame_assets::{CAT_THIN_DOWN, CAT_THIN_RIGHT, SPOT},
@@ -312,24 +313,24 @@ impl Scene for SnakeScene {
     fn draw(&self, _ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
         match self.state {
             State::Ready => {
-                renderer.draw_text("SNAKE", Point::new(44, 12));
-                renderer.draw_text("A: START", Point::new(32, 28));
+                renderer.draw_text(t!("SNAKE"), Point::new(44, 12));
+                renderer.draw_text(t!("A: START"), Point::new(32, 28));
                 return;
             }
             State::Win => {
-                renderer.draw_text("YOU WIN!", Point::new(32, 16));
+                renderer.draw_text(t!("YOU WIN!"), Point::new(32, 16));
                 let mut s: String<16> = String::new();
                 let _ = write!(s, "SCORE:{}", self.score);
                 renderer.draw_text(&s, Point::new(28, 30));
-                renderer.draw_text("A: RETRY", Point::new(32, 44));
+                renderer.draw_text(t!("A: RETRY"), Point::new(32, 44));
                 return;
             }
             State::Lose => {
-                renderer.draw_text("GAME OVER", Point::new(28, 16));
+                renderer.draw_text(t!("GAME OVER"), Point::new(28, 16));
                 let mut s: String<16> = String::new();
                 let _ = write!(s, "SCORE:{}", self.score);
                 renderer.draw_text(&s, Point::new(28, 30));
-                renderer.draw_text("A: RETRY", Point::new(32, 44));
+                renderer.draw_text(t!("A: RETRY"), Point::new(32, 44));
                 return;
             }
             State::Playing => {}

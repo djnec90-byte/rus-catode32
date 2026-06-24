@@ -2,6 +2,7 @@ use core::fmt::Write;
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
+use crate::t;
 
 use crate::{
     assets::icons,
@@ -54,11 +55,11 @@ impl ForecastScene {
 fn fmt_hour(h: u8, out: &mut String<4>) {
     out.clear();
     if h == 0 {
-        let _ = out.push_str("12A");
+        let _ = out.push_str(t!("12A"));
     } else if h < 12 {
         let _ = write!(out, "{}A", h);
     } else if h == 12 {
-        let _ = out.push_str("12P");
+        let _ = out.push_str(t!("12P"));
     } else {
         let _ = write!(out, "{}P", h - 12);
     }

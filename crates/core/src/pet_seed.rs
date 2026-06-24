@@ -1,5 +1,7 @@
 //! Pet seed to personality / favorites derivation.
 
+use crate::t;
+
 use crate::{
     context::{FoodItem, ToyVariant},
     scene::SceneId,
@@ -107,11 +109,11 @@ impl Temperament {
 
     pub fn label(self) -> &'static str {
         match self {
-            Temperament::Bold => "Bold",
-            Temperament::Loyal => "Loyal",
-            Temperament::Mischievous => "Mischievous",
-            Temperament::Curious => "Curious",
-            Temperament::Sociable => "Sociable",
+            Temperament::Bold => t!("Bold"),
+            Temperament::Loyal => t!("Loyal"),
+            Temperament::Mischievous => t!("Mischievous"),
+            Temperament::Curious => t!("Curious"),
+            Temperament::Sociable => t!("Sociable"),
         }
     }
 

@@ -1,4 +1,5 @@
 use embedded_graphics::prelude::Point;
+use crate::t;
 
 use crate::{
     assets::character::PoseId,
@@ -263,7 +264,7 @@ impl Behavior for NappingBehavior {
         let base_x = char_screen.x + if mirror_h { 18 } else { -18 };
         let base_y = char_screen.y - 28;
         let wave = (self.z_timer * 2.5).sin() * 2.0;
-        renderer.draw_text("z", Point::new(base_x, base_y + wave as i32));
+        renderer.draw_text(t!("z"), Point::new(base_x, base_y + wave as i32));
     }
 
     fn mark_almost_done(&mut self, ctx: &mut GameContext) {

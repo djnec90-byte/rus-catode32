@@ -5,6 +5,7 @@ use core::fmt::Write as _;
 use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     assets::{
@@ -1318,7 +1319,7 @@ impl PlatformerScene {
             && self.slimes_killed == self.total_slimes
             && self.level_coins_collected == self.total_coins;
         if flawless {
-            renderer.draw_text("Flawless!", Point::new(128 - 9 * 8, text_y));
+            renderer.draw_text(t!("Flawless!"), Point::new(128 - 9 * 8, text_y));
         }
 
         let sh = PLATFORMER_SLIME_IDLE.height as i32;

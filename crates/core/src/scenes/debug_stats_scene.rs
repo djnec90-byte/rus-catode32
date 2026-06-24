@@ -1,3 +1,5 @@
+use crate::t;
+
 use crate::{
     context::{GameContext, StatId},
     input::Buttons,
@@ -20,25 +22,25 @@ struct Entry {
 }
 
 const ENTRIES: &[Entry] = &[
-    Entry { label: "Fullness",    field: Field::Stat(StatId::Fullness),        max: 100 },
-    Entry { label: "Energy",      field: Field::Stat(StatId::Energy),          max: 100 },
-    Entry { label: "Comfort",     field: Field::Stat(StatId::Comfort),         max: 100 },
-    Entry { label: "Playfulness", field: Field::Stat(StatId::Playfulness),     max: 100 },
-    Entry { label: "Focus",       field: Field::Stat(StatId::Focus),           max: 100 },
-    Entry { label: "Health",      field: Field::Health,                        max: 100 },
-    Entry { label: "Fulfillment", field: Field::Stat(StatId::Fulfillment),     max: 100 },
-    Entry { label: "Cleanliness", field: Field::Stat(StatId::Cleanliness),     max: 100 },
-    Entry { label: "Curiosity",   field: Field::Stat(StatId::Curiosity),       max: 100 },
-    Entry { label: "Sociability", field: Field::Stat(StatId::Sociability),     max: 100 },
-    Entry { label: "Intelligence",field: Field::Stat(StatId::Intelligence),    max: 100 },
-    Entry { label: "Maturity",    field: Field::Stat(StatId::Maturity),        max: 100 },
-    Entry { label: "Affection",   field: Field::Stat(StatId::Affection),       max: 100 },
-    Entry { label: "Fitness",     field: Field::Stat(StatId::Fitness),         max: 100 },
-    Entry { label: "Serenity",    field: Field::Stat(StatId::Serenity),        max: 100 },
-    Entry { label: "Courage",     field: Field::Stat(StatId::Courage),         max: 100 },
-    Entry { label: "Loyalty",     field: Field::Stat(StatId::Loyalty),         max: 100 },
-    Entry { label: "Mischief",    field: Field::Stat(StatId::Mischievousness), max: 100 },
-    Entry { label: "Sickness",    field: Field::Sickness,                      max: 10  },
+    Entry { label: t!("Fullness"),    field: Field::Stat(StatId::Fullness),        max: 100 },
+    Entry { label: t!("Energy"),      field: Field::Stat(StatId::Energy),          max: 100 },
+    Entry { label: t!("Comfort"),     field: Field::Stat(StatId::Comfort),         max: 100 },
+    Entry { label: t!("Playfulness"), field: Field::Stat(StatId::Playfulness),     max: 100 },
+    Entry { label: t!("Focus"),       field: Field::Stat(StatId::Focus),           max: 100 },
+    Entry { label: t!("Health"),      field: Field::Health,                        max: 100 },
+    Entry { label: t!("Fulfillment"), field: Field::Stat(StatId::Fulfillment),     max: 100 },
+    Entry { label: t!("Cleanliness"), field: Field::Stat(StatId::Cleanliness),     max: 100 },
+    Entry { label: t!("Curiosity"),   field: Field::Stat(StatId::Curiosity),       max: 100 },
+    Entry { label: t!("Sociability"), field: Field::Stat(StatId::Sociability),     max: 100 },
+    Entry { label: t!("Intelligence"),field: Field::Stat(StatId::Intelligence),    max: 100 },
+    Entry { label: t!("Maturity"),    field: Field::Stat(StatId::Maturity),        max: 100 },
+    Entry { label: t!("Affection"),   field: Field::Stat(StatId::Affection),       max: 100 },
+    Entry { label: t!("Fitness"),     field: Field::Stat(StatId::Fitness),         max: 100 },
+    Entry { label: t!("Serenity"),    field: Field::Stat(StatId::Serenity),        max: 100 },
+    Entry { label: t!("Courage"),     field: Field::Stat(StatId::Courage),         max: 100 },
+    Entry { label: t!("Loyalty"),     field: Field::Stat(StatId::Loyalty),         max: 100 },
+    Entry { label: t!("Mischief"),    field: Field::Stat(StatId::Mischievousness), max: 100 },
+    Entry { label: t!("Sickness"),    field: Field::Sickness,                      max: 10  },
 ];
 
 fn read(ctx: &GameContext, field: Field) -> f32 {

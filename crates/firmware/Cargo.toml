@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/moonbench/catode32"
 
 [features]
-default = ["c6"]
+default = ["c6", "lang-en"]
 c6 = [
     "catode32-core/c6",
     "esp-hal/esp32c6",
@@ -24,6 +24,14 @@ c3 = [
     "esp-bootloader-esp-idf/esp32c3",
     "esp-rtos/esp32c3",
 ]
+
+# Language selection — pass-through to core. Exactly one should be active.
+lang-en = ["catode32-core/lang-en"]
+lang-de = ["catode32-core/lang-de"]
+lang-es = ["catode32-core/lang-es"]
+lang-fr = ["catode32-core/lang-fr"]
+lang-it = ["catode32-core/lang-it"]
+lang-nl = ["catode32-core/lang-nl"]
 
 [dependencies]
 catode32-core = { path = "../core", default-features = false }

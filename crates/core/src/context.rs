@@ -1,4 +1,5 @@
 use heapless::Vec;
+use crate::t;
 
 use crate::platform::{
     radio::{WifiController, WIFI},
@@ -216,29 +217,29 @@ impl FoodItem {
 
     pub fn label(self) -> &'static str {
         match self {
-            FoodItem::Kibble => "Kibble",
-            FoodItem::Cod => "Cod",
-            FoodItem::Haddock => "Haddock",
-            FoodItem::Trout => "Trout",
-            FoodItem::Shrimp => "Shrimp",
-            FoodItem::Herring => "Herring",
-            FoodItem::Turkey => "Turkey",
-            FoodItem::Tuna => "Tuna",
-            FoodItem::Salmon => "Salmon",
-            FoodItem::Chicken => "Chicken",
-            FoodItem::Liver => "Liver",
-            FoodItem::Beef => "Beef",
-            FoodItem::Lamb => "Lamb",
-            FoodItem::Mackerel => "Mackerel",
-            FoodItem::Carrots => "Carrots",
-            FoodItem::Pumpkin => "Pumpkin",
-            FoodItem::Treats => "Treats",
-            FoodItem::FishBite => "Fish Bite",
-            FoodItem::Eggs => "Eggs",
-            FoodItem::Nugget => "Nugget",
-            FoodItem::Milk => "Milk",
-            FoodItem::ChewStick => "Chew Stick",
-            FoodItem::Puree => "Puree",
+            FoodItem::Kibble => t!("Kibble"),
+            FoodItem::Cod => t!("Cod"),
+            FoodItem::Haddock => t!("Haddock"),
+            FoodItem::Trout => t!("Trout"),
+            FoodItem::Shrimp => t!("Shrimp"),
+            FoodItem::Herring => t!("Herring"),
+            FoodItem::Turkey => t!("Turkey"),
+            FoodItem::Tuna => t!("Tuna"),
+            FoodItem::Salmon => t!("Salmon"),
+            FoodItem::Chicken => t!("Chicken"),
+            FoodItem::Liver => t!("Liver"),
+            FoodItem::Beef => t!("Beef"),
+            FoodItem::Lamb => t!("Lamb"),
+            FoodItem::Mackerel => t!("Mackerel"),
+            FoodItem::Carrots => t!("Carrots"),
+            FoodItem::Pumpkin => t!("Pumpkin"),
+            FoodItem::Treats => t!("Treats"),
+            FoodItem::FishBite => t!("Fish Bite"),
+            FoodItem::Eggs => t!("Eggs"),
+            FoodItem::Nugget => t!("Nugget"),
+            FoodItem::Milk => t!("Milk"),
+            FoodItem::ChewStick => t!("Chew Stick"),
+            FoodItem::Puree => t!("Puree"),
         }
     }
 
@@ -310,12 +311,12 @@ impl ToyVariant {
 
     pub const fn label(self) -> &'static str {
         match self {
-            ToyVariant::String_ => "String",
-            ToyVariant::Feather => "Feather",
-            ToyVariant::Mouse => "Mouse",
-            ToyVariant::Ball => "Yarn Ball",
-            ToyVariant::Bubbles => "Bubbles",
-            ToyVariant::Laser => "Laser",
+            ToyVariant::String_ => t!("String"),
+            ToyVariant::Feather => t!("Feather"),
+            ToyVariant::Mouse => t!("Mouse"),
+            ToyVariant::Ball => t!("Yarn Ball"),
+            ToyVariant::Bubbles => t!("Bubbles"),
+            ToyVariant::Laser => t!("Laser"),
         }
     }
 

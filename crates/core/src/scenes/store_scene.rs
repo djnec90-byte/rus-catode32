@@ -5,6 +5,7 @@
 
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
+use crate::t;
 
 use crate::{
     assets::store as art,
@@ -50,67 +51,67 @@ const COIN_X: i32 = 84;
 const COIN_Y: i32 = 29;
 
 const FOOD: &[MenuItem<StoreAction>] = &[
-    food_item("Kibble",  FoodItem::Kibble,  5,  "Kibble(5): 5c"),
-    food_item("Cod",     FoodItem::Cod,     6,  "Cod(5): 6c"),
-    food_item("Haddock", FoodItem::Haddock, 7,  "Haddock(5): 7c"),
-    food_item("Trout",   FoodItem::Trout,   8,  "Trout(5): 8c"),
-    food_item("Shrimp",  FoodItem::Shrimp,  9,  "Shrimp(5): 9c"),
-    food_item("Herring", FoodItem::Herring, 10, "Herring(5): 10c"),
-    food_item("Turkey",  FoodItem::Turkey,  10, "Turkey(5): 10c"),
-    food_item("Tuna",    FoodItem::Tuna,    12, "Tuna(5): 12c"),
-    food_item("Salmon",  FoodItem::Salmon,  12, "Salmon(5): 12c"),
-    food_item("Chicken", FoodItem::Chicken, 13, "Chicken(5): 13c"),
-    food_item("Liver",   FoodItem::Liver,   14, "Liver(5): 14c"),
-    food_item("Beef",    FoodItem::Beef,    14, "Beef(5): 14c"),
-    food_item("Lamb",    FoodItem::Lamb,    15, "Lamb(5): 15c"),
+    food_item(t!("Kibble"),  FoodItem::Kibble,  5,  "Kibble(5): 5c"),
+    food_item(t!("Cod"),     FoodItem::Cod,     6,  "Cod(5): 6c"),
+    food_item(t!("Haddock"), FoodItem::Haddock, 7,  "Haddock(5): 7c"),
+    food_item(t!("Trout"),   FoodItem::Trout,   8,  "Trout(5): 8c"),
+    food_item(t!("Shrimp"),  FoodItem::Shrimp,  9,  "Shrimp(5): 9c"),
+    food_item(t!("Herring"), FoodItem::Herring, 10, "Herring(5): 10c"),
+    food_item(t!("Turkey"),  FoodItem::Turkey,  10, "Turkey(5): 10c"),
+    food_item(t!("Tuna"),    FoodItem::Tuna,    12, "Tuna(5): 12c"),
+    food_item(t!("Salmon"),  FoodItem::Salmon,  12, "Salmon(5): 12c"),
+    food_item(t!("Chicken"), FoodItem::Chicken, 13, "Chicken(5): 13c"),
+    food_item(t!("Liver"),   FoodItem::Liver,   14, "Liver(5): 14c"),
+    food_item(t!("Beef"),    FoodItem::Beef,    14, "Beef(5): 14c"),
+    food_item(t!("Lamb"),    FoodItem::Lamb,    15, "Lamb(5): 15c"),
 ];
 
 const SNACKS: &[MenuItem<StoreAction>] = &[
-    food_item("Carrots", FoodItem::Carrots,  2, "Carrots(5): 2c"),
-    food_item("Pumpkin", FoodItem::Pumpkin,  2, "Pumpkin(5): 2c"),
-    food_item("Treats",  FoodItem::Treats,   3, "Treats(5): 3c"),
-    food_item("Bytes",   FoodItem::FishBite, 4, "Bytes(5): 4c"),
-    food_item("Eggs",    FoodItem::Eggs,     5, "Eggs(5): 5c"),
-    food_item("Nuggets", FoodItem::Nugget,   5, "Nuggets(5): 5c"),
-    food_item("Milk",    FoodItem::Milk,     6, "Milk(5): 6c"),
-    food_item("Sticks",  FoodItem::ChewStick, 6, "Sticks(5): 6c"),
-    food_item("Puree",   FoodItem::Puree,    8, "Puree(5): 8c"),
+    food_item(t!("Carrots"), FoodItem::Carrots,  2, "Carrots(5): 2c"),
+    food_item(t!("Pumpkin"), FoodItem::Pumpkin,  2, "Pumpkin(5): 2c"),
+    food_item(t!("Treats"),  FoodItem::Treats,   3, "Treats(5): 3c"),
+    food_item(t!("Bytes"),   FoodItem::FishBite, 4, "Bytes(5): 4c"),
+    food_item(t!("Eggs"),    FoodItem::Eggs,     5, "Eggs(5): 5c"),
+    food_item(t!("Nuggets"), FoodItem::Nugget,   5, "Nuggets(5): 5c"),
+    food_item(t!("Milk"),    FoodItem::Milk,     6, "Milk(5): 6c"),
+    food_item(t!("Sticks"),  FoodItem::ChewStick, 6, "Sticks(5): 6c"),
+    food_item(t!("Puree"),   FoodItem::Puree,    8, "Puree(5): 8c"),
 ];
 
 const TOYS: &[MenuItem<StoreAction>] = &[
-    toy_item("String",  ToyVariant::String_, 20, "String: 20c"),
-    toy_item("Feather", ToyVariant::Feather, 35, "Feather: 35c"),
-    toy_item("Mouse",   ToyVariant::Mouse,   40, "Mouse Toy: 40c"),
-    toy_item("Yarn",    ToyVariant::Ball,    50, "Yarn Ball: 50c"),
-    toy_item("Bubbles", ToyVariant::Bubbles, 45, "Bubbles: 45c"),
-    toy_item("Laser",   ToyVariant::Laser,   75, "Laser Pointer: 75c"),
+    toy_item(t!("String"),  ToyVariant::String_, 20, "String: 20c"),
+    toy_item(t!("Feather"), ToyVariant::Feather, 35, "Feather: 35c"),
+    toy_item(t!("Mouse"),   ToyVariant::Mouse,   40, "Mouse Toy: 40c"),
+    toy_item(t!("Yarn"),    ToyVariant::Ball,    50, "Yarn Ball: 50c"),
+    toy_item(t!("Bubbles"), ToyVariant::Bubbles, 45, "Bubbles: 45c"),
+    toy_item(t!("Laser"),   ToyVariant::Laser,   75, "Laser Pointer: 75c"),
 ];
 
 const POTS: &[MenuItem<StoreAction>] = &[
-    pot_item("Small",   PotSize::Small,   15, "Small pot: 15c"),
-    pot_item("Medium",  PotSize::Medium,  25, "Medium pot: 25c"),
-    pot_item("Large",   PotSize::Large,   40, "Large pot: 40c"),
-    pot_item("Planter", PotSize::Planter, 55, "Planter box: 55c"),
+    pot_item(t!("Small"),   PotSize::Small,   15, "Small pot: 15c"),
+    pot_item(t!("Medium"),  PotSize::Medium,  25, "Medium pot: 25c"),
+    pot_item(t!("Large"),   PotSize::Large,   40, "Large pot: 40c"),
+    pot_item(t!("Planter"), PotSize::Planter, 55, "Planter box: 55c"),
 ];
 
 const SEEDS: &[MenuItem<StoreAction>] = &[
-    seed_item("Grass",   SeedKind::CatGrass,  4,  "Cat Grass x3: 4c"),
-    seed_item("Freesia", SeedKind::Freesia,   10, "Freesia x3: 10c"),
-    seed_item("Sun",     SeedKind::Sunflower, 12, "Sunflower x3: 12c"),
-    seed_item("Rose",    SeedKind::Rose,      15, "Rose x3: 15c"),
+    seed_item(t!("Grass"),   SeedKind::CatGrass,  4,  "Cat Grass x3: 4c"),
+    seed_item(t!("Freesia"), SeedKind::Freesia,   10, "Freesia x3: 10c"),
+    seed_item(t!("Sun"),     SeedKind::Sunflower, 12, "Sunflower x3: 12c"),
+    seed_item(t!("Rose"),    SeedKind::Rose,      15, "Rose x3: 15c"),
 ];
 
 const TOOLS: &[MenuItem<StoreAction>] = &[
-    tool_item("Spade",  ToolKind::Spade,       40, "Spade: 40c"),
-    tool_item("W. Can", ToolKind::WateringCan, 50, "Watering Can: 50c"),
+    tool_item(t!("Spade"),  ToolKind::Spade,       40, "Spade: 40c"),
+    tool_item(t!("W. Can"), ToolKind::WateringCan, 50, "Watering Can: 50c"),
 ];
 
 const GARDEN: &[MenuItem<StoreAction>] = &[
-    MenuItem { label: "Pots",       icon: None, submenu: Some(POTS),  action: None, confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Seeds",      icon: None, submenu: Some(SEEDS), action: None, confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Tools",      icon: None, submenu: Some(TOOLS), action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Pots"),       icon: None, submenu: Some(POTS),  action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Seeds"),      icon: None, submenu: Some(SEEDS), action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Tools"),      icon: None, submenu: Some(TOOLS), action: None, confirm: None, confirm_on_vacation: None },
     MenuItem {
-        label: "Fertilizer",
+        label: t!("Fertilizer"),
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyFertilizer(FERTILIZER_COST)),
@@ -121,7 +122,7 @@ const GARDEN: &[MenuItem<StoreAction>] = &[
 
 const SERVICE: &[MenuItem<StoreAction>] = &[
     MenuItem {
-        label: "Groom",
+        label: t!("Groom"),
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyService(ServiceKind::Groom, GROOM_COST)),
@@ -129,7 +130,7 @@ const SERVICE: &[MenuItem<StoreAction>] = &[
         confirm_on_vacation: None,
     },
     MenuItem {
-        label: "Train",
+        label: t!("Train"),
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyService(ServiceKind::Train, TRAIN_COST)),
@@ -140,7 +141,7 @@ const SERVICE: &[MenuItem<StoreAction>] = &[
 
 const TRIPS: &[MenuItem<StoreAction>] = &[
     MenuItem {
-        label: "Park",
+        label: t!("Park"),
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationPark, 15)),
@@ -148,7 +149,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         confirm_on_vacation: None,
     },
     MenuItem {
-        label: "Forest",
+        label: t!("Forest"),
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationForest, 25)),
@@ -156,7 +157,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         confirm_on_vacation: None,
     },
     MenuItem {
-        label: "Aqua.",
+        label: t!("Aqua."),
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationAquarium, 50)),
@@ -164,7 +165,7 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
         confirm_on_vacation: None,
     },
     MenuItem {
-        label: "Beach",
+        label: t!("Beach"),
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyTrip(SceneId::VacationBeach, 100)),
@@ -174,14 +175,14 @@ const TRIPS: &[MenuItem<StoreAction>] = &[
 ];
 
 const ROOT: &[MenuItem<StoreAction>] = &[
-    MenuItem { label: "Food",    icon: None, submenu: Some(FOOD),    action: None, confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Snacks",  icon: None, submenu: Some(SNACKS),  action: None, confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Toys",    icon: None, submenu: Some(TOYS),    action: None, confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Garden",  icon: None, submenu: Some(GARDEN),  action: None, confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Service", icon: None, submenu: Some(SERVICE), action: None, confirm: None, confirm_on_vacation: None },
-    MenuItem { label: "Trips",   icon: None, submenu: Some(TRIPS),   action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Food"),    icon: None, submenu: Some(FOOD),    action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Snacks"),  icon: None, submenu: Some(SNACKS),  action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Toys"),    icon: None, submenu: Some(TOYS),    action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Garden"),  icon: None, submenu: Some(GARDEN),  action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Service"), icon: None, submenu: Some(SERVICE), action: None, confirm: None, confirm_on_vacation: None },
+    MenuItem { label: t!("Trips"),   icon: None, submenu: Some(TRIPS),   action: None, confirm: None, confirm_on_vacation: None },
     MenuItem {
-        label: "Meds.",
+        label: t!("Meds."),
         icon: None,
         submenu: None,
         action: Some(StoreAction::BuyMedicine(MEDICINE_COST)),
@@ -189,7 +190,7 @@ const ROOT: &[MenuItem<StoreAction>] = &[
         confirm_on_vacation: None,
     },
     MenuItem {
-        label: "Exit",
+        label: t!("Exit"),
         icon: None,
         submenu: None,
         action: Some(StoreAction::Leave),
@@ -293,7 +294,7 @@ impl StoreScene {
                     ctx.add_food_stock(item, FOOD_USES);
                     self.set_popup("Purchased!");
                 } else {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 }
             }
 
@@ -301,7 +302,7 @@ impl StoreScene {
                 let existing = ctx.find_toy(variant);
                 if let Some(idx) = existing {
                     if ctx.toys[idx].durability > 0 {
-                        self.set_popup("Already owned!");
+                        self.set_popup(t!("Already owned!"));
                     } else if Self::try_spend(ctx, cost) {
                         ctx.refresh_toy(variant);
                         self.set_popup(if matches!(variant, ToyVariant::Bubbles) {
@@ -310,13 +311,13 @@ impl StoreScene {
                             "Replaced!"
                         });
                     } else {
-                        self.set_popup("Can't afford!");
+                        self.set_popup(t!("Can't afford!"));
                     }
                 } else if Self::try_spend(ctx, cost) {
                     ctx.add_toy(variant);
                     self.set_popup("Purchased!");
                 } else {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 }
             }
 
@@ -325,7 +326,7 @@ impl StoreScene {
                     ctx.add_pot(pot);
                     self.set_popup("Pot bought!");
                 } else {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 }
             }
 
@@ -334,27 +335,27 @@ impl StoreScene {
                     ctx.add_seeds(seed, SEEDS_PER_PACK);
                     self.set_popup("Seeds bought!");
                 } else {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 }
             }
 
             StoreAction::BuyTool(tool, cost) => {
                 if ctx.owns_tool(tool) {
-                    self.set_popup("Already owned!");
+                    self.set_popup(t!("Already owned!"));
                 } else if Self::try_spend(ctx, cost) {
                     ctx.set_tool(tool, true);
                     self.set_popup("Tool bought!");
                 } else {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 }
             }
 
             StoreAction::BuyFertilizer(cost) => {
                 if Self::try_spend(ctx, cost) {
                     ctx.fertilizer = ctx.fertilizer.saturating_add(1);
-                    self.set_popup("Fertilizer bought!");
+                    self.set_popup(t!("Fertilizer bought!"));
                 } else {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 }
             }
 
@@ -363,13 +364,13 @@ impl StoreScene {
                     ctx.medicine = ctx.medicine.saturating_add(1);
                     self.set_popup("Medicine bought!");
                 } else {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 }
             }
 
             StoreAction::BuyService(kind, cost) => {
                 if !Self::try_spend(ctx, cost) {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 } else {
                     match kind {
                         ServiceKind::Groom => {
@@ -399,7 +400,7 @@ impl StoreScene {
                     self.pending_scene = Some(dest);
                     self.set_popup("Enjoy the trip!");
                 } else {
-                    self.set_popup("Can't afford!");
+                    self.set_popup(t!("Can't afford!"));
                 }
             }
         }

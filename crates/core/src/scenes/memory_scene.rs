@@ -6,6 +6,7 @@ use core::fmt::Write as _;
 use embedded_graphics::prelude::{Point, Size};
 use heapless::String;
 use micromath::F32Ext;
+use crate::t;
 
 use crate::{
     assets::character::PoseId,
@@ -288,17 +289,17 @@ impl MemoryScene {
         self.pending_best = new_best;
 
         let rating = if self.score < 50 {
-            "Incredible!"
+            t!("Incredible!")
         } else if self.score < 100 {
-            "Amazing!"
+            t!("Amazing!")
         } else if self.score < 150 {
-            "Impressive!"
+            t!("Impressive!")
         } else if self.score < 250 {
-            "Well done!"
+            t!("Well done!")
         } else if self.score < 500 {
-            "Not bad!"
+            t!("Not bad!")
         } else {
-            "Phwew!"
+            t!("Phwew!")
         };
 
         let mut text: String<96> = String::new();

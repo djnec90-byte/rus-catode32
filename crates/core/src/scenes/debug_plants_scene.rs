@@ -4,6 +4,7 @@
 //! Menu2 swaps between pot/plant submenus. B returns to the last main scene.
 
 use embedded_graphics::prelude::Point;
+use crate::t;
 
 use crate::{
     assets::plants::{plant_sprite, pot_sprite, PlantStage, PotKind},
@@ -48,22 +49,22 @@ const SEEDS: &[SeedKind] = &[
 ];
 
 const POT_MENU: &[MenuItem<DebugPlantsAction>] = &[
-    pot_menu_item("Small", 0),
-    pot_menu_item("Medium", 1),
-    pot_menu_item("Large", 2),
-    pot_menu_item("Planter", 3),
+    pot_menu_item(t!("Small"), 0),
+    pot_menu_item(t!("Medium"), 1),
+    pot_menu_item(t!("Large"), 2),
+    pot_menu_item(t!("Planter"), 3),
 ];
 
 const SEED_MENU: &[MenuItem<DebugPlantsAction>] = &[
-    seed_menu_item("Cat Grass", 0),
-    seed_menu_item("Freesia", 1),
-    seed_menu_item("Rose", 2),
-    seed_menu_item("Sunflower", 3),
+    seed_menu_item(t!("Cat Grass"), 0),
+    seed_menu_item(t!("Freesia"), 1),
+    seed_menu_item(t!("Rose"), 2),
+    seed_menu_item(t!("Sunflower"), 3),
 ];
 
 const MENU: &[MenuItem<DebugPlantsAction>] = &[
     MenuItem {
-        label: "Pot type",
+        label: t!("Pot type"),
         icon: None,
         submenu: Some(POT_MENU),
         action: None,
@@ -71,7 +72,7 @@ const MENU: &[MenuItem<DebugPlantsAction>] = &[
         confirm_on_vacation: None,
     },
     MenuItem {
-        label: "Plant type",
+        label: t!("Plant type"),
         icon: None,
         submenu: Some(SEED_MENU),
         action: None,
