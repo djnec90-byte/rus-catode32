@@ -8,7 +8,6 @@ use crate::{
     entities::character::Character,
     rand,
     render::Renderer,
-    scene::SceneId,
     time_system::Weather,
     ui::bubble::{self, BubbleIcon},
 };
@@ -244,7 +243,3 @@ fn pick_icon(ctx: &GameContext) -> &'static str {
     }
 }
 
-#[allow(dead_code)]
-fn _scene_outdoor(s: SceneId) -> bool {
-    common::is_outdoor(s)
-}

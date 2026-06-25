@@ -33,7 +33,6 @@ use crate::{
     behavior::{Behavior, BehaviorId, NextBehavior},
     context::GameContext,
     println, rand,
-    scene::SceneId,
 };
 
 pub use affection::AffectionBehavior;
@@ -508,9 +507,3 @@ fn priority(id: BehaviorId, ctx: &GameContext) -> u32 {
     }
 }
 
-/// Helper used by every scene to know whether the current location is an
-/// outdoor one (drives weather effects on bonuses, etc.).
-#[allow(dead_code)]
-pub fn scene_is_outdoor(scene: SceneId) -> bool {
-    common::is_outdoor(scene)
-}

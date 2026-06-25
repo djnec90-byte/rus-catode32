@@ -169,13 +169,9 @@ impl VacationForestScene {
         }
     }
 
-    fn is_daytime(ctx: &GameContext) -> bool {
-        (6..20).contains(&ctx.time_hours)
-    }
-
     fn spawn_critters(&mut self, ctx: &GameContext) {
         self.critters.clear();
-        let day = Self::is_daytime(ctx);
+        let day = ctx.is_daytime();
         if day {
             let n = rand_range_u32(&mut self.rng, 1, 3);
             for _ in 0..n {

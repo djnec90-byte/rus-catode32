@@ -20,10 +20,11 @@ use heapless::{String, Vec};
 
 use crate::{
     context::GameContext,
-    espnow_manager::{self, format_mac},
+    espnow_manager,
     input::{Button, Buttons},
     render::Renderer,
     scene::{Scene, SceneId},
+    wifi_tracker::format_bssid,
 };
 
 const LINES_VISIBLE: usize = 8;
@@ -188,7 +189,7 @@ impl Scene for DebugEspnowScene {
             .espnow
             .as_ref()
             .and_then(|m| m.own_mac())
-            .map(|m| format_mac(&m))
+            .map(|m| format_bssid(&m))
             .unwrap_or_else(|| {
                 let mut s: String<17> = String::new();
                 let _ = s.push_str("--");

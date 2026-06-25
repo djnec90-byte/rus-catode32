@@ -810,6 +810,13 @@ impl GameContext {
         self.meteor_shower_timer > 0.0
     }
 
+    /// Daylight predicate. True when the in-game hour is between 6 (sunrise)
+    /// and 20 (sunset). Drives critter spawn pools and any other day/night
+    /// gameplay gate.
+    pub fn is_daytime(&self) -> bool {
+        (6..20).contains(&self.time_hours)
+    }
+
     /// Reset every numeric stat to its default baseline. Personality traits
     /// fall back to `50 + seed-derived offset` so pet identity survives;
     /// nothing else (inventory, plants, favorites, name, scores) is touched.

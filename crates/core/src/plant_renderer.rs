@@ -7,21 +7,13 @@ use embedded_graphics::prelude::Point;
 use crate::{
     assets::plants::{plant_sprite, pot_sprite, PotKind},
     context::GameContext,
-    environment::{Environment, Layer},
+    environment::Environment,
     plant_system::PlantLayer,
     render::{Renderer, Sprite, SpriteOpts},
     scene::SceneId,
 };
 
 const DISPLAY_WIDTH: i32 = 128;
-
-fn env_layer(layer: PlantLayer) -> Layer {
-    match layer {
-        PlantLayer::Background => Layer::Background,
-        PlantLayer::Midground => Layer::Midground,
-        PlantLayer::Foreground => Layer::Foreground,
-    }
-}
 
 /// Draw all pots and plants for one scene + one layer.
 pub fn draw_plants_layer(
@@ -31,7 +23,7 @@ pub fn draw_plants_layer(
     scene: SceneId,
     layer: PlantLayer,
 ) {
-    let offset = env.camera_offset(env_layer(layer));
+    let offset = env.camera_offset(layer.to_env());
     for plant in ctx.plants.iter() {
         if plant.scene != scene || plant.layer != layer {
             continue;

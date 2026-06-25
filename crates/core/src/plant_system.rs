@@ -195,12 +195,7 @@ impl PlantLayer {
     }
 
     pub fn parallax(self) -> f32 {
-        // Mirrors environment::PARALLAX.
-        match self {
-            PlantLayer::Background => 0.3,
-            PlantLayer::Midground => 0.6,
-            PlantLayer::Foreground => 1.0,
-        }
+        crate::environment::PARALLAX[self.to_env() as usize]
     }
 }
 

@@ -122,7 +122,3 @@ impl Character {
         );
     }
 }
-
-// Keep `GameContext` accessible from the trait without a circular import.
-#[allow(dead_code)]
-fn _ctx_marker(_: &GameContext) {}

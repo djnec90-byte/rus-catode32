@@ -2,7 +2,7 @@ use embedded_graphics::prelude::{Point, Size};
 
 use crate::{
     assets::{
-        furniture::{BOOKSHELF, CAT_BED_SIDE, PILLOW},
+        furniture::{draw_cat_bed_rim, BOOKSHELF, PILLOW},
         items::YARN_BALL,
     },
     context::GameContext,
@@ -11,7 +11,7 @@ use crate::{
     input::Buttons,
     location_scene::LocationScene,
     plant_system::PlantLayer,
-    render::{Renderer, SpriteOpts},
+    render::Renderer,
     scene::{Scene, SceneId},
 };
 
@@ -73,31 +73,6 @@ impl BedroomScene {
         renderer.draw_rect(Point::new(bed_x, 32), Size::new(79, 16), false);
     }
 
-    fn draw_cat_bed_rim(&self, renderer: &mut Renderer) {
-        let fg_offset = self.base.environment.camera_offset(Layer::Foreground);
-        let bed_x = CAT_BED_WORLD_X - fg_offset;
-        let w = CAT_BED_SIDE.width as i32;
-        // Left rim
-        renderer.draw_sprite(
-            &CAT_BED_SIDE,
-            Point::new(bed_x, 52),
-            SpriteOpts::default(),
-        );
-        // Middle gap (mask + 3 horizontal rim lines)
-        renderer.fill_rect_off(Point::new(bed_x + w, 54), Size::new(20, 10));
-        renderer.draw_line(Point::new(bed_x + w, 54), Point::new(bed_x + w + 20, 54));
-        renderer.draw_line(Point::new(bed_x + w, 63), Point::new(bed_x + w + 20, 63));
-        renderer.draw_line(Point::new(bed_x + w, 59), Point::new(bed_x + w + 20, 59));
-        // Right rim (mirrored)
-        renderer.draw_sprite(
-            &CAT_BED_SIDE,
-            Point::new(bed_x + w + 20, 52),
-            SpriteOpts {
-                mirror_h: true,
-                ..Default::default()
-            },
-        );
-    }
 }
 
 // Approx foreground world-x of the bed interior; sleep/nap behaviors read
@@ -158,7 +133,8 @@ impl Scene for BedroomScene {
         self.base.draw_plants(ctx, renderer, PlantLayer::Foreground);
         self.base.draw_character(renderer, ctx);
         // Cat bed rim drawn AFTER the character so the cat appears nestled inside.
-        self.draw_cat_bed_rim(renderer);
+        let fg_offset = self.base.environment.camera_offset(Layer::Foreground);
+        draw_cat_bed_rim(renderer, CAT_BED_WORLD_X - fg_offset);
         self.base.draw_overlay(ctx, renderer);
     }
 }

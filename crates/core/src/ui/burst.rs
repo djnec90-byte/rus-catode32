@@ -63,7 +63,7 @@ pub const HEAL_STYLE: BurstStyle = BurstStyle {
     fill_frames: Some(HEAL_FILL_FRAMES),
     width: icons::HEAL_W,
     height: icons::HEAL_H,
-    frame_dur: 0.06,
+    frame_dur: 0.5,
 };
 
 const HEAL_FRAMES: &[&[u8]] = &[icons::HEAL_FRAME];
@@ -110,11 +110,6 @@ impl BurstEffect {
     /// -20], stagger 0.5s + up to 0.25s jitter.
     pub fn trigger_character(&mut self, rng: &mut u32, count: usize, style: BurstStyle) {
         self.trigger_with(rng, count, style, -35.0, 35.0, -50.0, -20.0, 0.5);
-    }
-
-    /// HEAL sparkles around the character: wide spread, drifting upward.
-    pub fn trigger_heal(&mut self, rng: &mut u32, count: usize) {
-        self.trigger_with(rng, count, HEAL_STYLE, -28.0, 28.0, -40.0, -10.0, 0.5);
     }
 
     /// Plant watering / fertilizer feedback: narrow spread centered just

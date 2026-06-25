@@ -1,7 +1,7 @@
 use embedded_graphics::prelude::{Point, Size};
 
 use crate::{
-    assets::{furniture::CAT_BED_SIDE, nature::COBWEB},
+    assets::{furniture::draw_cat_bed_rim, nature::COBWEB},
     context::GameContext,
     environment::Layer,
     gardening_ui::PlantSurface,
@@ -79,24 +79,6 @@ impl TreehouseScene {
         );
     }
 
-    fn draw_cat_bed_rim(&self, renderer: &mut Renderer) {
-        let fg_offset = self.base.environment.camera_offset(Layer::Foreground);
-        let bed_x = CAT_BED_WORLD_X - fg_offset;
-        let w = CAT_BED_SIDE.width as i32;
-        renderer.draw_sprite(&CAT_BED_SIDE, Point::new(bed_x, 52), SpriteOpts::default());
-        renderer.fill_rect_off(Point::new(bed_x + w, 54), Size::new(20, 10));
-        renderer.draw_line(Point::new(bed_x + w, 54), Point::new(bed_x + w + 20, 54));
-        renderer.draw_line(Point::new(bed_x + w, 63), Point::new(bed_x + w + 20, 63));
-        renderer.draw_line(Point::new(bed_x + w, 59), Point::new(bed_x + w + 20, 59));
-        renderer.draw_sprite(
-            &CAT_BED_SIDE,
-            Point::new(bed_x + w + 20, 52),
-            SpriteOpts {
-                mirror_h: true,
-                ..Default::default()
-            },
-        );
-    }
 }
 
 // Foreground world-x of the cat bed interior; sleep/nap behaviors read this
@@ -153,7 +135,8 @@ impl Scene for TreehouseScene {
         self.draw_platform_fg(renderer);
         self.base.draw_plants(ctx, renderer, PlantLayer::Foreground);
         self.base.draw_character(renderer, ctx);
-        self.draw_cat_bed_rim(renderer);
+        let fg_offset = self.base.environment.camera_offset(Layer::Foreground);
+        draw_cat_bed_rim(renderer, CAT_BED_WORLD_X - fg_offset);
         self.base.draw_overlay(ctx, renderer);
     }
 }

@@ -29,7 +29,6 @@ pub mod snake_scene;
 pub mod social_scene;
 pub mod stats_scene;
 pub mod store_scene;
-pub mod stub_scene;
 pub mod tictactoe_scene;
 pub mod treehouse_scene;
 pub mod vacation_aquarium_scene;
@@ -72,7 +71,6 @@ use snake_scene::SnakeScene;
 use social_scene::SocialScene;
 use stats_scene::StatsScene;
 use store_scene::StoreScene;
-use stub_scene::StubScene;
 use tictactoe_scene::TicTacToeScene;
 use treehouse_scene::TreehouseScene;
 use vacation_aquarium_scene::VacationAquariumScene;
@@ -120,7 +118,6 @@ pub enum ActiveScene {
     VacationForest(VacationForestScene),
     VacationAquarium(VacationAquariumScene),
     VacationBeach(VacationBeachScene),
-    Stub(StubScene),
 }
 
 impl ActiveScene {
@@ -166,7 +163,6 @@ impl ActiveScene {
                 ActiveScene::VacationAquarium(VacationAquariumScene::new())
             }
             SceneId::VacationBeach => ActiveScene::VacationBeach(VacationBeachScene::new()),
-            SceneId::Stub(name) => ActiveScene::Stub(StubScene::new(name)),
         }
     }
 
@@ -210,7 +206,6 @@ impl ActiveScene {
             ActiveScene::VacationForest(s) => s,
             ActiveScene::VacationAquarium(s) => s,
             ActiveScene::VacationBeach(s) => s,
-            ActiveScene::Stub(s) => s,
         }
     }
 
@@ -254,7 +249,6 @@ impl ActiveScene {
             ActiveScene::VacationForest(s) => s,
             ActiveScene::VacationAquarium(s) => s,
             ActiveScene::VacationBeach(s) => s,
-            ActiveScene::Stub(s) => s,
         }
     }
 }

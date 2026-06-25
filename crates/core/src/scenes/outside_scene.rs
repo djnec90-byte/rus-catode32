@@ -89,10 +89,6 @@ const CRITTER_SPECS: &[CritterSpec] = &[
     },
 ];
 
-fn is_daytime(hours: u8) -> bool {
-    (6..20).contains(&hours)
-}
-
 pub struct OutsideScene {
     base: LocationScene,
     critters: Vec<Critter, MAX_CRITTERS>,
@@ -123,7 +119,7 @@ impl OutsideScene {
 
     fn spawn_critters(&mut self, ctx: &GameContext) {
         self.critters.clear();
-        let day = is_daytime(ctx.time_hours);
+        let day = ctx.is_daytime();
         for spec in CRITTER_SPECS {
             if !spec.seasons.contains(&ctx.season) {
                 continue;

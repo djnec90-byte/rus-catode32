@@ -45,7 +45,6 @@ pub enum SceneId {
     VacationForest,
     VacationAquarium,
     VacationBeach,
-    Stub(&'static str),
 }
 
 pub trait Scene {

@@ -4,6 +4,7 @@ use crate::t;
 
 use crate::{
     context::{FoodItem, ToyVariant},
+    rand::xorshift32,
     scene::SceneId,
 };
 
@@ -206,18 +207,6 @@ const LOCATIONS: [SceneId; 4] = [
 
 const TRAIT_MAGNITUDE: u32 = 10;
 const PERSONALITY_TRAITS: usize = 5;
-
-fn xorshift32(state: &mut u32) -> u32 {
-    let mut x = *state;
-    if x == 0 {
-        x = 1;
-    }
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    *state = x;
-    x
-}
 
 /// Returns five `(courage, loyalty, mischievousness, curiosity, sociability)`
 /// offsets in roughly `[-TRAIT_MAGNITUDE, +TRAIT_MAGNITUDE]`, mean-centered.

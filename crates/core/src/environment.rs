@@ -13,7 +13,7 @@ pub enum Layer {
     Foreground = 2,
 }
 
-const PARALLAX: [f32; 3] = [0.3, 0.6, 1.0];
+pub(crate) const PARALLAX: [f32; 3] = [0.3, 0.6, 1.0];
 
 #[derive(Clone, Copy)]
 pub struct EnvObject {

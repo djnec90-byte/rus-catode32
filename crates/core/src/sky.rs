@@ -6,6 +6,7 @@ use micromath::F32Ext;
 use crate::{
     assets::nature::{CLOUD1, CLOUD2, CLOUD3, HOT_AIR_BALLOON, MOON, PLANE_TINY, SUN, SUN_HOT},
     context::GameContext,
+    rand::xorshift32,
     render::{Renderer, Sprite, SpriteOpts},
     time_system::{Season, Weather},
 };
@@ -138,14 +139,6 @@ impl TimeCategory {
     }
 }
 
-fn xorshift32(state: &mut u32) -> u32 {
-    let mut x = *state;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    *state = x;
-    x
-}
 
 // (min_count, max_count, speed_multiplier) by weather
 fn weather_cloud_config(weather: Weather) -> (u8, u8, f32) {

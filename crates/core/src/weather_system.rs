@@ -2,6 +2,7 @@ use heapless::Vec;
 
 use crate::{
     context::GameContext,
+    rand::xorshift32,
     time_system::{Season, Weather},
 };
 
@@ -18,15 +19,6 @@ const SNOW_TEMP_THRESHOLD: f32 = 4.0;
 const METEOR_SEED_OFFSET: u32 = 0x100000;
 const METEOR_SHOWER_MIN_DURATION: u32 = 180;
 const METEOR_SHOWER_MAX_DURATION: u32 = 300;
-
-fn xorshift32(state: &mut u32) -> u32 {
-    let mut x = *state;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    *state = x;
-    x
-}
 
 fn seeded_rand(step: u32) -> u32 {
     let mut x = step.wrapping_mul(2_654_435_761).wrapping_add(1);

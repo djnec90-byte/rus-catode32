@@ -262,7 +262,7 @@ impl SocialScene {
         // it survives this scene's `exit` (which always releases the
         // refcount it took in `enter`). Phase 5b's `end_visit` drops
         // this one.
-        espnow_manager::acquire_visit_radio(ctx);
+        espnow_manager::start_session(ctx);
     }
 
     fn draw_browsing(&self, renderer: &mut Renderer) {

@@ -21,7 +21,8 @@ use crate::{
 };
 
 /// MAC address newtype. Stored as raw 6 bytes; formatted as
-/// `aa:bb:cc:dd:ee:ff` for logs and save files via [`format_mac`].
+/// `aa:bb:cc:dd:ee:ff` via [`crate::wifi_tracker::format_bssid`] (same byte
+/// layout).
 pub type MacAddr = [u8; 6];
 
 /// Broadcast destination, re-exported for callers.
@@ -265,10 +266,6 @@ pub fn stop_session(ctx: &mut GameContext) {
     radio::release(ctx);
 }
 
-pub fn acquire_visit_radio(ctx: &mut GameContext) -> bool {
-    radio::acquire(ctx)
-}
-
 pub fn end_visit(ctx: &mut GameContext, notify_peer: bool) {
     let Some(visit) = ctx.visit.take() else {
         return;
@@ -282,16 +279,3 @@ pub fn end_visit(ctx: &mut GameContext, notify_peer: bool) {
     radio::release(ctx);
 }
 
-/// Format a MAC as `aa:bb:cc:dd:ee:ff`. Used for the debug scene and
-/// any future persistence (friends list).
-pub fn format_mac(m: &MacAddr) -> heapless::String<17> {
-    use core::fmt::Write;
-    let mut s: heapless::String<17> = heapless::String::new();
-    for (i, b) in m.iter().enumerate() {
-        if i > 0 {
-            let _ = s.push(':');
-        }
-        let _ = write!(s, "{:02x}", b);
-    }
-    s
-}

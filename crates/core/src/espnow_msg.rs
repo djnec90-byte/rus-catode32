@@ -157,14 +157,6 @@ pub fn decode_vocalize(data: &[u8]) -> Option<BubbleIcon> {
     Some(icon_from_wire(data[4]))
 }
 
-/// Lookup table mapping behavior-side icon hint strings ("heart",
-/// "exclaim", etc.) to wire-encodable [`BubbleIcon`]s. Mirrors
-/// [`BubbleIcon::from_name`]; this duplication keeps the wire layer
-/// independent of the UI module's public surface.
-pub fn icon_from_name(name: &str) -> Option<BubbleIcon> {
-    BubbleIcon::from_name(name)
-}
-
 /// Type alias matching the on-context pet-name buffer.
 pub type PetName = String<PET_NAME_MAX>;
 
