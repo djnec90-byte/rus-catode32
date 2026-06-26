@@ -9,15 +9,11 @@ use crate::{
     },
     context::{GameContext, StatId},
     environment::Layer,
-    gardening_ui::PlantSurface,
-    input::Buttons,
     location_scene::LocationScene,
     render::{Renderer, Sprite, SpriteOpts},
-    scene::{Scene, SceneId},
-    scenes::vacation_base::{VacationConfig, VacationState},
+    scene::SceneId,
+    scenes::vacation_base::{VacationConfig, VacationScene, VacationWorld},
 };
-
-const PLANT_SURFACES: &[PlantSurface] = &[];
 
 const WORLD_WIDTH: i32 = 234;
 const GROUND_Y: i32 = 58;
@@ -81,41 +77,21 @@ const WAVE_TRAVEL_FG: i32 = 12;
 const TIMER_SCALE: f32 = TIMER_LENGTH / 256.0;
 const SHORE_PAR_SCALE: f32 = 1.0 / 128.0;
 
-const CONFIG: VacationConfig = VacationConfig {
-    enjoy_duration: 750.0,
-    grace_duration: 120.0,
-    accrual: &[
-        (StatId::Serenity, 8.0),
-        (StatId::Fulfillment, 8.0),
-    ],
-    penalties: &[
-        (StatId::Comfort, -0.005),
-        (StatId::Serenity, -0.003),
-    ],
-};
-
-pub struct VacationBeachScene {
-    base: LocationScene,
-    state: VacationState,
+#[derive(Default)]
+pub struct BeachWorld {
     wave_timer: f32,
 }
 
-impl VacationBeachScene {
-    pub fn new() -> Self {
-        Self {
-            base: LocationScene::new(WORLD_WIDTH, Point::new(CHAR_WORLD_X, GROUND_Y)),
-            state: VacationState::new(CONFIG),
-            wave_timer: 0.0,
-        }
-    }
+pub type VacationBeachScene = VacationScene<BeachWorld>;
 
-    fn draw_background(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Background);
+impl BeachWorld {
+    fn draw_background(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Background);
         // Shimmers use the layer parallax (already baked in to `shimmer_cam`);
         // waves use the per-y `shore_par_128` baked into the chunks, so they
         // need the raw camera_x. Applying layer parallax on top would slow
         // the waves below the hill's drift and make them appear to track right.
-        let raw_cam = self.base.environment.camera_x as f32;
+        let raw_cam = base.environment.camera_x as f32;
         let shimmer_cam = raw_cam * 0.3;
         let sw = 128;
         let hill_sx = HILL_WORLD_X - offset;
@@ -169,9 +145,9 @@ impl VacationBeachScene {
         );
     }
 
-    fn draw_midground(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Midground);
-        let raw_cam = self.base.environment.camera_x as f32;
+    fn draw_midground(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Midground);
+        let raw_cam = base.environment.camera_x as f32;
         let shimmer_cam = raw_cam * 0.6;
         let sw = 128;
         let mut i = 0;
@@ -205,9 +181,9 @@ impl VacationBeachScene {
         );
     }
 
-    fn draw_foreground(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Foreground);
-        let raw_cam = self.base.environment.camera_x as f32;
+    fn draw_foreground(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Foreground);
+        let raw_cam = base.environment.camera_x as f32;
         let sw = 128;
         let mut i = 0;
         while i + 1 < SAND_FG_CLUSTERS.len() {
@@ -324,65 +300,37 @@ fn rem_euclid_f32(a: f32, m: f32) -> f32 {
     }
 }
 
-impl Scene for VacationBeachScene {
-    fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::VacationBeach, PLANT_SURFACES);
-        // Beach walkable strip is shifted right so the cat stays on sand, not water.
-        ctx.scene_x_min = 100;
-        ctx.scene_x_max = WORLD_WIDTH - 10;
+impl VacationWorld for BeachWorld {
+    const SCENE_ID: SceneId = SceneId::VacationBeach;
+    const WORLD_WIDTH: i32 = WORLD_WIDTH;
+    const CHAR_WORLD_X: i32 = CHAR_WORLD_X;
+    const GROUND_Y: i32 = GROUND_Y;
+    // Beach walkable strip is shifted right so the cat stays on sand, not water.
+    const X_MIN: i32 = 100;
+    const X_MAX: i32 = WORLD_WIDTH - 10;
+    const CONFIG: VacationConfig = VacationConfig::standard(&[
+        (StatId::Serenity, 8.0),
+        (StatId::Fulfillment, 8.0),
+    ]);
+    const HAS_SKY: bool = true;
+
+    fn enter(&mut self, _ctx: &mut GameContext, _base: &mut LocationScene) {
         self.wave_timer = 0.0;
-        self.state.on_enter(ctx);
     }
 
-    fn exit(&mut self, ctx: &mut GameContext) {
-        self.state.on_exit(ctx);
-    }
-
-    fn update(
-        &mut self,
-        ctx: &mut GameContext,
-        buttons: &mut Buttons,
-        dt: f32,
-    ) -> Option<SceneId> {
-        if let Some(id) = self.base.update(ctx, buttons, dt) {
-            return Some(id);
-        }
-        let scaled = dt * ctx.time_speed;
-        self.wave_timer += scaled;
+    fn tick(&mut self, _ctx: &mut GameContext, scaled_dt: f32) {
+        self.wave_timer += scaled_dt;
         if self.wave_timer >= TIMER_LENGTH {
             self.wave_timer -= TIMER_LENGTH;
         }
-        self.state.tick(ctx, scaled);
-        None
     }
 
-    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
-        self.base.tick_background(ctx, dt);
-        let scaled = dt * ctx.time_speed;
-        self.wave_timer += scaled;
-        if self.wave_timer >= TIMER_LENGTH {
-            self.wave_timer -= TIMER_LENGTH;
-        }
-        self.state.tick(ctx, scaled);
-    }
-
-    fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
-        self.base.mark_behavior_almost_done(ctx);
-    }
-
-    fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
-        if self.base.menu_active() {
-            self.base.draw_menu(renderer);
-            return;
-        }
-        self.base.draw_sky(renderer, ctx);
-        self.base.environment.draw_layer(renderer, Layer::Background);
-        self.draw_background(renderer);
-        self.base.environment.draw_layer(renderer, Layer::Midground);
-        self.draw_midground(renderer);
-        self.base.environment.draw_layer(renderer, Layer::Foreground);
-        self.draw_foreground(renderer);
-        self.base.draw_character(renderer, ctx);
-        self.base.draw_overlay(ctx, renderer);
+    fn draw_world(&self, _ctx: &GameContext, renderer: &mut Renderer, base: &LocationScene) {
+        base.environment.draw_layer(renderer, Layer::Background);
+        self.draw_background(renderer, base);
+        base.environment.draw_layer(renderer, Layer::Midground);
+        self.draw_midground(renderer, base);
+        base.environment.draw_layer(renderer, Layer::Foreground);
+        self.draw_foreground(renderer, base);
     }
 }

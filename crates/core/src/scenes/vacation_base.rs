@@ -1,11 +1,18 @@
-//! Shared vacation timer + stat-accrual / overstay-penalty logic.
-//!
-//! Used by the four vacation scenes (park, forest, aquarium, beach) to keep
-//! the per-scene file focused on art. Each scene owns a `VacationState` and
-//! calls `tick()` from its update path. `apply_rewards_on_exit()` lands the
-//! accumulated bonuses, and `cleanup_context()` clears the cross-scene flags.
+//! Shared vacation timer + stat-accrual / overstay-penalty logic, plus the
+//! [`VacationScene`] / [`VacationWorld`] split that lets each destination
+//! describe only the bits unique to it (geometry, art, entity state) and
+//! inherit the boilerplate `Scene` impl from this module.
 
-use crate::context::{GameContext, StatId};
+use embedded_graphics::prelude::Point;
+
+use crate::{
+    context::{GameContext, StatId},
+    gardening_ui::PlantSurface,
+    input::Buttons,
+    location_scene::LocationScene,
+    render::Renderer,
+    scene::{Scene, SceneId},
+};
 
 #[derive(Clone, Copy)]
 pub struct VacationConfig {
@@ -18,6 +25,32 @@ pub struct VacationConfig {
     pub accrual: &'static [(StatId, f32)],
     /// Per-second penalties applied during overstay (negative deltas).
     pub penalties: &'static [(StatId, f32)],
+}
+
+/// Default enjoyment cap shared by every Python `VacationScene` subclass; the
+/// `VacationConfig::standard` helper bakes this in so destinations only have
+/// to declare their accrual stats.
+pub const STANDARD_ENJOY_DURATION: f32 = 750.0;
+/// Default post-cap grace before overstay penalties begin (matches Python).
+pub const STANDARD_GRACE_DURATION: f32 = 120.0;
+/// Default overstay penalty stat-pair (matches Python's `STAT_PENALTIES`
+/// default on the `VacationScene` base class; no subclass overrides it).
+pub const STANDARD_PENALTIES: &[(StatId, f32)] = &[
+    (StatId::Comfort, -0.005),
+    (StatId::Serenity, -0.003),
+];
+
+impl VacationConfig {
+    /// Most destinations share `STANDARD_ENJOY_DURATION` / `STANDARD_GRACE_DURATION`
+    /// / `STANDARD_PENALTIES` and only differ in the accrual stat-pair.
+    pub const fn standard(accrual: &'static [(StatId, f32)]) -> Self {
+        Self {
+            enjoy_duration: STANDARD_ENJOY_DURATION,
+            grace_duration: STANDARD_GRACE_DURATION,
+            accrual,
+            penalties: STANDARD_PENALTIES,
+        }
+    }
 }
 
 const PENALTY_INTERVAL: f32 = 90.0;
@@ -99,5 +132,130 @@ impl VacationState {
             let _ = batched.push((stat, total * proportion));
         }
         ctx.apply_stat_changes(&batched);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Vacation Scene generic wrapper
+// ---------------------------------------------------------------------------
+
+/// Per-destination contract. The wrapper [`VacationScene`] handles the
+/// `Scene`-trait boilerplate (enter / exit flag-stamping, dt scaling, menu
+/// gating, character + overlay draws); each implementor only declares the
+/// geometry, art, and per-frame world updates that are actually unique.
+///
+/// All four current destinations use the same enjoy/grace/penalty defaults
+/// from [`VacationConfig::standard`].
+pub trait VacationWorld: Default {
+    /// `SceneId` this destination identifies as.
+    const SCENE_ID: SceneId;
+    /// World width in pixels.
+    const WORLD_WIDTH: i32;
+    /// Initial character world x.
+    const CHAR_WORLD_X: i32;
+    /// Initial character world y.
+    const GROUND_Y: i32;
+    /// Left bound of the walkable strip (sets `ctx.scene_x_min`).
+    const X_MIN: i32;
+    /// Right bound of the walkable strip (sets `ctx.scene_x_max`).
+    const X_MAX: i32;
+    /// Vacation timer/accrual/penalty config.
+    const CONFIG: VacationConfig;
+    /// True for outdoor destinations that draw the sky; false for indoor
+    /// (e.g. aquarium).
+    const HAS_SKY: bool;
+    /// Plant surfaces this scene exposes. Most vacation scenes have none.
+    const PLANT_SURFACES: &'static [PlantSurface] = &[];
+
+    /// One-shot setup: spawn entities, place environment objects, reseed rng.
+    /// Called after the base scene has finished its own enter and the
+    /// vacation flags have been stamped.
+    fn enter(&mut self, _ctx: &mut GameContext, _base: &mut LocationScene) {}
+
+    /// Optional teardown for per-world transient state. The vacation flags
+    /// and reward landing are handled by the wrapper.
+    fn exit(&mut self, _ctx: &mut GameContext) {}
+
+    /// Per-frame world advance. `scaled_dt` is already multiplied by
+    /// `ctx.time_speed`; the wrapper takes care of that and of ticking the
+    /// shared `VacationState` afterwards.
+    fn tick(&mut self, _ctx: &mut GameContext, _scaled_dt: f32) {}
+
+    /// Draw the destination's art (environment layers + custom passes) between
+    /// the optional sky and the character. The wrapper handles menu gating,
+    /// sky (if `HAS_SKY`), character, and overlay.
+    fn draw_world(&self, ctx: &GameContext, renderer: &mut Renderer, base: &LocationScene);
+}
+
+pub struct VacationScene<W: VacationWorld> {
+    base: LocationScene,
+    state: VacationState,
+    world: W,
+}
+
+impl<W: VacationWorld> VacationScene<W> {
+    pub fn new() -> Self {
+        Self {
+            base: LocationScene::new(
+                W::WORLD_WIDTH,
+                Point::new(W::CHAR_WORLD_X, W::GROUND_Y),
+            ),
+            state: VacationState::new(W::CONFIG),
+            world: W::default(),
+        }
+    }
+}
+
+impl<W: VacationWorld> Scene for VacationScene<W> {
+    fn enter(&mut self, ctx: &mut GameContext) {
+        self.base.enter(ctx, W::SCENE_ID, W::PLANT_SURFACES);
+        ctx.scene_x_min = W::X_MIN;
+        ctx.scene_x_max = W::X_MAX;
+        self.world.enter(ctx, &mut self.base);
+        self.state.on_enter(ctx);
+    }
+
+    fn exit(&mut self, ctx: &mut GameContext) {
+        self.state.on_exit(ctx);
+        self.world.exit(ctx);
+    }
+
+    fn update(
+        &mut self,
+        ctx: &mut GameContext,
+        buttons: &mut Buttons,
+        dt: f32,
+    ) -> Option<SceneId> {
+        if let Some(id) = self.base.update(ctx, buttons, dt) {
+            return Some(id);
+        }
+        let scaled = dt * ctx.time_speed;
+        self.world.tick(ctx, scaled);
+        self.state.tick(ctx, scaled);
+        None
+    }
+
+    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
+        self.base.tick_background(ctx, dt);
+        let scaled = dt * ctx.time_speed;
+        self.world.tick(ctx, scaled);
+        self.state.tick(ctx, scaled);
+    }
+
+    fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
+        self.base.mark_behavior_almost_done(ctx);
+    }
+
+    fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
+        if self.base.menu_active() {
+            self.base.draw_menu(renderer);
+            return;
+        }
+        if W::HAS_SKY {
+            self.base.draw_sky(renderer, ctx);
+        }
+        self.world.draw_world(ctx, renderer, &self.base);
+        self.base.draw_character(renderer, ctx);
+        self.base.draw_overlay(ctx, renderer);
     }
 }

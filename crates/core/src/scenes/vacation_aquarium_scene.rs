@@ -9,15 +9,11 @@ use crate::{
     context::{GameContext, StatId},
     entities::aquarium::{BubbleGroup, DebrisField, FishEntity, OctopusEntity},
     environment::Layer,
-    gardening_ui::PlantSurface,
-    input::Buttons,
     location_scene::LocationScene,
     render::{Renderer, Sprite, SpriteOpts},
-    scene::{Scene, SceneId},
-    scenes::vacation_base::{VacationConfig, VacationState},
+    scene::SceneId,
+    scenes::vacation_base::{VacationConfig, VacationScene, VacationWorld},
 };
-
-const PLANT_SURFACES: &[PlantSurface] = &[];
 
 const WORLD_WIDTH: i32 = 342;
 const GROUND_Y: i32 = 63;
@@ -106,22 +102,8 @@ const TANK_RANGES: &[(i32, i32)] = &[
 const DEBRIS_COUNT: usize = 10;
 const MAX_FISH: usize = 12;
 
-const CONFIG: VacationConfig = VacationConfig {
-    enjoy_duration: 750.0,
-    grace_duration: 120.0,
-    accrual: &[
-        (StatId::Serenity, 8.0),
-        (StatId::Fulfillment, 8.0),
-    ],
-    penalties: &[
-        (StatId::Comfort, -0.005),
-        (StatId::Serenity, -0.003),
-    ],
-};
-
-pub struct VacationAquariumScene {
-    base: LocationScene,
-    state: VacationState,
+#[derive(Default)]
+pub struct AquariumWorld {
     sw_timer: f32,
     sw_frame: usize,
     fish: heapless::Vec<FishEntity, MAX_FISH>,
@@ -131,21 +113,9 @@ pub struct VacationAquariumScene {
     rng: u32,
 }
 
-impl VacationAquariumScene {
-    pub fn new() -> Self {
-        Self {
-            base: LocationScene::new(WORLD_WIDTH, Point::new(CHAR_WORLD_X, GROUND_Y)),
-            state: VacationState::new(CONFIG),
-            sw_timer: 0.0,
-            sw_frame: 0,
-            fish: heapless::Vec::new(),
-            octopus: None,
-            bubbles: None,
-            debris: None,
-            rng: 1,
-        }
-    }
+pub type VacationAquariumScene = VacationScene<AquariumWorld>;
 
+impl AquariumWorld {
     fn spawn_creatures(&mut self) {
         self.fish.clear();
         for s in FISH_SPAWNS {
@@ -191,8 +161,8 @@ impl VacationAquariumScene {
         ));
     }
 
-    fn draw_rocks_and_plants(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Midground);
+    fn draw_rocks_and_plants(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Midground);
         let rock_w = ROCK_PILE.width as i32;
         let rock_y = TANK_FLOOR - ROCK_PILE_H;
         for &wx in &[ROCK1_X, ROCK2_X, ROCK3_X] {
@@ -210,8 +180,8 @@ impl VacationAquariumScene {
         }
     }
 
-    fn draw_seaweed(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Midground);
+    fn draw_seaweed(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Midground);
         let w = SEAWEED.width as i32;
         let h = SEAWEED.height as i32;
         for spawn in SEAWEED_POS {
@@ -231,8 +201,8 @@ impl VacationAquariumScene {
         }
     }
 
-    fn draw_creatures(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Midground);
+    fn draw_creatures(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Midground);
         if let Some(oct) = self.octopus.as_ref() {
             oct.draw(renderer, offset);
         }
@@ -241,8 +211,8 @@ impl VacationAquariumScene {
         }
     }
 
-    fn draw_particles(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Midground);
+    fn draw_particles(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Midground);
         if let Some(b) = self.bubbles.as_ref() {
             b.draw(renderer, offset);
         }
@@ -251,8 +221,8 @@ impl VacationAquariumScene {
         }
     }
 
-    fn draw_occluders(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Midground);
+    fn draw_occluders(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Midground);
         let tank_h = (TANK_FLOOR - TANK_TOP + 1) as u32;
 
         let left_sx = TANK1_LEFT - offset;
@@ -286,8 +256,8 @@ impl VacationAquariumScene {
         }
     }
 
-    fn draw_tank_outlines(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Midground);
+    fn draw_tank_outlines(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Midground);
         let x1 = TANK1_LEFT - offset;
         renderer.draw_rect(
             Point::new(x1, TANK_TOP),
@@ -307,88 +277,65 @@ impl VacationAquariumScene {
             false,
         );
     }
-
-    fn tick_world(&mut self, ctx: &mut GameContext, dt: f32) {
-        let scaled = dt * ctx.time_speed;
-        self.sw_timer += scaled;
-        if self.sw_timer >= SW_FRAME_INTERVAL {
-            self.sw_timer -= SW_FRAME_INTERVAL;
-            self.sw_frame = (self.sw_frame + 1) % SW_FRAMES;
-        }
-        for f in self.fish.iter_mut() {
-            f.update(scaled);
-        }
-        if let Some(oct) = self.octopus.as_mut() {
-            oct.update(scaled);
-        }
-        if let Some(b) = self.bubbles.as_mut() {
-            b.update(scaled);
-        }
-        if let Some(d) = self.debris.as_mut() {
-            d.update(scaled);
-        }
-        self.state.tick(ctx, scaled);
-    }
 }
 
-impl Scene for VacationAquariumScene {
-    fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::VacationAquarium, PLANT_SURFACES);
-        ctx.scene_x_min = 10;
-        ctx.scene_x_max = WORLD_WIDTH - 10;
+impl VacationWorld for AquariumWorld {
+    const SCENE_ID: SceneId = SceneId::VacationAquarium;
+    const WORLD_WIDTH: i32 = WORLD_WIDTH;
+    const CHAR_WORLD_X: i32 = CHAR_WORLD_X;
+    const GROUND_Y: i32 = GROUND_Y;
+    const X_MIN: i32 = 10;
+    const X_MAX: i32 = WORLD_WIDTH - 10;
+    const CONFIG: VacationConfig = VacationConfig::standard(&[
+        (StatId::Serenity, 8.0),
+        (StatId::Fulfillment, 8.0),
+    ]);
+    // Indoor scene, no sky. Tanks sit against a black wall.
+    const HAS_SKY: bool = false;
+
+    fn enter(&mut self, _ctx: &mut GameContext, _base: &mut LocationScene) {
         self.rng = (Instant::now().duration_since_epoch().as_micros() as u32).max(1);
         self.spawn_creatures();
-        self.state.on_enter(ctx);
     }
 
-    fn exit(&mut self, ctx: &mut GameContext) {
-        self.state.on_exit(ctx);
+    fn exit(&mut self, _ctx: &mut GameContext) {
         self.fish.clear();
         self.octopus = None;
         self.bubbles = None;
         self.debris = None;
     }
 
-    fn update(
-        &mut self,
-        ctx: &mut GameContext,
-        buttons: &mut Buttons,
-        dt: f32,
-    ) -> Option<SceneId> {
-        if let Some(id) = self.base.update(ctx, buttons, dt) {
-            return Some(id);
+    fn tick(&mut self, _ctx: &mut GameContext, scaled_dt: f32) {
+        self.sw_timer += scaled_dt;
+        if self.sw_timer >= SW_FRAME_INTERVAL {
+            self.sw_timer -= SW_FRAME_INTERVAL;
+            self.sw_frame = (self.sw_frame + 1) % SW_FRAMES;
         }
-        self.tick_world(ctx, dt);
-        None
-    }
-
-    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
-        self.base.tick_background(ctx, dt);
-        self.tick_world(ctx, dt);
-    }
-
-    fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
-        self.base.mark_behavior_almost_done(ctx);
-    }
-
-    fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
-        if self.base.menu_active() {
-            self.base.draw_menu(renderer);
-            return;
+        for f in self.fish.iter_mut() {
+            f.update(scaled_dt);
         }
-        // Indoor scene, no sky. Tanks sit against a black wall.
-        self.base.environment.draw_layer(renderer, Layer::Background);
-        self.base.environment.draw_layer(renderer, Layer::Midground);
+        if let Some(oct) = self.octopus.as_mut() {
+            oct.update(scaled_dt);
+        }
+        if let Some(b) = self.bubbles.as_mut() {
+            b.update(scaled_dt);
+        }
+        if let Some(d) = self.debris.as_mut() {
+            d.update(scaled_dt);
+        }
+    }
+
+    fn draw_world(&self, _ctx: &GameContext, renderer: &mut Renderer, base: &LocationScene) {
+        base.environment.draw_layer(renderer, Layer::Background);
+        base.environment.draw_layer(renderer, Layer::Midground);
         // Midground custom passes: rocks -> seaweed -> creatures -> particles ->
         // occluders (paint over anything that escaped the windows) -> outlines.
-        self.draw_rocks_and_plants(renderer);
-        self.draw_seaweed(renderer);
-        self.draw_creatures(renderer);
-        self.draw_particles(renderer);
-        self.draw_occluders(renderer);
-        self.draw_tank_outlines(renderer);
-        self.base.environment.draw_layer(renderer, Layer::Foreground);
-        self.base.draw_character(renderer, ctx);
-        self.base.draw_overlay(ctx, renderer);
+        self.draw_rocks_and_plants(renderer, base);
+        self.draw_seaweed(renderer, base);
+        self.draw_creatures(renderer, base);
+        self.draw_particles(renderer, base);
+        self.draw_occluders(renderer, base);
+        self.draw_tank_outlines(renderer, base);
+        base.environment.draw_layer(renderer, Layer::Foreground);
     }
 }

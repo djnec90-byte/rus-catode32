@@ -11,16 +11,12 @@ use crate::{
     context::{GameContext, StatId},
     entities::flyer::{FlyerEntity, FlyerKind},
     environment::Layer,
-    gardening_ui::PlantSurface,
-    input::Buttons,
     location_scene::LocationScene,
     rand::{rand_range_f32, rand_range_u32},
     render::{Renderer, Sprite, SpriteOpts},
-    scene::{Scene, SceneId},
-    scenes::vacation_base::{VacationConfig, VacationState},
+    scene::SceneId,
+    scenes::vacation_base::{VacationConfig, VacationScene, VacationWorld},
 };
-
-const PLANT_SURFACES: &[PlantSurface] = &[];
 
 const WORLD_WIDTH: i32 = 300;
 const GROUND_Y: i32 = 63;
@@ -68,36 +64,15 @@ const SCATTER_MIDGROUND: &[Scatter] = &[
 
 const MAX_BUTTERFLIES: usize = 4;
 
-const CONFIG: VacationConfig = VacationConfig {
-    enjoy_duration: 750.0,
-    grace_duration: 120.0,
-    accrual: &[
-        (StatId::Fulfillment, 8.0),
-        (StatId::Playfulness, 8.0),
-    ],
-    penalties: &[
-        (StatId::Comfort, -0.005),
-        (StatId::Serenity, -0.003),
-    ],
-};
-
-pub struct VacationParkScene {
-    base: LocationScene,
-    state: VacationState,
+#[derive(Default)]
+pub struct ParkWorld {
     butterflies: Vec<FlyerEntity, MAX_BUTTERFLIES>,
     rng: u32,
 }
 
-impl VacationParkScene {
-    pub fn new() -> Self {
-        Self {
-            base: LocationScene::new(WORLD_WIDTH, Point::new(CHAR_WORLD_X, GROUND_Y)),
-            state: VacationState::new(CONFIG),
-            butterflies: Vec::new(),
-            rng: 1,
-        }
-    }
+pub type VacationParkScene = VacationScene<ParkWorld>;
 
+impl ParkWorld {
     fn spawn_butterflies(&mut self) {
         self.butterflies.clear();
         let count = rand_range_u32(&mut self.rng, 2, 3);
@@ -113,9 +88,9 @@ impl VacationParkScene {
         }
     }
 
-    fn place_background_objects(&mut self) {
+    fn place_background_objects(base: &mut LocationScene) {
         for &(x, y_bot) in BUSH_POSITIONS {
-            self.base.environment.add_object(
+            base.environment.add_object(
                 Layer::Background,
                 &BUSH,
                 x,
@@ -124,7 +99,7 @@ impl VacationParkScene {
             );
         }
         for &x in BENCH_POSITIONS {
-            self.base.environment.add_object(
+            base.environment.add_object(
                 Layer::Background,
                 &PARK_BENCH,
                 x,
@@ -133,7 +108,7 @@ impl VacationParkScene {
             );
         }
         for &x in LAMP_POSITIONS {
-            self.base.environment.add_object(
+            base.environment.add_object(
                 Layer::Background,
                 &STREET_LAMP,
                 x,
@@ -143,8 +118,8 @@ impl VacationParkScene {
         }
     }
 
-    fn draw_path(&self, renderer: &mut Renderer) {
-        let bg_offset = self.base.environment.camera_offset(Layer::Background);
+    fn draw_path(renderer: &mut Renderer, base: &LocationScene) {
+        let bg_offset = base.environment.camera_offset(Layer::Background);
         for &wx in PATH_GRASS_X {
             let sx = wx - bg_offset;
             if (0..128).contains(&sx) {
@@ -177,8 +152,8 @@ impl VacationParkScene {
         }
     }
 
-    fn draw_scatter(&self, renderer: &mut Renderer, layer: Layer, items: &[Scatter]) {
-        let offset = self.base.environment.camera_offset(layer);
+    fn draw_scatter(renderer: &mut Renderer, base: &LocationScene, layer: Layer, items: &[Scatter]) {
+        let offset = base.environment.camera_offset(layer);
         for s in items {
             let sx = s.x - offset;
             let w = s.sprite.width as i32;
@@ -193,73 +168,46 @@ impl VacationParkScene {
         }
     }
 
-    fn draw_butterflies(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Foreground);
+    fn draw_butterflies(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Foreground);
         for b in &self.butterflies {
             b.draw(renderer, offset);
         }
     }
 }
 
-impl Scene for VacationParkScene {
-    fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::VacationPark, PLANT_SURFACES);
-        ctx.scene_x_min = 10;
-        ctx.scene_x_max = WORLD_WIDTH - 10;
+impl VacationWorld for ParkWorld {
+    const SCENE_ID: SceneId = SceneId::VacationPark;
+    const WORLD_WIDTH: i32 = WORLD_WIDTH;
+    const CHAR_WORLD_X: i32 = CHAR_WORLD_X;
+    const GROUND_Y: i32 = GROUND_Y;
+    const X_MIN: i32 = 10;
+    const X_MAX: i32 = WORLD_WIDTH - 10;
+    const CONFIG: VacationConfig = VacationConfig::standard(&[
+        (StatId::Fulfillment, 8.0),
+        (StatId::Playfulness, 8.0),
+    ]);
+    const HAS_SKY: bool = true;
+
+    fn enter(&mut self, _ctx: &mut GameContext, base: &mut LocationScene) {
         self.rng = (Instant::now().duration_since_epoch().as_micros() as u32).max(1);
-        self.place_background_objects();
+        Self::place_background_objects(base);
         self.spawn_butterflies();
-        self.state.on_enter(ctx);
     }
 
-    fn exit(&mut self, ctx: &mut GameContext) {
-        self.state.on_exit(ctx);
-    }
-
-    fn update(
-        &mut self,
-        ctx: &mut GameContext,
-        buttons: &mut Buttons,
-        dt: f32,
-    ) -> Option<SceneId> {
-        if let Some(id) = self.base.update(ctx, buttons, dt) {
-            return Some(id);
-        }
-        let scaled_dt = dt * ctx.time_speed;
+    fn tick(&mut self, _ctx: &mut GameContext, scaled_dt: f32) {
         for b in self.butterflies.iter_mut() {
             b.update(scaled_dt);
         }
-        self.state.tick(ctx, scaled_dt);
-        None
     }
 
-    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
-        self.base.tick_background(ctx, dt);
-        let scaled_dt = dt * ctx.time_speed;
-        for b in self.butterflies.iter_mut() {
-            b.update(scaled_dt);
-        }
-        self.state.tick(ctx, scaled_dt);
-    }
-
-    fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
-        self.base.mark_behavior_almost_done(ctx);
-    }
-
-    fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
-        if self.base.menu_active() {
-            self.base.draw_menu(renderer);
-            return;
-        }
-        self.base.draw_sky(renderer, ctx);
-        self.draw_path(renderer);
-        self.base.environment.draw_layer(renderer, Layer::Background);
-        self.base.environment.draw_layer(renderer, Layer::Midground);
-        self.draw_scatter(renderer, Layer::Midground, SCATTER_MIDGROUND);
-        self.base.environment.draw_layer(renderer, Layer::Foreground);
-        self.draw_scatter(renderer, Layer::Foreground, SCATTER_FOREGROUND);
-        self.draw_butterflies(renderer);
-        self.base.draw_character(renderer, ctx);
-        self.base.draw_overlay(ctx, renderer);
+    fn draw_world(&self, _ctx: &GameContext, renderer: &mut Renderer, base: &LocationScene) {
+        Self::draw_path(renderer, base);
+        base.environment.draw_layer(renderer, Layer::Background);
+        base.environment.draw_layer(renderer, Layer::Midground);
+        Self::draw_scatter(renderer, base, Layer::Midground, SCATTER_MIDGROUND);
+        base.environment.draw_layer(renderer, Layer::Foreground);
+        Self::draw_scatter(renderer, base, Layer::Foreground, SCATTER_FOREGROUND);
+        self.draw_butterflies(renderer, base);
     }
 }

@@ -13,16 +13,12 @@ use crate::{
         jumper::{JumperEntity, JumperKind},
     },
     environment::Layer,
-    gardening_ui::PlantSurface,
-    input::Buttons,
     location_scene::LocationScene,
     rand::{rand_bool, rand_range_f32, rand_range_u32},
     render::{Renderer, Sprite, SpriteOpts},
-    scene::{Scene, SceneId},
-    scenes::vacation_base::{VacationConfig, VacationState},
+    scene::SceneId,
+    scenes::vacation_base::{VacationConfig, VacationScene, VacationWorld},
 };
-
-const PLANT_SURFACES: &[PlantSurface] = &[];
 
 const WORLD_WIDTH: i32 = 300;
 const GROUND_Y: i32 = 63;
@@ -44,6 +40,10 @@ struct BarkLine(i32, i32, i32);
 
 struct TreePlacement {
     x: i32,
+    /// Per-tree vertical offset added to the layer's trunk_top_y. Background
+    /// trees use small fixed offsets so they don't all sit at exactly the same
+    /// height; midground trees stay at 0 to keep them flush with the bush line.
+    y_offset: i32,
     bark: &'static [BarkLine],
 }
 
@@ -52,9 +52,9 @@ const BG_LARGE_TREE_BARK_1: &[BarkLine] = &[BarkLine(8, 8, 16), BarkLine(10, 25,
 const BG_LARGE_TREE_BARK_2: &[BarkLine] = &[BarkLine(8, 22, 25), BarkLine(10, 10, 21)];
 
 const BG_LARGE_TREES: &[TreePlacement] = &[
-    TreePlacement { x: 18, bark: BG_LARGE_TREE_BARK_0 },
-    TreePlacement { x: 82, bark: BG_LARGE_TREE_BARK_1 },
-    TreePlacement { x: 150, bark: BG_LARGE_TREE_BARK_2 },
+    TreePlacement { x: 18, y_offset: -3, bark: BG_LARGE_TREE_BARK_0 },
+    TreePlacement { x: 82, y_offset: 2, bark: BG_LARGE_TREE_BARK_1 },
+    TreePlacement { x: 150, y_offset: -5, bark: BG_LARGE_TREE_BARK_2 },
 ];
 
 const BG_SMALL_TREE_BARK_0: &[BarkLine] = &[BarkLine(6, 23, 27), BarkLine(6, 33, 33), BarkLine(6, 13, 10)];
@@ -63,18 +63,18 @@ const BG_SMALL_TREE_BARK_2: &[BarkLine] = &[BarkLine(6, 24, 28), BarkLine(6, 35,
 const BG_SMALL_TREE_BARK_3: &[BarkLine] = &[BarkLine(6, 28, 32), BarkLine(6, 10, 8), BarkLine(6, 34, 34)];
 
 const BG_SMALL_TREES: &[TreePlacement] = &[
-    TreePlacement { x: 50, bark: BG_SMALL_TREE_BARK_0 },
-    TreePlacement { x: 108, bark: BG_SMALL_TREE_BARK_1 },
-    TreePlacement { x: 132, bark: BG_SMALL_TREE_BARK_2 },
-    TreePlacement { x: 165, bark: BG_SMALL_TREE_BARK_3 },
+    TreePlacement { x: 50, y_offset: -2, bark: BG_SMALL_TREE_BARK_0 },
+    TreePlacement { x: 108, y_offset: 4, bark: BG_SMALL_TREE_BARK_1 },
+    TreePlacement { x: 132, y_offset: -4, bark: BG_SMALL_TREE_BARK_2 },
+    TreePlacement { x: 165, y_offset: 1, bark: BG_SMALL_TREE_BARK_3 },
 ];
 
 const MG_TREE_BARK_0: &[BarkLine] = &[BarkLine(8, 30, 35), BarkLine(10, 38, 41)];
 const MG_TREE_BARK_1: &[BarkLine] = &[BarkLine(8, 27, 31), BarkLine(10, 36, 38)];
 
 const MG_TREES: &[TreePlacement] = &[
-    TreePlacement { x: 45, bark: MG_TREE_BARK_0 },
-    TreePlacement { x: 175, bark: MG_TREE_BARK_1 },
+    TreePlacement { x: 45, y_offset: 0, bark: MG_TREE_BARK_0 },
+    TreePlacement { x: 175, y_offset: 0, bark: MG_TREE_BARK_1 },
 ];
 
 const BG_BUSH_POSITIONS: &[(i32, i32)] = &[
@@ -118,39 +118,18 @@ enum Critter {
     Jumper(JumperEntity),
 }
 
-const CONFIG: VacationConfig = VacationConfig {
-    enjoy_duration: 750.0,
-    grace_duration: 120.0,
-    accrual: &[
-        (StatId::Serenity, 8.0),
-        (StatId::Fulfillment, 8.0),
-    ],
-    penalties: &[
-        (StatId::Comfort, -0.005),
-        (StatId::Serenity, -0.003),
-    ],
-};
-
-pub struct VacationForestScene {
-    base: LocationScene,
-    state: VacationState,
+#[derive(Default)]
+pub struct ForestWorld {
     critters: Vec<Critter, MAX_CRITTERS>,
     rng: u32,
 }
 
-impl VacationForestScene {
-    pub fn new() -> Self {
-        Self {
-            base: LocationScene::new(WORLD_WIDTH, Point::new(CHAR_WORLD_X, GROUND_Y)),
-            state: VacationState::new(CONFIG),
-            critters: Vec::new(),
-            rng: 1,
-        }
-    }
+pub type VacationForestScene = VacationScene<ForestWorld>;
 
-    fn place_bushes(&mut self) {
+impl ForestWorld {
+    fn place_bushes(base: &mut LocationScene) {
         for &(x, y_bot) in BG_BUSH_POSITIONS {
-            self.base.environment.add_object(
+            base.environment.add_object(
                 Layer::Background,
                 &BUSH,
                 x,
@@ -159,7 +138,7 @@ impl VacationForestScene {
             );
         }
         for &(x, y_bot) in MG_BUSH_POSITIONS {
-            self.base.environment.add_object(
+            base.environment.add_object(
                 Layer::Midground,
                 &BUSH,
                 x,
@@ -237,8 +216,8 @@ impl VacationForestScene {
     }
 
     fn draw_trees(
-        &self,
         renderer: &mut Renderer,
+        base: &LocationScene,
         layer: Layer,
         placements: &[TreePlacement],
         trunk_top_y: i32,
@@ -246,7 +225,7 @@ impl VacationForestScene {
         left_line: i32,
         right_line: i32,
     ) {
-        let offset = self.base.environment.camera_offset(layer);
+        let offset = base.environment.camera_offset(layer);
         let fill_x = left_line + 1;
         let fill_w = (right_line - left_line - 1).max(0) as u32;
         let w = sprite.width as i32;
@@ -255,33 +234,34 @@ impl VacationForestScene {
             if sx + w < 0 || sx >= 128 {
                 continue;
             }
+            let top_y = trunk_top_y + p.y_offset;
             // Black-fill column from screen top down to the trunk top, then
             // the two outline lines bracketing it, then bark detail, then the
-            // trunk sprite anchored at trunk_top_y.
+            // trunk sprite anchored at top_y.
             renderer.fill_rect_off(
                 Point::new(sx + fill_x, 0),
-                Size::new(fill_w, trunk_top_y.max(0) as u32),
+                Size::new(fill_w, top_y.max(0) as u32),
             );
             renderer.draw_line(
                 Point::new(sx + left_line, 0),
-                Point::new(sx + left_line, trunk_top_y - 1),
+                Point::new(sx + left_line, top_y - 1),
             );
             renderer.draw_line(
                 Point::new(sx + right_line, 0),
-                Point::new(sx + right_line, trunk_top_y - 1),
+                Point::new(sx + right_line, top_y - 1),
             );
             for line in p.bark {
                 renderer.draw_line(
-                    Point::new(sx + line.0, line.1),
-                    Point::new(sx + line.0, line.2),
+                    Point::new(sx + line.0, line.1 + p.y_offset),
+                    Point::new(sx + line.0, line.2 + p.y_offset),
                 );
             }
-            renderer.draw_sprite(sprite, Point::new(sx, trunk_top_y), SpriteOpts::default());
+            renderer.draw_sprite(sprite, Point::new(sx, top_y), SpriteOpts::default());
         }
     }
 
-    fn draw_scatter(&self, renderer: &mut Renderer, layer: Layer, items: &[Scatter]) {
-        let offset = self.base.environment.camera_offset(layer);
+    fn draw_scatter(renderer: &mut Renderer, base: &LocationScene, layer: Layer, items: &[Scatter]) {
+        let offset = base.environment.camera_offset(layer);
         for s in items {
             let sx = s.x - offset;
             let w = s.sprite.width as i32;
@@ -296,8 +276,8 @@ impl VacationForestScene {
         }
     }
 
-    fn draw_critters(&self, renderer: &mut Renderer) {
-        let offset = self.base.environment.camera_offset(Layer::Foreground);
+    fn draw_critters(&self, renderer: &mut Renderer, base: &LocationScene) {
+        let offset = base.environment.camera_offset(Layer::Foreground);
         for c in &self.critters {
             match c {
                 Critter::Flyer(f) => f.draw(renderer, offset),
@@ -307,56 +287,34 @@ impl VacationForestScene {
     }
 }
 
-impl Scene for VacationForestScene {
-    fn enter(&mut self, ctx: &mut GameContext) {
-        self.base.enter(ctx, SceneId::VacationForest, PLANT_SURFACES);
-        ctx.scene_x_min = 10;
-        ctx.scene_x_max = WORLD_WIDTH - 10;
+impl VacationWorld for ForestWorld {
+    const SCENE_ID: SceneId = SceneId::VacationForest;
+    const WORLD_WIDTH: i32 = WORLD_WIDTH;
+    const CHAR_WORLD_X: i32 = CHAR_WORLD_X;
+    const GROUND_Y: i32 = GROUND_Y;
+    const X_MIN: i32 = 10;
+    const X_MAX: i32 = WORLD_WIDTH - 10;
+    const CONFIG: VacationConfig = VacationConfig::standard(&[
+        (StatId::Serenity, 8.0),
+        (StatId::Fulfillment, 8.0),
+    ]);
+    const HAS_SKY: bool = true;
+
+    fn enter(&mut self, ctx: &mut GameContext, base: &mut LocationScene) {
         self.rng = (Instant::now().duration_since_epoch().as_micros() as u32).max(1);
-        self.place_bushes();
+        Self::place_bushes(base);
         self.spawn_critters(ctx);
-        self.state.on_enter(ctx);
     }
 
-    fn exit(&mut self, ctx: &mut GameContext) {
-        self.state.on_exit(ctx);
+    fn tick(&mut self, _ctx: &mut GameContext, scaled_dt: f32) {
+        self.update_critters(scaled_dt);
     }
 
-    fn update(
-        &mut self,
-        ctx: &mut GameContext,
-        buttons: &mut Buttons,
-        dt: f32,
-    ) -> Option<SceneId> {
-        if let Some(id) = self.base.update(ctx, buttons, dt) {
-            return Some(id);
-        }
-        let scaled = dt * ctx.time_speed;
-        self.update_critters(scaled);
-        self.state.tick(ctx, scaled);
-        None
-    }
-
-    fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
-        self.base.tick_background(ctx, dt);
-        let scaled = dt * ctx.time_speed;
-        self.update_critters(scaled);
-        self.state.tick(ctx, scaled);
-    }
-
-    fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
-        self.base.mark_behavior_almost_done(ctx);
-    }
-
-    fn draw(&self, ctx: &GameContext, renderer: &mut Renderer, _dt_ms: u64) {
-        if self.base.menu_active() {
-            self.base.draw_menu(renderer);
-            return;
-        }
-        self.base.draw_sky(renderer, ctx);
-        self.base.environment.draw_layer(renderer, Layer::Background);
-        self.draw_trees(
+    fn draw_world(&self, _ctx: &GameContext, renderer: &mut Renderer, base: &LocationScene) {
+        base.environment.draw_layer(renderer, Layer::Background);
+        Self::draw_trees(
             renderer,
+            base,
             Layer::Background,
             BG_LARGE_TREES,
             BG_TRUNK_TOP_Y,
@@ -364,8 +322,9 @@ impl Scene for VacationForestScene {
             TREE_LEFT_LINE,
             TREE_RIGHT_LINE,
         );
-        self.draw_trees(
+        Self::draw_trees(
             renderer,
+            base,
             Layer::Background,
             BG_SMALL_TREES,
             BG_SMALL_TRUNK_TOP_Y,
@@ -373,9 +332,10 @@ impl Scene for VacationForestScene {
             SMALL_TREE_LEFT_LINE,
             SMALL_TREE_RIGHT_LINE,
         );
-        self.base.environment.draw_layer(renderer, Layer::Midground);
-        self.draw_trees(
+        base.environment.draw_layer(renderer, Layer::Midground);
+        Self::draw_trees(
             renderer,
+            base,
             Layer::Midground,
             MG_TREES,
             MG_TRUNK_TOP_Y,
@@ -383,11 +343,9 @@ impl Scene for VacationForestScene {
             TREE_LEFT_LINE,
             TREE_RIGHT_LINE,
         );
-        self.draw_scatter(renderer, Layer::Midground, SCATTER_MIDGROUND);
-        self.base.environment.draw_layer(renderer, Layer::Foreground);
-        self.draw_scatter(renderer, Layer::Foreground, SCATTER_FOREGROUND);
-        self.draw_critters(renderer);
-        self.base.draw_character(renderer, ctx);
-        self.base.draw_overlay(ctx, renderer);
+        Self::draw_scatter(renderer, base, Layer::Midground, SCATTER_MIDGROUND);
+        base.environment.draw_layer(renderer, Layer::Foreground);
+        Self::draw_scatter(renderer, base, Layer::Foreground, SCATTER_FOREGROUND);
+        self.draw_critters(renderer, base);
     }
 }
