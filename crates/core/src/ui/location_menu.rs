@@ -6,7 +6,6 @@
 
 use core::fmt::Write as _;
 
-use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
 use crate::t;
 
@@ -19,28 +18,23 @@ use crate::{
     context::{FoodItem, GameContext, PotSize, SeedKind},
     input::{Button, Buttons},
     plant_system::{self, Plant},
-    render::{Renderer, SpriteOpts},
+    render::Renderer,
     scene::SceneId,
-    ui::scrollbar::Scrollbar,
+    ui::{
+        confirm::{Confirm, ConfirmResult},
+        list_nav::ListNav,
+        menu::{
+            draw_menu_row, DEFAULT_CONTENT_WIDTH, DEFAULT_SCROLLBAR_X, ROW_HEIGHT, VISIBLE_ITEMS,
+        },
+        scrollbar::Scrollbar,
+    },
 };
 
 const LABEL_LEN: usize = 20;
 const MAX_PAGE_ITEMS: usize = 16;
 const MAX_DEPTH: usize = 4;
-const VISIBLE_ITEMS: usize = 4;
-const ROW_HEIGHT: i32 = 16;
-const CONTENT_WIDTH: i32 = 120;
-const SCROLLBAR_X: i32 = 126;
 const TRACK_HEIGHT: u32 = 64;
 const MIN_THUMB_HEIGHT: u32 = 4;
-const ICON_X: i32 = 2;
-const ICON_TEXT_GAP: i32 = 3;
-const ARROW_INSET_FROM_RIGHT: i32 = 10;
-
-const CONFIRM_CHARS: usize = 14;
-const CONFIRM_LINE_LEN: usize = 16;
-const CONFIRM_VISIBLE: usize = 3;
-const CONFIRM_MAX_LINES: usize = 8;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Page {
@@ -115,23 +109,17 @@ struct Item {
 
 struct StackFrame {
     page: Page,
-    selected: usize,
-    scroll: usize,
-}
-
-struct ConfirmState {
-    action: LocationAction,
-    lines: Vec<String<CONFIRM_LINE_LEN>, CONFIRM_MAX_LINES>,
-    scroll: usize,
+    nav: ListNav,
 }
 
 pub struct LocationMenu {
     page: Page,
     items: Vec<Item, MAX_PAGE_ITEMS>,
-    selected: usize,
-    scroll: usize,
+    nav: ListNav,
     stack: Vec<StackFrame, MAX_DEPTH>,
-    confirm: Option<ConfirmState>,
+    confirm: Confirm,
+    /// Action that fires once the open `Confirm` returns `Confirmed`.
+    pending_action: Option<LocationAction>,
     /// Set by the host scene before opening a tend page so dynamic per-plant
     /// builders know which plant to introspect.
     tend_plant_id: Option<u32>,
@@ -150,10 +138,10 @@ impl LocationMenu {
         Self {
             page: Page::Root,
             items: Vec::new(),
-            selected: 0,
-            scroll: 0,
+            nav: ListNav::new(),
             stack: Vec::new(),
-            confirm: None,
+            confirm: Confirm::new(),
+            pending_action: None,
             tend_plant_id: None,
             current_scene: None,
             has_plant_surfaces: false,
@@ -169,7 +157,8 @@ impl LocationMenu {
         is_vacation: bool,
     ) {
         self.stack.clear();
-        self.confirm = None;
+        self.confirm.close();
+        self.pending_action = None;
         self.tend_plant_id = None;
         self.current_scene = Some(scene);
         self.has_plant_surfaces = has_surfaces;
@@ -181,7 +170,8 @@ impl LocationMenu {
     /// LocationScene after the PlantSelectionMode confirms a selection.
     pub fn open_tend(&mut self, ctx: &GameContext, scene: SceneId, plant_id: u32) {
         self.stack.clear();
-        self.confirm = None;
+        self.confirm.close();
+        self.pending_action = None;
         self.tend_plant_id = Some(plant_id);
         self.current_scene = Some(scene);
         self.has_plant_surfaces = true;
@@ -194,37 +184,29 @@ impl LocationMenu {
         ctx: &GameContext,
         buttons: &mut Buttons,
     ) -> LocationMenuResult {
-        if let Some(confirm) = self.confirm.as_mut() {
-            if buttons.was_just_pressed(Button::A) {
-                let action = confirm.action;
-                self.confirm = None;
-                return LocationMenuResult::Action(action);
-            }
-            if buttons.was_just_pressed(Button::B) {
-                self.confirm = None;
-                return LocationMenuResult::Continue;
-            }
-            let max_scroll = confirm.lines.len().saturating_sub(CONFIRM_VISIBLE);
-            if buttons.was_just_pressed(Button::Up) && confirm.scroll > 0 {
-                confirm.scroll -= 1;
-            }
-            if buttons.was_just_pressed(Button::Down) && confirm.scroll < max_scroll {
-                confirm.scroll += 1;
-            }
-            return LocationMenuResult::Continue;
+        if self.confirm.is_open() {
+            return match self.confirm.handle_input(buttons) {
+                ConfirmResult::Pending => LocationMenuResult::Continue,
+                ConfirmResult::Confirmed => match self.pending_action.take() {
+                    Some(action) => LocationMenuResult::Action(action),
+                    None => LocationMenuResult::Continue,
+                },
+                ConfirmResult::Cancelled => {
+                    self.pending_action = None;
+                    LocationMenuResult::Continue
+                }
+            };
         }
 
         if buttons.was_just_pressed(Button::Menu1) || buttons.was_just_pressed(Button::Menu2) {
             return LocationMenuResult::Closed;
         }
 
-        if buttons.was_just_pressed(Button::Up) && self.selected > 0 {
-            self.selected -= 1;
-            self.adjust_scroll();
+        if buttons.was_just_pressed(Button::Up) {
+            self.nav.up(VISIBLE_ITEMS);
         }
-        if buttons.was_just_pressed(Button::Down) && self.selected + 1 < self.items.len() {
-            self.selected += 1;
-            self.adjust_scroll();
+        if buttons.was_just_pressed(Button::Down) {
+            self.nav.down(self.items.len(), VISIBLE_ITEMS);
         }
 
         if buttons.was_just_pressed(Button::B) {
@@ -240,7 +222,7 @@ impl LocationMenu {
         }
 
         if buttons.was_just_pressed(Button::Right) {
-            if let Some(item) = self.items.get(self.selected) {
+            if let Some(item) = self.items.get(self.nav.selected) {
                 if let Some(sub) = item.submenu {
                     self.push_page(sub, ctx);
                     return LocationMenuResult::Continue;
@@ -249,14 +231,15 @@ impl LocationMenu {
         }
 
         if buttons.was_just_pressed(Button::A) {
-            if let Some(item) = self.items.get(self.selected) {
+            if let Some(item) = self.items.get(self.nav.selected) {
                 if let Some(sub) = item.submenu {
                     self.push_page(sub, ctx);
                     return LocationMenuResult::Continue;
                 }
                 if let Some(action) = item.action {
                     if let Some(text) = item.confirm {
-                        self.open_confirm(action, text);
+                        self.pending_action = Some(action);
+                        self.confirm.open(text);
                     } else {
                         return LocationMenuResult::Action(action);
                     }
@@ -268,33 +251,29 @@ impl LocationMenu {
     }
 
     pub fn draw(&self, renderer: &mut Renderer) {
-        let visible_end = (self.scroll + VISIBLE_ITEMS).min(self.items.len());
-        for (i, item) in self.items[self.scroll..visible_end].iter().enumerate() {
+        for (i, idx) in self.nav.visible_range(self.items.len(), VISIBLE_ITEMS).enumerate() {
+            let item = &self.items[idx];
             let y = (i as i32) * ROW_HEIGHT;
-            let actual = self.scroll + i;
-            let selected = actual == self.selected;
-            draw_item(renderer, item, y, selected);
+            let selected = idx == self.nav.selected;
+            draw_menu_row(
+                renderer,
+                item.label.as_str(),
+                item.icon,
+                item.submenu.is_some(),
+                y,
+                selected,
+                DEFAULT_CONTENT_WIDTH,
+            );
         }
-        let bar = Scrollbar::new(SCROLLBAR_X, 0, TRACK_HEIGHT, MIN_THUMB_HEIGHT);
-        bar.draw(renderer, self.items.len(), VISIBLE_ITEMS, self.scroll);
+        let bar = Scrollbar::new(DEFAULT_SCROLLBAR_X, 0, TRACK_HEIGHT, MIN_THUMB_HEIGHT);
+        bar.draw(renderer, self.items.len(), VISIBLE_ITEMS, self.nav.scroll);
 
-        if let Some(confirm) = self.confirm.as_ref() {
-            draw_confirm_dialog(renderer, confirm);
-        }
-    }
-
-    fn adjust_scroll(&mut self) {
-        if self.selected < self.scroll {
-            self.scroll = self.selected;
-        } else if self.selected >= self.scroll + VISIBLE_ITEMS {
-            self.scroll = self.selected + 1 - VISIBLE_ITEMS;
-        }
+        self.confirm.draw(renderer);
     }
 
     fn set_page(&mut self, page: Page, ctx: &GameContext) {
         self.page = page;
-        self.selected = 0;
-        self.scroll = 0;
+        self.nav.reset();
         self.items.clear();
         build_page(
             page,
@@ -310,8 +289,7 @@ impl LocationMenu {
     fn push_page(&mut self, page: Page, ctx: &GameContext) {
         let frame = StackFrame {
             page: self.page,
-            selected: self.selected,
-            scroll: self.scroll,
+            nav: self.nav,
         };
         let _ = self.stack.push(frame);
         self.set_page(page, ctx);
@@ -320,130 +298,8 @@ impl LocationMenu {
     fn pop_page(&mut self, ctx: &GameContext) {
         if let Some(frame) = self.stack.pop() {
             self.set_page(frame.page, ctx);
-            self.selected = frame.selected.min(self.items.len().saturating_sub(1));
-            self.scroll = frame.scroll;
-        }
-    }
-
-    fn open_confirm(&mut self, action: LocationAction, text: &str) {
-        let mut state = ConfirmState {
-            action,
-            lines: Vec::new(),
-            scroll: 0,
-        };
-        wrap_text(text, CONFIRM_CHARS, &mut state.lines);
-        self.confirm = Some(state);
-    }
-}
-
-fn draw_item(renderer: &mut Renderer, item: &Item, y: i32, selected: bool) {
-    if selected {
-        renderer.draw_rect(
-            Point::new(0, y),
-            Size::new(CONTENT_WIDTH as u32, ROW_HEIGHT as u32),
-            true,
-        );
-    }
-    let mut text_x = ICON_X;
-    if let Some(icon) = item.icon {
-        let icon_y = y + (ROW_HEIGHT - icons::ICON_HEIGHT as i32) / 2;
-        renderer.draw_sprite_raw(
-            icon,
-            icons::ICON_WIDTH,
-            icons::ICON_HEIGHT,
-            Point::new(ICON_X, icon_y),
-            SpriteOpts {
-                transparent: !selected,
-                invert: selected,
-                ..Default::default()
-            },
-        );
-        text_x = ICON_X + icons::ICON_WIDTH as i32 + ICON_TEXT_GAP;
-    }
-    let text_y = y + (ROW_HEIGHT - 10) / 2;
-    if selected {
-        renderer.draw_text_inverted(item.label.as_str(), Point::new(text_x, text_y));
-    } else {
-        renderer.draw_text(item.label.as_str(), Point::new(text_x, text_y));
-    }
-    if item.submenu.is_some() {
-        let arrow_x = CONTENT_WIDTH - ARROW_INSET_FROM_RIGHT;
-        if selected {
-            renderer.draw_text_inverted(">", Point::new(arrow_x, text_y));
-        } else {
-            renderer.draw_text(">", Point::new(arrow_x, text_y));
-        }
-    }
-}
-
-fn draw_confirm_dialog(renderer: &mut Renderer, confirm: &ConfirmState) {
-    renderer.fill_rect_off(Point::new(5, 13), Size::new(118, 38));
-    renderer.draw_rect(Point::new(4, 12), Size::new(120, 40), false);
-
-    let total = confirm.lines.len();
-    let can_scroll = total > CONFIRM_VISIBLE;
-    let visible = total.min(CONFIRM_VISIBLE);
-    let y_start = if can_scroll {
-        14
-    } else {
-        14 + (28 - visible as i32 * 8) / 2
-    };
-    let end = (confirm.scroll + CONFIRM_VISIBLE).min(total);
-    for (i, line) in confirm.lines[confirm.scroll..end].iter().enumerate() {
-        renderer.draw_text(line.as_str(), Point::new(8, y_start + i as i32 * 8));
-    }
-    if can_scroll {
-        let icon_x = 116;
-        if confirm.scroll > 0 {
-            renderer.draw_sprite_raw(
-                icons::UP_ARROW,
-                icons::ARROW_W,
-                icons::ARROW_H,
-                Point::new(icon_x, 14),
-                SpriteOpts::default(),
-            );
-        }
-        if confirm.scroll + CONFIRM_VISIBLE < total {
-            renderer.draw_sprite_raw(
-                icons::DOWN_ARROW,
-                icons::ARROW_W,
-                icons::ARROW_H,
-                Point::new(icon_x, 32),
-                SpriteOpts::default(),
-            );
-        }
-    }
-    renderer.draw_text(t!("[A]Yes [B]No"), Point::new(20, 42));
-}
-
-fn wrap_text(
-    text: &str,
-    chars_per_line: usize,
-    lines: &mut Vec<String<CONFIRM_LINE_LEN>, CONFIRM_MAX_LINES>,
-) {
-    let chars_per_line = chars_per_line.min(CONFIRM_LINE_LEN);
-    for paragraph in text.split('\n') {
-        let mut current: String<CONFIRM_LINE_LEN> = String::new();
-        for word in paragraph.split(' ') {
-            let needs_space = !current.is_empty();
-            let extra = (if needs_space { 1 } else { 0 }) + word.len();
-            if current.len() + extra <= chars_per_line {
-                if needs_space {
-                    let _ = current.push(' ');
-                }
-                let _ = current.push_str(word);
-            } else {
-                if !current.is_empty() {
-                    if lines.push(current.clone()).is_err() {
-                        return;
-                    }
-                    current.clear();
-                }
-                let _ = current.push_str(&word[..word.len().min(CONFIRM_LINE_LEN)]);
-            }
-        }
-        if lines.push(current).is_err() {
-            return;
+            self.nav.selected = frame.nav.selected.min(self.items.len().saturating_sub(1));
+            self.nav.scroll = frame.nav.scroll;
         }
     }
 }
@@ -936,4 +792,3 @@ fn food_icon(item: FoodItem) -> &'static [u8] {
         _ => icons::KIBBLE,
     }
 }
-

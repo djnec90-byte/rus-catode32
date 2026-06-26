@@ -7,6 +7,7 @@ use crate::{
     render::{Renderer, SpriteOpts},
     ui::{
         confirm::{Confirm, ConfirmResult},
+        list_nav::ListNav,
         scrollbar::Scrollbar,
     },
 };
@@ -45,8 +46,7 @@ pub enum MenuResult<A> {
 #[derive(Clone, Copy)]
 struct Frame<A: Copy + 'static> {
     items: &'static [MenuItem<A>],
-    selected: usize,
-    scroll: usize,
+    nav: ListNav,
 }
 
 pub struct Menu<A: Copy + 'static> {
@@ -70,7 +70,7 @@ impl<A: Copy + 'static> Menu<A> {
         scrollbar_x: i32,
     ) -> Self {
         Self {
-            current: Frame { items, selected: 0, scroll: 0 },
+            current: Frame { items, nav: ListNav::new() },
             stack: Vec::new(),
             content_width,
             scrollbar_x,
@@ -81,7 +81,7 @@ impl<A: Copy + 'static> Menu<A> {
 
     /// Reset to the root menu (clears any submenu stack and pending confirmation).
     pub fn reset_to(&mut self, items: &'static [MenuItem<A>]) {
-        self.current = Frame { items, selected: 0, scroll: 0 };
+        self.current = Frame { items, nav: ListNav::new() };
         self.stack.clear();
         self.confirm.close();
         self.pending_action = None;
@@ -106,15 +106,11 @@ impl<A: Copy + 'static> Menu<A> {
             return MenuResult::Closed;
         }
 
-        if buttons.was_just_pressed(Button::Up) && self.current.selected > 0 {
-            self.current.selected -= 1;
-            self.adjust_scroll();
+        if buttons.was_just_pressed(Button::Up) {
+            self.current.nav.up(VISIBLE_ITEMS);
         }
-        if buttons.was_just_pressed(Button::Down)
-            && self.current.selected + 1 < self.current.items.len()
-        {
-            self.current.selected += 1;
-            self.adjust_scroll();
+        if buttons.was_just_pressed(Button::Down) {
+            self.current.nav.down(self.current.items.len(), VISIBLE_ITEMS);
         }
 
         if buttons.was_just_pressed(Button::B) {
@@ -128,7 +124,7 @@ impl<A: Copy + 'static> Menu<A> {
         }
 
         if buttons.was_just_pressed(Button::Right) {
-            if let Some(item) = self.current.items.get(self.current.selected) {
+            if let Some(item) = self.current.items.get(self.current.nav.selected) {
                 if let Some(submenu) = item.submenu {
                     self.enter_submenu(submenu);
                 }
@@ -136,7 +132,7 @@ impl<A: Copy + 'static> Menu<A> {
         }
 
         if buttons.was_just_pressed(Button::A) {
-            if let Some(item) = self.current.items.get(self.current.selected) {
+            if let Some(item) = self.current.items.get(self.current.nav.selected) {
                 if let Some(submenu) = item.submenu {
                     self.enter_submenu(submenu);
                 } else if let Some(action) = item.action {
@@ -158,84 +154,34 @@ impl<A: Copy + 'static> Menu<A> {
     }
 
     pub fn draw(&self, renderer: &mut Renderer) {
-        let visible_end = (self.current.scroll + VISIBLE_ITEMS).min(self.current.items.len());
-        for (i, item) in self.current.items[self.current.scroll..visible_end]
-            .iter()
-            .enumerate()
-        {
+        let range = self.current.nav.visible_range(self.current.items.len(), VISIBLE_ITEMS);
+        for (i, idx) in range.enumerate() {
+            let item = &self.current.items[idx];
             let y = (i as i32) * ROW_HEIGHT;
-            let actual = self.current.scroll + i;
-            let selected = actual == self.current.selected;
-            self.draw_item(renderer, item, y, selected);
-        }
-        self.draw_scrollbar(renderer);
-        self.confirm.draw(renderer);
-    }
-
-    fn draw_item(&self, renderer: &mut Renderer, item: &MenuItem<A>, y: i32, selected: bool) {
-        if selected {
-            renderer.draw_rect(
-                Point::new(0, y),
-                Size::new(self.content_width as u32, ROW_HEIGHT as u32),
-                true,
+            let selected = idx == self.current.nav.selected;
+            draw_menu_row(
+                renderer,
+                item.label,
+                item.icon,
+                item.submenu.is_some(),
+                y,
+                selected,
+                self.content_width,
             );
         }
-
-        let mut text_x = ICON_X;
-        if let Some(icon) = item.icon {
-            let icon_y = y + (ROW_HEIGHT - icons::ICON_HEIGHT as i32) / 2;
-            renderer.draw_sprite_raw(
-                icon,
-                icons::ICON_WIDTH,
-                icons::ICON_HEIGHT,
-                Point::new(ICON_X, icon_y),
-                SpriteOpts {
-                    transparent: !selected,
-                    invert: selected,
-                    ..Default::default()
-                },
-            );
-            text_x = ICON_X + icons::ICON_WIDTH as i32 + ICON_TEXT_GAP;
-        }
-
-        let text_y = y + (ROW_HEIGHT - 10) / 2;
-        if selected {
-            renderer.draw_text_inverted(item.label, Point::new(text_x, text_y));
-        } else {
-            renderer.draw_text(item.label, Point::new(text_x, text_y));
-        }
-
-        if item.submenu.is_some() {
-            let arrow_x = self.content_width - ARROW_INSET_FROM_RIGHT;
-            if selected {
-                renderer.draw_text_inverted(">", Point::new(arrow_x, text_y));
-            } else {
-                renderer.draw_text(">", Point::new(arrow_x, text_y));
-            }
-        }
-    }
-
-    fn draw_scrollbar(&self, renderer: &mut Renderer) {
         let bar = Scrollbar::new(self.scrollbar_x, 0, TRACK_HEIGHT, MIN_THUMB_HEIGHT);
         bar.draw(
             renderer,
             self.current.items.len(),
             VISIBLE_ITEMS,
-            self.current.scroll,
+            self.current.nav.scroll,
         );
-    }
-
-    fn adjust_scroll(&mut self) {
-        if self.current.selected < self.current.scroll {
-            self.current.scroll = self.current.selected;
-        } else if self.current.selected >= self.current.scroll + VISIBLE_ITEMS {
-            self.current.scroll = self.current.selected + 1 - VISIBLE_ITEMS;
-        }
+        self.confirm.draw(renderer);
     }
 
     fn enter_submenu(&mut self, submenu: &'static [MenuItem<A>]) {
         let _ = self.stack.push(self.current);
-        self.current = Frame { items: submenu, selected: 0, scroll: 0 };
+        self.current = Frame { items: submenu, nav: ListNav::new() };
     }
 
     fn exit_submenu(&mut self) {
@@ -247,5 +193,60 @@ impl<A: Copy + 'static> Menu<A> {
     fn open_confirm(&mut self, action: A, text: &str) {
         self.pending_action = Some(action);
         self.confirm.open(text);
+    }
+}
+
+/// Draw one row of a menu-style list: optional icon, label, and a `>` arrow
+/// when the row leads into a submenu. The selected row gets an inverted-fill
+/// background. Used by `Menu`, `LocationMenu`, and anywhere else that wants
+/// the same row look.
+pub fn draw_menu_row(
+    renderer: &mut Renderer,
+    label: &str,
+    icon: Option<&'static [u8]>,
+    has_submenu_arrow: bool,
+    y: i32,
+    selected: bool,
+    content_width: i32,
+) {
+    if selected {
+        renderer.draw_rect(
+            Point::new(0, y),
+            Size::new(content_width as u32, ROW_HEIGHT as u32),
+            true,
+        );
+    }
+
+    let mut text_x = ICON_X;
+    if let Some(icon) = icon {
+        let icon_y = y + (ROW_HEIGHT - icons::ICON_HEIGHT as i32) / 2;
+        renderer.draw_sprite_raw(
+            icon,
+            icons::ICON_WIDTH,
+            icons::ICON_HEIGHT,
+            Point::new(ICON_X, icon_y),
+            SpriteOpts {
+                transparent: !selected,
+                invert: selected,
+                ..Default::default()
+            },
+        );
+        text_x = ICON_X + icons::ICON_WIDTH as i32 + ICON_TEXT_GAP;
+    }
+
+    let text_y = y + (ROW_HEIGHT - 10) / 2;
+    if selected {
+        renderer.draw_text_inverted(label, Point::new(text_x, text_y));
+    } else {
+        renderer.draw_text(label, Point::new(text_x, text_y));
+    }
+
+    if has_submenu_arrow {
+        let arrow_x = content_width - ARROW_INSET_FROM_RIGHT;
+        if selected {
+            renderer.draw_text_inverted(">", Point::new(arrow_x, text_y));
+        } else {
+            renderer.draw_text(">", Point::new(arrow_x, text_y));
+        }
     }
 }

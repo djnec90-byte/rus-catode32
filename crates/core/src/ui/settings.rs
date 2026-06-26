@@ -6,7 +6,7 @@ use heapless::{String, Vec};
 use crate::{
     input::{Button, Buttons},
     render::Renderer,
-    ui::scrollbar::Scrollbar,
+    ui::{list_nav::ListNav, scrollbar::Scrollbar},
 };
 
 pub const MAX_ITEMS: usize = 24;
@@ -178,16 +178,14 @@ pub enum SettingsResult {
 /// and the caller reads the current values back by index.
 pub struct Settings {
     items: Vec<SettingItem, MAX_ITEMS>,
-    selected: usize,
-    scroll: usize,
+    nav: ListNav,
 }
 
 impl Settings {
     pub fn new() -> Self {
         Self {
             items: Vec::new(),
-            selected: 0,
-            scroll: 0,
+            nav: ListNav::new(),
         }
     }
 
@@ -198,8 +196,7 @@ impl Settings {
                 break;
             }
         }
-        self.selected = 0;
-        self.scroll = 0;
+        self.nav.reset();
     }
 
     pub fn value(&self, index: usize) -> Option<&SettingValue> {
@@ -214,30 +211,28 @@ impl Settings {
             return SettingsResult::Closed;
         }
 
-        if buttons.was_just_pressed(Button::Up) && self.selected > 0 {
-            self.selected -= 1;
-            self.adjust_scroll();
+        if buttons.was_just_pressed(Button::Up) {
+            self.nav.up(VISIBLE_ITEMS);
         }
-        if buttons.was_just_pressed(Button::Down) && self.selected + 1 < self.items.len() {
-            self.selected += 1;
-            self.adjust_scroll();
+        if buttons.was_just_pressed(Button::Down) {
+            self.nav.down(self.items.len(), VISIBLE_ITEMS);
         }
 
         if buttons.was_just_pressed(Button::Right) {
-            if let Some(item) = self.items.get_mut(self.selected) {
+            if let Some(item) = self.items.get_mut(self.nav.selected) {
                 item.value.cycle_next();
             }
         }
         if buttons.was_just_pressed(Button::Left) {
-            if let Some(item) = self.items.get_mut(self.selected) {
+            if let Some(item) = self.items.get_mut(self.nav.selected) {
                 item.value.cycle_prev();
             }
         }
 
         if buttons.was_just_pressed(Button::A) {
-            if let Some(item) = self.items.get(self.selected) {
+            if let Some(item) = self.items.get(self.nav.selected) {
                 if matches!(item.value, SettingValue::Action) {
-                    return SettingsResult::Activated(self.selected);
+                    return SettingsResult::Activated(self.nav.selected);
                 }
             }
         }
@@ -245,24 +240,15 @@ impl Settings {
         SettingsResult::Continue
     }
 
-    fn adjust_scroll(&mut self) {
-        if self.selected < self.scroll {
-            self.scroll = self.selected;
-        } else if self.selected >= self.scroll + VISIBLE_ITEMS {
-            self.scroll = self.selected + 1 - VISIBLE_ITEMS;
-        }
-    }
-
     pub fn draw(&self, renderer: &mut Renderer) {
-        let end = (self.scroll + VISIBLE_ITEMS).min(self.items.len());
-        for (row, idx) in (self.scroll..end).enumerate() {
+        for (row, idx) in self.nav.visible_range(self.items.len(), VISIBLE_ITEMS).enumerate() {
             let y = row as i32 * ROW_HEIGHT;
-            let selected = idx == self.selected;
+            let selected = idx == self.nav.selected;
             self.draw_row(renderer, &self.items[idx], y, selected);
         }
 
         let bar = Scrollbar::right_edge(0, TRACK_HEIGHT);
-        bar.draw(renderer, self.items.len(), VISIBLE_ITEMS, self.scroll);
+        bar.draw(renderer, self.items.len(), VISIBLE_ITEMS, self.nav.scroll);
     }
 
     fn draw_row(&self, renderer: &mut Renderer, item: &SettingItem, y: i32, selected: bool) {
