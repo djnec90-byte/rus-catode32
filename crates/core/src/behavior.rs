@@ -55,42 +55,41 @@ pub enum BehaviorId {
     Greeting,
 }
 
+crate::enum_str_method! {
+    BehaviorId::name;
+    Idle          => "idle",
+    Sleeping      => "sleeping",
+    Napping       => "napping",
+    Stretching    => "stretching",
+    Kneading      => "kneading",
+    Lounging      => "lounging",
+    Investigating => "investigating",
+    Observing     => "observing",
+    Chattering    => "chattering",
+    Zoomies       => "zoomies",
+    Vocalizing    => "vocalizing",
+    SelfGrooming  => "self_grooming",
+    BeingGroomed  => "being_groomed",
+    Hunting       => "hunting",
+    GiftBringing  => "gift_bringing",
+    Pacing        => "pacing",
+    Sulking       => "sulking",
+    Mischief      => "mischief",
+    Hiding        => "hiding",
+    Training      => "training",
+    Playing       => "playing",
+    Affection     => "affection",
+    Attention     => "attention",
+    Eating        => "eating",
+    Startled      => "startled",
+    Meandering    => "meandering",
+    GoTo          => "go_to",
+    Hearing       => "hearing",
+    Greeting      => "greeting",
+}
+
 #[allow(dead_code)]
 impl BehaviorId {
-    pub fn name(self) -> &'static str {
-        match self {
-            BehaviorId::Idle => "idle",
-            BehaviorId::Sleeping => "sleeping",
-            BehaviorId::Napping => "napping",
-            BehaviorId::Stretching => "stretching",
-            BehaviorId::Kneading => "kneading",
-            BehaviorId::Lounging => "lounging",
-            BehaviorId::Investigating => "investigating",
-            BehaviorId::Observing => "observing",
-            BehaviorId::Chattering => "chattering",
-            BehaviorId::Zoomies => "zoomies",
-            BehaviorId::Vocalizing => "vocalizing",
-            BehaviorId::SelfGrooming => "self_grooming",
-            BehaviorId::BeingGroomed => "being_groomed",
-            BehaviorId::Hunting => "hunting",
-            BehaviorId::GiftBringing => "gift_bringing",
-            BehaviorId::Pacing => "pacing",
-            BehaviorId::Sulking => "sulking",
-            BehaviorId::Mischief => "mischief",
-            BehaviorId::Hiding => "hiding",
-            BehaviorId::Training => "training",
-            BehaviorId::Playing => "playing",
-            BehaviorId::Affection => "affection",
-            BehaviorId::Attention => "attention",
-            BehaviorId::Eating => "eating",
-            BehaviorId::Startled => "startled",
-            BehaviorId::Meandering => "meandering",
-            BehaviorId::GoTo => "go_to",
-            BehaviorId::Hearing => "hearing",
-            BehaviorId::Greeting => "greeting",
-        }
-    }
-
     /// Interaction (player-initiated) behaviors that shouldn't auto-resume
     /// when re-entering a scene.
     pub fn is_interaction(self) -> bool {

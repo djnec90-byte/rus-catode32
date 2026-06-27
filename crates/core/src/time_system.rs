@@ -18,28 +18,26 @@ pub enum Season {
     Fall,
 }
 
-impl Season {
+crate::enum_str_method! {
     /// Stable English identifier used as the save-file serialization key.
     /// Do not translate — saves would break across language changes.
-    pub fn name(self) -> &'static str {
-        match self {
-            Season::Winter => "Winter",
-            Season::Spring => "Spring",
-            Season::Summer => "Summer",
-            Season::Fall => "Fall",
-        }
-    }
+    Season::name;
+    Winter => "Winter",
+    Spring => "Spring",
+    Summer => "Summer",
+    Fall   => "Fall",
+}
 
+crate::enum_str_method! {
     /// Translated display label for UI rendering.
-    pub fn label(self) -> &'static str {
-        match self {
-            Season::Winter => t!("Winter"),
-            Season::Spring => t!("Spring"),
-            Season::Summer => t!("Summer"),
-            Season::Fall => t!("Fall"),
-        }
-    }
+    Season::label;
+    Winter => t!("Winter"),
+    Spring => t!("Spring"),
+    Summer => t!("Summer"),
+    Fall   => t!("Fall"),
+}
 
+impl Season {
     pub fn for_day(day: u32, offset: u16) -> Self {
         let d = (day + offset as u32) % 365;
         if d < 60 {
@@ -67,34 +65,32 @@ pub enum Weather {
     Snow,
 }
 
-impl Weather {
+crate::enum_str_method! {
     /// Stable English identifier used as the save-file serialization key.
     /// Do not translate — saves would break across language changes.
-    pub fn name(self) -> &'static str {
-        match self {
-            Weather::Clear => "Clear",
-            Weather::Cloudy => "Cloudy",
-            Weather::Overcast => "Overcast",
-            Weather::Windy => "Windy",
-            Weather::Rain => "Rain",
-            Weather::Storm => "Storm",
-            Weather::Snow => "Snow",
-        }
-    }
+    Weather::name;
+    Clear    => "Clear",
+    Cloudy   => "Cloudy",
+    Overcast => "Overcast",
+    Windy    => "Windy",
+    Rain     => "Rain",
+    Storm    => "Storm",
+    Snow     => "Snow",
+}
 
+crate::enum_str_method! {
     /// Translated display label for UI rendering.
-    pub fn label(self) -> &'static str {
-        match self {
-            Weather::Clear => t!("Clear"),
-            Weather::Cloudy => t!("Cloudy"),
-            Weather::Overcast => t!("Overcast"),
-            Weather::Windy => t!("Windy"),
-            Weather::Rain => t!("Rain"),
-            Weather::Storm => t!("Storm"),
-            Weather::Snow => t!("Snow"),
-        }
-    }
+    Weather::label;
+    Clear    => t!("Clear"),
+    Cloudy   => t!("Cloudy"),
+    Overcast => t!("Overcast"),
+    Windy    => t!("Windy"),
+    Rain     => t!("Rain"),
+    Storm    => t!("Storm"),
+    Snow     => t!("Snow"),
+}
 
+impl Weather {
     pub fn next(self) -> Self {
         match self {
             Weather::Clear => Weather::Cloudy,

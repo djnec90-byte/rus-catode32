@@ -61,141 +61,68 @@ fn sstr(s: &str) -> SStr {
 // Per-enum string mapping. Snake_case keys.
 // ---------------------------------------------------------------------------
 
-fn food_save_key(item: FoodItem) -> &'static str {
-    match item {
-        FoodItem::Kibble => "kibble",
-        FoodItem::Cod => "cod",
-        FoodItem::Haddock => "haddock",
-        FoodItem::Trout => "trout",
-        FoodItem::Shrimp => "shrimp",
-        FoodItem::Herring => "herring",
-        FoodItem::Turkey => "turkey",
-        FoodItem::Tuna => "tuna",
-        FoodItem::Salmon => "salmon",
-        FoodItem::Chicken => "chicken",
-        FoodItem::Liver => "liver",
-        FoodItem::Beef => "beef",
-        FoodItem::Lamb => "lamb",
-        FoodItem::Mackerel => "mackerel",
-        FoodItem::Carrots => "carrots",
-        FoodItem::Pumpkin => "pumpkin",
-        FoodItem::Treats => "treats",
-        FoodItem::FishBite => "fish_bite",
-        FoodItem::Eggs => "eggs",
-        FoodItem::Nugget => "nugget",
-        FoodItem::Milk => "milk",
-        FoodItem::ChewStick => "chew_stick",
-        FoodItem::Puree => "puree",
-    }
+crate::enum_key_pair_option! {
+    food_save_key, food_from_key, FoodItem;
+    Kibble    => "kibble",
+    Cod       => "cod",
+    Haddock   => "haddock",
+    Trout     => "trout",
+    Shrimp    => "shrimp",
+    Herring   => "herring",
+    Turkey    => "turkey",
+    Tuna      => "tuna",
+    Salmon    => "salmon",
+    Chicken   => "chicken",
+    Liver     => "liver",
+    Beef      => "beef",
+    Lamb      => "lamb",
+    Mackerel  => "mackerel",
+    Carrots   => "carrots",
+    Pumpkin   => "pumpkin",
+    Treats    => "treats",
+    FishBite  => "fish_bite",
+    Eggs      => "eggs",
+    Nugget    => "nugget",
+    Milk      => "milk",
+    ChewStick => "chew_stick",
+    Puree     => "puree",
 }
 
-fn food_from_key(s: &str) -> Option<FoodItem> {
-    Some(match s {
-        "kibble" => FoodItem::Kibble,
-        "cod" => FoodItem::Cod,
-        "haddock" => FoodItem::Haddock,
-        "trout" => FoodItem::Trout,
-        "shrimp" => FoodItem::Shrimp,
-        "herring" => FoodItem::Herring,
-        "turkey" => FoodItem::Turkey,
-        "tuna" => FoodItem::Tuna,
-        "salmon" => FoodItem::Salmon,
-        "chicken" => FoodItem::Chicken,
-        "liver" => FoodItem::Liver,
-        "beef" => FoodItem::Beef,
-        "lamb" => FoodItem::Lamb,
-        "mackerel" => FoodItem::Mackerel,
-        "carrots" => FoodItem::Carrots,
-        "pumpkin" => FoodItem::Pumpkin,
-        "treats" => FoodItem::Treats,
-        "fish_bite" => FoodItem::FishBite,
-        "eggs" => FoodItem::Eggs,
-        "nugget" => FoodItem::Nugget,
-        "milk" => FoodItem::Milk,
-        "chew_stick" => FoodItem::ChewStick,
-        "puree" => FoodItem::Puree,
-        _ => return None,
-    })
+crate::enum_key_pair_option! {
+    toy_save_key, toy_from_key, ToyVariant;
+    String_ => "string",
+    Feather => "feather",
+    Mouse   => "mouse",
+    Ball    => "ball",
+    Bubbles => "bubbles",
+    Laser   => "laser",
 }
 
-fn toy_save_key(v: ToyVariant) -> &'static str {
-    match v {
-        ToyVariant::String_ => "string",
-        ToyVariant::Feather => "feather",
-        ToyVariant::Mouse => "mouse",
-        ToyVariant::Ball => "ball",
-        ToyVariant::Bubbles => "bubbles",
-        ToyVariant::Laser => "laser",
-    }
+crate::enum_key_pair_option! {
+    pot_save_key, pot_from_key, PotKind;
+    Small   => "small",
+    Medium  => "medium",
+    Large   => "large",
+    Planter => "planter",
+    Ground  => "ground",
 }
 
-fn toy_from_key(s: &str) -> Option<ToyVariant> {
-    Some(match s {
-        "string" => ToyVariant::String_,
-        "feather" => ToyVariant::Feather,
-        "mouse" => ToyVariant::Mouse,
-        "ball" => ToyVariant::Ball,
-        "bubbles" => ToyVariant::Bubbles,
-        "laser" => ToyVariant::Laser,
-        _ => return None,
-    })
+crate::enum_key_pair_option! {
+    seed_save_key, seed_from_key, SeedKind;
+    CatGrass  => "cat_grass",
+    Freesia   => "freesia",
+    Sunflower => "sunflower",
+    Rose      => "rose",
 }
 
-fn pot_save_key(p: PotKind) -> &'static str {
-    match p {
-        PotKind::Small => "small",
-        PotKind::Medium => "medium",
-        PotKind::Large => "large",
-        PotKind::Planter => "planter",
-        PotKind::Ground => "ground",
-    }
-}
-
-fn pot_from_key(s: &str) -> Option<PotKind> {
-    Some(match s {
-        "small" => PotKind::Small,
-        "medium" => PotKind::Medium,
-        "large" => PotKind::Large,
-        "planter" => PotKind::Planter,
-        "ground" => PotKind::Ground,
-        _ => return None,
-    })
-}
-
-fn seed_save_key(s: SeedKind) -> &'static str {
-    match s {
-        SeedKind::CatGrass => "cat_grass",
-        SeedKind::Freesia => "freesia",
-        SeedKind::Sunflower => "sunflower",
-        SeedKind::Rose => "rose",
-    }
-}
-
-fn seed_from_key(s: &str) -> Option<SeedKind> {
-    Some(match s {
-        "cat_grass" => SeedKind::CatGrass,
-        "freesia" => SeedKind::Freesia,
-        "sunflower" => SeedKind::Sunflower,
-        "rose" => SeedKind::Rose,
-        _ => return None,
-    })
-}
-
-fn layer_save_key(l: PlantLayer) -> &'static str {
-    match l {
-        PlantLayer::Background => "background",
-        PlantLayer::Midground => "midground",
-        PlantLayer::Foreground => "foreground",
-    }
-}
-
-fn layer_from_key(s: &str) -> PlantLayer {
-    // Accept the legacy `fg/mg/bg` abbreviations so old saves still load.
-    match s {
-        "background" | "bg" => PlantLayer::Background,
-        "foreground" | "fg" => PlantLayer::Foreground,
-        _ => PlantLayer::Midground,
-    }
+// Accept the legacy `fg/mg/bg` abbreviations so old saves still load. Unknown
+// keys silently snap to Midground (the dominant layer in legacy saves).
+crate::enum_key_pair_default! {
+    layer_save_key, layer_from_key, PlantLayer;
+    default: PlantLayer::Midground;
+    Background => "background" | "bg",
+    Midground  => "midground" | "mg",
+    Foreground => "foreground" | "fg",
 }
 
 fn scene_save_key(s: SceneId) -> &'static str {
@@ -221,51 +148,29 @@ fn scene_from_key(s: &str) -> SceneId {
     }
 }
 
-fn stage_save_key(st: PlantStage) -> &'static str {
-    match st {
-        PlantStage::EmptyPot => "empty_pot",
-        PlantStage::Seedling => "seedling",
-        PlantStage::Young => "young",
-        PlantStage::Growing => "growing",
-        PlantStage::Mature => "mature",
-        PlantStage::Thriving => "thriving",
-        PlantStage::SeedlingWilted => "seedling_wilted",
-        PlantStage::YoungWilted => "young_wilted",
-        PlantStage::GrowingWilted => "growing_wilted",
-        PlantStage::MatureWilted => "mature_wilted",
-        PlantStage::ThrivingWilted => "thriving_wilted",
-        PlantStage::SeedlingDead => "seedling_dead",
-        PlantStage::YoungDead => "young_dead",
-        PlantStage::GrowingDead => "growing_dead",
-        PlantStage::MatureDead => "mature_dead",
-        PlantStage::ThrivingDead => "thriving_dead",
-        PlantStage::Dead => "dead",
-        PlantStage::Dormant => "dormant",
-    }
-}
-
-fn stage_from_key(s: &str) -> PlantStage {
-    match s {
-        "empty_pot" => PlantStage::EmptyPot,
-        "seedling" => PlantStage::Seedling,
-        "young" => PlantStage::Young,
-        "growing" => PlantStage::Growing,
-        "mature" => PlantStage::Mature,
-        "thriving" => PlantStage::Thriving,
-        "seedling_wilted" => PlantStage::SeedlingWilted,
-        "young_wilted" | "withering" => PlantStage::YoungWilted,
-        "growing_wilted" => PlantStage::GrowingWilted,
-        "mature_wilted" => PlantStage::MatureWilted,
-        "thriving_wilted" => PlantStage::ThrivingWilted,
-        "seedling_dead" => PlantStage::SeedlingDead,
-        "young_dead" => PlantStage::YoungDead,
-        "growing_dead" => PlantStage::GrowingDead,
-        "mature_dead" => PlantStage::MatureDead,
-        "thriving_dead" => PlantStage::ThrivingDead,
-        "dead" => PlantStage::Dead,
-        "dormant" => PlantStage::Dormant,
-        _ => PlantStage::Young,
-    }
+// "withering" is the legacy alias for YoungWilted from an earlier save
+// format. Unknown keys fall back to Young (a safe non-dead stage).
+crate::enum_key_pair_default! {
+    stage_save_key, stage_from_key, PlantStage;
+    default: PlantStage::Young;
+    EmptyPot        => "empty_pot",
+    Seedling        => "seedling",
+    Young           => "young",
+    Growing         => "growing",
+    Mature          => "mature",
+    Thriving        => "thriving",
+    SeedlingWilted  => "seedling_wilted",
+    YoungWilted     => "young_wilted" | "withering",
+    GrowingWilted   => "growing_wilted",
+    MatureWilted    => "mature_wilted",
+    ThrivingWilted  => "thriving_wilted",
+    SeedlingDead    => "seedling_dead",
+    YoungDead       => "young_dead",
+    GrowingDead     => "growing_dead",
+    MatureDead      => "mature_dead",
+    ThrivingDead    => "thriving_dead",
+    Dead            => "dead",
+    Dormant         => "dormant",
 }
 
 fn weather_save_key(w: Weather) -> &'static str {
@@ -330,38 +235,18 @@ fn moon_phase_from_key(s: &str) -> u8 {
     }
 }
 
-fn gender_save_key(g: PetGender) -> &'static str {
-    match g {
-        PetGender::Tom => "tom",
-        PetGender::Queen => "queen",
-    }
+crate::enum_key_pair_option! {
+    gender_save_key, gender_from_key, PetGender;
+    Tom   => "tom",
+    Queen => "queen",
 }
 
-fn gender_from_key(s: &str) -> Option<PetGender> {
-    Some(match s {
-        "tom" => PetGender::Tom,
-        "queen" => PetGender::Queen,
-        _ => return None,
-    })
-}
-
-fn fav_weather_save_key(w: FavWeather) -> &'static str {
-    match w {
-        FavWeather::Sunny => "sunny",
-        FavWeather::Rainy => "rainy",
-        FavWeather::Snowy => "snowy",
-        FavWeather::Overcast => "overcast",
-    }
-}
-
-fn fav_weather_from_key(s: &str) -> Option<FavWeather> {
-    Some(match s {
-        "sunny" => FavWeather::Sunny,
-        "rainy" => FavWeather::Rainy,
-        "snowy" => FavWeather::Snowy,
-        "overcast" => FavWeather::Overcast,
-        _ => return None,
-    })
+crate::enum_key_pair_option! {
+    fav_weather_save_key, fav_weather_from_key, FavWeather;
+    Sunny    => "sunny",
+    Rainy    => "rainy",
+    Snowy    => "snowy",
+    Overcast => "overcast",
 }
 
 fn star_sign_save_key(s: StarSign) -> &'static str {

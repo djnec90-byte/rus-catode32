@@ -37,63 +37,6 @@ impl StarSign {
         Self::ALL[(idx as usize) % Self::ALL.len()]
     }
 
-    /// Stable English identifier used as the save-file serialization key.
-    /// Do not translate — saves would break across language changes.
-    pub fn name(self) -> &'static str {
-        match self {
-            StarSign::Aries => "Aries",
-            StarSign::Taurus => "Taurus",
-            StarSign::Gemini => "Gemini",
-            StarSign::Cancer => "Cancer",
-            StarSign::Leo => "Leo",
-            StarSign::Virgo => "Virgo",
-            StarSign::Libra => "Libra",
-            StarSign::Scorpio => "Scorpio",
-            StarSign::Sagittarius => "Sagittarius",
-            StarSign::Capricorn => "Capricorn",
-            StarSign::Aquarius => "Aquarius",
-            StarSign::Pisces => "Pisces",
-        }
-    }
-
-    /// Translated display label for UI rendering.
-    pub fn label(self) -> &'static str {
-        match self {
-            StarSign::Aries => t!("Aries"),
-            StarSign::Taurus => t!("Taurus"),
-            StarSign::Gemini => t!("Gemini"),
-            StarSign::Cancer => t!("Cancer"),
-            StarSign::Leo => t!("Leo"),
-            StarSign::Virgo => t!("Virgo"),
-            StarSign::Libra => t!("Libra"),
-            StarSign::Scorpio => t!("Scorpio"),
-            StarSign::Sagittarius => t!("Sagittarius"),
-            StarSign::Capricorn => t!("Capricorn"),
-            StarSign::Aquarius => t!("Aquarius"),
-            StarSign::Pisces => t!("Pisces"),
-        }
-    }
-
-    /// Legacy ASCII lowercase used in a few places that still need a
-    /// `&'static str`. Prefer `to_lower(s.label())` for new code so the
-    /// embedded form respects the active translation.
-    pub fn lower_name(self) -> &'static str {
-        match self {
-            StarSign::Aries => "aries",
-            StarSign::Taurus => "taurus",
-            StarSign::Gemini => "gemini",
-            StarSign::Cancer => "cancer",
-            StarSign::Leo => "leo",
-            StarSign::Virgo => "virgo",
-            StarSign::Libra => "libra",
-            StarSign::Scorpio => "scorpio",
-            StarSign::Sagittarius => "sagittarius",
-            StarSign::Capricorn => "capricorn",
-            StarSign::Aquarius => "aquarius",
-            StarSign::Pisces => "pisces",
-        }
-    }
-
     pub const ALL: [StarSign; 12] = [
         StarSign::Aries,
         StarSign::Taurus,
@@ -108,6 +51,60 @@ impl StarSign {
         StarSign::Aquarius,
         StarSign::Pisces,
     ];
+}
+
+crate::enum_str_method! {
+    /// Stable English identifier used as the save-file serialization key.
+    /// Do not translate — saves would break across language changes.
+    StarSign::name;
+    Aries       => "Aries",
+    Taurus      => "Taurus",
+    Gemini      => "Gemini",
+    Cancer      => "Cancer",
+    Leo         => "Leo",
+    Virgo       => "Virgo",
+    Libra       => "Libra",
+    Scorpio     => "Scorpio",
+    Sagittarius => "Sagittarius",
+    Capricorn   => "Capricorn",
+    Aquarius    => "Aquarius",
+    Pisces      => "Pisces",
+}
+
+crate::enum_str_method! {
+    /// Translated display label for UI rendering.
+    StarSign::label;
+    Aries       => t!("Aries"),
+    Taurus      => t!("Taurus"),
+    Gemini      => t!("Gemini"),
+    Cancer      => t!("Cancer"),
+    Leo         => t!("Leo"),
+    Virgo       => t!("Virgo"),
+    Libra       => t!("Libra"),
+    Scorpio     => t!("Scorpio"),
+    Sagittarius => t!("Sagittarius"),
+    Capricorn   => t!("Capricorn"),
+    Aquarius    => t!("Aquarius"),
+    Pisces      => t!("Pisces"),
+}
+
+crate::enum_str_method! {
+    /// Legacy ASCII lowercase used in a few places that still need a
+    /// `&'static str`. Prefer `to_lower(s.label())` for new code so the
+    /// embedded form respects the active translation.
+    StarSign::lower_name;
+    Aries       => "aries",
+    Taurus      => "taurus",
+    Gemini      => "gemini",
+    Cancer      => "cancer",
+    Leo         => "leo",
+    Virgo       => "virgo",
+    Libra       => "libra",
+    Scorpio     => "scorpio",
+    Sagittarius => "sagittarius",
+    Capricorn   => "capricorn",
+    Aquarius    => "aquarius",
+    Pisces      => "pisces",
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -130,26 +127,24 @@ impl Temperament {
             _ => Temperament::Sociable,
         }
     }
+}
 
-    pub fn label(self) -> &'static str {
-        match self {
-            Temperament::Bold => t!("Bold"),
-            Temperament::Loyal => t!("Loyal"),
-            Temperament::Mischievous => t!("Mischievous"),
-            Temperament::Curious => t!("Curious"),
-            Temperament::Sociable => t!("Sociable"),
-        }
-    }
+crate::enum_str_method! {
+    Temperament::label;
+    Bold        => t!("Bold"),
+    Loyal       => t!("Loyal"),
+    Mischievous => t!("Mischievous"),
+    Curious     => t!("Curious"),
+    Sociable    => t!("Sociable"),
+}
 
-    pub fn lower_label(self) -> &'static str {
-        match self {
-            Temperament::Bold => "bold",
-            Temperament::Loyal => "loyal",
-            Temperament::Mischievous => "mischievous",
-            Temperament::Curious => "curious",
-            Temperament::Sociable => "sociable",
-        }
-    }
+crate::enum_str_method! {
+    Temperament::lower_label;
+    Bold        => "bold",
+    Loyal       => "loyal",
+    Mischievous => "mischievous",
+    Curious     => "curious",
+    Sociable    => "sociable",
 }
 
 pub fn fav_weather_from_index(idx: u32) -> crate::context::FavWeather {
