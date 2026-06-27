@@ -22,261 +22,60 @@ const CHAR_Y: i32 = 60;
 const SCENE_X_MIN: i32 = 10;
 const SCENE_X_MAX: i32 = 118;
 
-#[derive(Clone, Copy)]
-enum Entry {
-    Idle,
-    Sleeping,
-    Napping,
-    Stretching,
-    Kneading,
-    Lounging,
-    Investigating,
-    Startled,
-    Observing,
-    Chattering,
-    Zoomies,
-    Vocalizing,
-    SelfGrooming,
-    BeingGroomed,
-    Hunting,
-    GiftFish,
-    GiftMouse,
-    Pacing,
-    Meandering,
-    Sulking,
-    Mischief,
-    Hiding,
-    TrainIntel,
-    TrainBehav,
-    TrainFitness,
-    TrainSocial,
-    PlayBall,
-    PlayString,
-    PlayFeather,
-    PlayMouse,
-    PlayHand,
-    PlayLaser,
-    PlayBubbles,
-    AffectionKiss,
-    AffectionPets,
-    AffectionScratch,
-    AttentionPsst,
-    AttentionBird,
-    HearingExclaim,
-    HearingHeart,
-    HearingNote,
-    EatKibble,
-    EatWet,
-    EatFish,
-    EatSnack,
-    EatTreat,
-    Greeting,
-}
-
-impl Entry {
-    fn label(self) -> &'static str {
-        match self {
-            Entry::Idle => t!("Idle"),
-            Entry::Sleeping => t!("Sleeping"),
-            Entry::Napping => t!("Napping"),
-            Entry::Stretching => t!("Stretching"),
-            Entry::Kneading => t!("Kneading"),
-            Entry::Lounging => t!("Lounging"),
-            Entry::Investigating => t!("Investigating"),
-            Entry::Startled => t!("Startled"),
-            Entry::Observing => t!("Observing"),
-            Entry::Chattering => t!("Chattering"),
-            Entry::Zoomies => t!("Zoomies"),
-            Entry::Vocalizing => t!("Vocalizing"),
-            Entry::SelfGrooming => t!("Self Grooming"),
-            Entry::BeingGroomed => t!("Being Groomed"),
-            Entry::Hunting => t!("Hunting"),
-            Entry::GiftFish => "Gift (fish)",
-            Entry::GiftMouse => "Gift (mouse)",
-            Entry::Pacing => t!("Pacing"),
-            Entry::Meandering => t!("Meandering"),
-            Entry::Sulking => t!("Sulking"),
-            Entry::Mischief => t!("Mischief"),
-            Entry::Hiding => t!("Hiding"),
-            Entry::TrainIntel => "Train (intel)",
-            Entry::TrainBehav => "Train (behav)",
-            Entry::TrainFitness => "Train (fit)",
-            Entry::TrainSocial => "Train (social)",
-            Entry::PlayBall => "Play (ball)",
-            Entry::PlayString => "Play (string)",
-            Entry::PlayFeather => "Play (feather)",
-            Entry::PlayMouse => "Play (mouse)",
-            Entry::PlayHand => "Play (hand)",
-            Entry::PlayLaser => "Play (laser)",
-            Entry::PlayBubbles => "Play (bubbles)",
-            Entry::AffectionKiss => "Affection (kiss)",
-            Entry::AffectionPets => "Affection (pets)",
-            Entry::AffectionScratch => "Affection (scratch)",
-            Entry::AttentionPsst => "Attention (psst)",
-            Entry::AttentionBird => "Attention (bird)",
-            Entry::HearingExclaim => t!("Hearing (exclaim)"),
-            Entry::HearingHeart => t!("Hearing (heart)"),
-            Entry::HearingNote => t!("Hearing (note)"),
-            Entry::EatKibble => "Eat (kibble)",
-            Entry::EatWet => "Eat (wet)",
-            Entry::EatFish => "Eat (fish)",
-            Entry::EatSnack => "Eat (snack)",
-            Entry::EatTreat => "Eat (treat)",
-            Entry::Greeting => "Greeting",
-        }
-    }
-
-    fn to_next(self) -> NextBehavior {
-        match self {
-            Entry::Idle => NextBehavior::Idle,
-            Entry::Sleeping => NextBehavior::Sleeping,
-            Entry::Napping => NextBehavior::Napping,
-            Entry::Stretching => NextBehavior::Stretching,
-            Entry::Kneading => NextBehavior::Kneading,
-            Entry::Lounging => NextBehavior::Lounging,
-            Entry::Investigating => NextBehavior::Investigating,
-            Entry::Startled => NextBehavior::Startled,
-            Entry::Observing => NextBehavior::Observing,
-            Entry::Chattering => NextBehavior::Chattering,
-            Entry::Zoomies => NextBehavior::Zoomies,
-            Entry::Vocalizing => NextBehavior::Vocalizing,
-            Entry::SelfGrooming => NextBehavior::SelfGrooming,
-            Entry::BeingGroomed => NextBehavior::BeingGroomed,
-            Entry::Hunting => NextBehavior::Hunting,
-            Entry::GiftFish => NextBehavior::GiftBringing(GiftKind::Fish),
-            Entry::GiftMouse => NextBehavior::GiftBringing(GiftKind::Mouse),
-            Entry::Pacing => NextBehavior::Pacing,
-            Entry::Meandering => NextBehavior::Meandering,
-            Entry::Sulking => NextBehavior::Sulking,
-            Entry::Mischief => NextBehavior::Mischief,
-            Entry::Hiding => NextBehavior::Hiding,
-            Entry::TrainIntel => NextBehavior::Training(TrainingKind::Intelligence),
-            Entry::TrainBehav => NextBehavior::Training(TrainingKind::Behavior),
-            Entry::TrainFitness => NextBehavior::Training(TrainingKind::Fitness),
-            Entry::TrainSocial => NextBehavior::Training(TrainingKind::Sociability),
-            Entry::PlayBall => NextBehavior::Playing(PlayVariant::Ball),
-            Entry::PlayString => NextBehavior::Playing(PlayVariant::String),
-            Entry::PlayFeather => NextBehavior::Playing(PlayVariant::Feather),
-            Entry::PlayMouse => NextBehavior::Playing(PlayVariant::Mouse),
-            Entry::PlayHand => NextBehavior::Playing(PlayVariant::Hand),
-            Entry::PlayLaser => NextBehavior::Playing(PlayVariant::Laser),
-            Entry::PlayBubbles => NextBehavior::Playing(PlayVariant::Bubbles),
-            Entry::AffectionKiss => NextBehavior::Affection(AffectionVariant::Kiss),
-            Entry::AffectionPets => NextBehavior::Affection(AffectionVariant::Pets),
-            Entry::AffectionScratch => NextBehavior::Affection(AffectionVariant::Scratching),
-            Entry::AttentionPsst => NextBehavior::Attention(AttentionVariant::Psst),
-            Entry::AttentionBird => NextBehavior::Attention(AttentionVariant::PointBird),
-            Entry::HearingExclaim => NextBehavior::Hearing(Some("exclaim")),
-            Entry::HearingHeart => NextBehavior::Hearing(Some("heart")),
-            Entry::HearingNote => NextBehavior::Hearing(Some("note")),
-            Entry::EatKibble => NextBehavior::Eating(EatingSource::Item(FoodItem::Kibble)),
-            Entry::EatWet => NextBehavior::Eating(EatingSource::Item(FoodItem::Chicken)),
-            Entry::EatFish => NextBehavior::Eating(EatingSource::Item(FoodItem::Tuna)),
-            Entry::EatSnack => NextBehavior::Eating(EatingSource::CaughtSnack),
-            Entry::EatTreat => NextBehavior::Eating(EatingSource::Item(FoodItem::Treats)),
-            Entry::Greeting => NextBehavior::Greeting,
-        }
-    }
-
-    fn target_id(self) -> BehaviorId {
-        match self {
-            Entry::Idle => BehaviorId::Idle,
-            Entry::Sleeping => BehaviorId::Sleeping,
-            Entry::Napping => BehaviorId::Napping,
-            Entry::Stretching => BehaviorId::Stretching,
-            Entry::Kneading => BehaviorId::Kneading,
-            Entry::Lounging => BehaviorId::Lounging,
-            Entry::Investigating => BehaviorId::Investigating,
-            Entry::Startled => BehaviorId::Startled,
-            Entry::Observing => BehaviorId::Observing,
-            Entry::Chattering => BehaviorId::Chattering,
-            Entry::Zoomies => BehaviorId::Zoomies,
-            Entry::Vocalizing => BehaviorId::Vocalizing,
-            Entry::SelfGrooming => BehaviorId::SelfGrooming,
-            Entry::BeingGroomed => BehaviorId::BeingGroomed,
-            Entry::Hunting => BehaviorId::Hunting,
-            Entry::GiftFish | Entry::GiftMouse => BehaviorId::GiftBringing,
-            Entry::Pacing => BehaviorId::Pacing,
-            Entry::Meandering => BehaviorId::Meandering,
-            Entry::Sulking => BehaviorId::Sulking,
-            Entry::Mischief => BehaviorId::Mischief,
-            Entry::Hiding => BehaviorId::Hiding,
-            Entry::TrainIntel
-            | Entry::TrainBehav
-            | Entry::TrainFitness
-            | Entry::TrainSocial => BehaviorId::Training,
-            Entry::PlayBall
-            | Entry::PlayString
-            | Entry::PlayFeather
-            | Entry::PlayMouse
-            | Entry::PlayHand
-            | Entry::PlayLaser
-            | Entry::PlayBubbles => BehaviorId::Playing,
-            Entry::AffectionKiss
-            | Entry::AffectionPets
-            | Entry::AffectionScratch => BehaviorId::Affection,
-            Entry::AttentionPsst | Entry::AttentionBird => BehaviorId::Attention,
-            Entry::HearingExclaim | Entry::HearingHeart | Entry::HearingNote => {
-                BehaviorId::Hearing
-            }
-            Entry::EatKibble
-            | Entry::EatWet
-            | Entry::EatFish
-            | Entry::EatSnack
-            | Entry::EatTreat => BehaviorId::Eating,
-            Entry::Greeting => BehaviorId::Greeting,
-        }
-    }
+struct Entry {
+    label: &'static str,
+    next: NextBehavior,
+    target: BehaviorId,
 }
 
 const ENTRIES: &[Entry] = &[
-    Entry::Idle,
-    Entry::Sleeping,
-    Entry::Napping,
-    Entry::Stretching,
-    Entry::Kneading,
-    Entry::Lounging,
-    Entry::Investigating,
-    Entry::Startled,
-    Entry::Observing,
-    Entry::Chattering,
-    Entry::Zoomies,
-    Entry::Vocalizing,
-    Entry::SelfGrooming,
-    Entry::BeingGroomed,
-    Entry::Hunting,
-    Entry::GiftFish,
-    Entry::GiftMouse,
-    Entry::Pacing,
-    Entry::Meandering,
-    Entry::Sulking,
-    Entry::Mischief,
-    Entry::Hiding,
-    Entry::TrainIntel,
-    Entry::TrainBehav,
-    Entry::TrainFitness,
-    Entry::TrainSocial,
-    Entry::PlayBall,
-    Entry::PlayString,
-    Entry::PlayFeather,
-    Entry::PlayMouse,
-    Entry::PlayHand,
-    Entry::PlayLaser,
-    Entry::PlayBubbles,
-    Entry::AffectionKiss,
-    Entry::AffectionPets,
-    Entry::AffectionScratch,
-    Entry::AttentionPsst,
-    Entry::AttentionBird,
-    Entry::HearingExclaim,
-    Entry::HearingHeart,
-    Entry::HearingNote,
-    Entry::EatKibble,
-    Entry::EatWet,
-    Entry::EatFish,
-    Entry::EatSnack,
-    Entry::EatTreat,
-    Entry::Greeting,
+    Entry { label: t!("Idle"),              next: NextBehavior::Idle,                                          target: BehaviorId::Idle },
+    Entry { label: t!("Sleeping"),          next: NextBehavior::Sleeping,                                      target: BehaviorId::Sleeping },
+    Entry { label: t!("Napping"),           next: NextBehavior::Napping,                                       target: BehaviorId::Napping },
+    Entry { label: t!("Stretching"),        next: NextBehavior::Stretching,                                    target: BehaviorId::Stretching },
+    Entry { label: t!("Kneading"),          next: NextBehavior::Kneading,                                      target: BehaviorId::Kneading },
+    Entry { label: t!("Lounging"),          next: NextBehavior::Lounging,                                      target: BehaviorId::Lounging },
+    Entry { label: t!("Investigating"),     next: NextBehavior::Investigating,                                 target: BehaviorId::Investigating },
+    Entry { label: t!("Startled"),          next: NextBehavior::Startled,                                      target: BehaviorId::Startled },
+    Entry { label: t!("Observing"),         next: NextBehavior::Observing,                                     target: BehaviorId::Observing },
+    Entry { label: t!("Chattering"),        next: NextBehavior::Chattering,                                    target: BehaviorId::Chattering },
+    Entry { label: t!("Zoomies"),           next: NextBehavior::Zoomies,                                       target: BehaviorId::Zoomies },
+    Entry { label: t!("Vocalizing"),        next: NextBehavior::Vocalizing,                                    target: BehaviorId::Vocalizing },
+    Entry { label: t!("Self Grooming"),     next: NextBehavior::SelfGrooming,                                  target: BehaviorId::SelfGrooming },
+    Entry { label: t!("Being Groomed"),     next: NextBehavior::BeingGroomed,                                  target: BehaviorId::BeingGroomed },
+    Entry { label: t!("Hunting"),           next: NextBehavior::Hunting,                                       target: BehaviorId::Hunting },
+    Entry { label: "Gift (fish)",           next: NextBehavior::GiftBringing(GiftKind::Fish),                  target: BehaviorId::GiftBringing },
+    Entry { label: "Gift (mouse)",          next: NextBehavior::GiftBringing(GiftKind::Mouse),                 target: BehaviorId::GiftBringing },
+    Entry { label: t!("Pacing"),            next: NextBehavior::Pacing,                                        target: BehaviorId::Pacing },
+    Entry { label: t!("Meandering"),        next: NextBehavior::Meandering,                                    target: BehaviorId::Meandering },
+    Entry { label: t!("Sulking"),           next: NextBehavior::Sulking,                                       target: BehaviorId::Sulking },
+    Entry { label: t!("Mischief"),          next: NextBehavior::Mischief,                                      target: BehaviorId::Mischief },
+    Entry { label: t!("Hiding"),            next: NextBehavior::Hiding,                                        target: BehaviorId::Hiding },
+    Entry { label: "Train (intel)",         next: NextBehavior::Training(TrainingKind::Intelligence),          target: BehaviorId::Training },
+    Entry { label: "Train (behav)",         next: NextBehavior::Training(TrainingKind::Behavior),              target: BehaviorId::Training },
+    Entry { label: "Train (fit)",           next: NextBehavior::Training(TrainingKind::Fitness),               target: BehaviorId::Training },
+    Entry { label: "Train (social)",        next: NextBehavior::Training(TrainingKind::Sociability),           target: BehaviorId::Training },
+    Entry { label: "Play (ball)",           next: NextBehavior::Playing(PlayVariant::Ball),                    target: BehaviorId::Playing },
+    Entry { label: "Play (string)",         next: NextBehavior::Playing(PlayVariant::String),                  target: BehaviorId::Playing },
+    Entry { label: "Play (feather)",        next: NextBehavior::Playing(PlayVariant::Feather),                 target: BehaviorId::Playing },
+    Entry { label: "Play (mouse)",          next: NextBehavior::Playing(PlayVariant::Mouse),                   target: BehaviorId::Playing },
+    Entry { label: "Play (hand)",           next: NextBehavior::Playing(PlayVariant::Hand),                    target: BehaviorId::Playing },
+    Entry { label: "Play (laser)",          next: NextBehavior::Playing(PlayVariant::Laser),                   target: BehaviorId::Playing },
+    Entry { label: "Play (bubbles)",        next: NextBehavior::Playing(PlayVariant::Bubbles),                 target: BehaviorId::Playing },
+    Entry { label: "Affection (kiss)",      next: NextBehavior::Affection(AffectionVariant::Kiss),             target: BehaviorId::Affection },
+    Entry { label: "Affection (pets)",      next: NextBehavior::Affection(AffectionVariant::Pets),             target: BehaviorId::Affection },
+    Entry { label: "Affection (scratch)",   next: NextBehavior::Affection(AffectionVariant::Scratching),       target: BehaviorId::Affection },
+    Entry { label: "Attention (psst)",      next: NextBehavior::Attention(AttentionVariant::Psst),             target: BehaviorId::Attention },
+    Entry { label: "Attention (bird)",      next: NextBehavior::Attention(AttentionVariant::PointBird),        target: BehaviorId::Attention },
+    Entry { label: t!("Hearing (exclaim)"), next: NextBehavior::Hearing(Some("exclaim")),                      target: BehaviorId::Hearing },
+    Entry { label: t!("Hearing (heart)"),   next: NextBehavior::Hearing(Some("heart")),                        target: BehaviorId::Hearing },
+    Entry { label: t!("Hearing (note)"),    next: NextBehavior::Hearing(Some("note")),                         target: BehaviorId::Hearing },
+    Entry { label: "Eat (kibble)",          next: NextBehavior::Eating(EatingSource::Item(FoodItem::Kibble)),  target: BehaviorId::Eating },
+    Entry { label: "Eat (wet)",             next: NextBehavior::Eating(EatingSource::Item(FoodItem::Chicken)), target: BehaviorId::Eating },
+    Entry { label: "Eat (fish)",            next: NextBehavior::Eating(EatingSource::Item(FoodItem::Tuna)),    target: BehaviorId::Eating },
+    Entry { label: "Eat (snack)",           next: NextBehavior::Eating(EatingSource::CaughtSnack),             target: BehaviorId::Eating },
+    Entry { label: "Eat (treat)",           next: NextBehavior::Eating(EatingSource::Item(FoodItem::Treats)),  target: BehaviorId::Eating },
+    Entry { label: "Greeting",              next: NextBehavior::Greeting,                                      target: BehaviorId::Greeting },
 ];
 
 pub struct DebugBehaviorsScene {
@@ -315,7 +114,7 @@ impl DebugBehaviorsScene {
     }
 
     fn trigger_selected(&mut self, ctx: &mut GameContext) {
-        let next = ENTRIES[self.selected].to_next();
+        let next = ENTRIES[self.selected].next;
         self.behaviors.trigger(next, ctx, &mut self.character);
     }
 }
@@ -376,7 +175,7 @@ impl DebugBehaviorsScene {
         let visible_end = (self.scroll + LINES_VISIBLE).min(ENTRIES.len());
         let current_id = self.behaviors.current_id();
         for (row, idx) in (self.scroll..visible_end).enumerate() {
-            let entry = ENTRIES[idx];
+            let entry = &ENTRIES[idx];
             let y = row as i32 * LINE_HEIGHT;
             let selected = idx == self.selected;
             if selected {
@@ -384,10 +183,9 @@ impl DebugBehaviorsScene {
             }
 
             let mut buf = [0u8; 24];
-            let label = entry.label();
-            let active_marker = entry.target_id() == current_id;
-            let written = format_label(&mut buf, label, active_marker);
-            let text = core::str::from_utf8(&buf[..written]).unwrap_or(label);
+            let active_marker = entry.target == current_id;
+            let written = format_label(&mut buf, entry.label, active_marker);
+            let text = core::str::from_utf8(&buf[..written]).unwrap_or(entry.label);
 
             if selected {
                 renderer.draw_text_inverted(text, Point::new(1, y));

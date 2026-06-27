@@ -95,46 +95,92 @@ pub const VSE_BODY_LEN: usize = 5;
 /// peer in the prior scene until the user returns.
 pub const TAG_VLOC: [u8; 4] = *b"vloc";
 
-/// Map a [`BubbleIcon`] to the byte we put on the wire. Stable across
-/// versions; order is append-only.
-pub fn icon_to_wire(icon: BubbleIcon) -> u8 {
-    match icon {
-        BubbleIcon::Heart => 0,
-        BubbleIcon::Question => 1,
-        BubbleIcon::Exclaim => 2,
-        BubbleIcon::Note => 3,
-        BubbleIcon::Star => 4,
-        BubbleIcon::Hunger => 5,
-        BubbleIcon::Discomfort => 6,
-        BubbleIcon::Bored => 7,
-        BubbleIcon::Lonely => 8,
-        BubbleIcon::Home => 9,
-        BubbleIcon::Hot => 10,
-        BubbleIcon::Wet => 11,
-        BubbleIcon::Cold => 12,
-    }
+/// Generate paired `pub fn $to(_: $Enum) -> u8` and
+/// `pub fn $from(_: u8) -> $Enum` from a `Variant => byte` table.
+///
+/// The decode arm falls back to `$default` for unknown bytes so the receiver
+/// always gets a sensible value rather than dropping the whole message.
+/// Variant bytes are stable across versions; the table is append-only.
+macro_rules! wire_enum_default {
+    (
+        $Enum:ident, $to:ident, $from:ident, $default:expr;
+        $($Variant:ident => $byte:literal),+ $(,)?
+    ) => {
+        pub fn $to(e: $Enum) -> u8 {
+            match e {
+                $($Enum::$Variant => $byte,)+
+            }
+        }
+        pub fn $from(b: u8) -> $Enum {
+            match b {
+                $($byte => $Enum::$Variant,)+
+                _ => $default,
+            }
+        }
+    };
 }
 
-/// Inverse of [`icon_to_wire`]. Returns [`BubbleIcon::Exclaim`] for any
-/// byte we do not recognize, so the receiver gets a sensible default
-/// rather than dropping the whole message.
-pub fn icon_from_wire(b: u8) -> BubbleIcon {
-    match b {
-        0 => BubbleIcon::Heart,
-        1 => BubbleIcon::Question,
-        2 => BubbleIcon::Exclaim,
-        3 => BubbleIcon::Note,
-        4 => BubbleIcon::Star,
-        5 => BubbleIcon::Hunger,
-        6 => BubbleIcon::Discomfort,
-        7 => BubbleIcon::Bored,
-        8 => BubbleIcon::Lonely,
-        9 => BubbleIcon::Home,
-        10 => BubbleIcon::Hot,
-        11 => BubbleIcon::Wet,
-        12 => BubbleIcon::Cold,
-        _ => BubbleIcon::Exclaim,
-    }
+/// Variant of [`wire_enum_default`] whose decode returns `None` on an
+/// unrecognized byte (used where forward-compat would silently mask a real
+/// protocol mismatch - e.g. behavior ids).
+macro_rules! wire_enum_option {
+    (
+        $Enum:ident, $to:ident, $from:ident;
+        $($Variant:ident => $byte:literal),+ $(,)?
+    ) => {
+        pub fn $to(e: $Enum) -> u8 {
+            match e {
+                $($Enum::$Variant => $byte,)+
+            }
+        }
+        pub fn $from(b: u8) -> Option<$Enum> {
+            Some(match b {
+                $($byte => $Enum::$Variant,)+
+                _ => return None,
+            })
+        }
+    };
+}
+
+/// Variant of [`wire_enum_option`] where only a *subset* of the enum's
+/// variants are encodable — `to_wire` itself returns `Option<u8>` and yields
+/// `None` for any variant not listed. Used by [`scene_id_to_wire`] since
+/// only `LocationScene`-backed scenes mirror across a visit.
+macro_rules! wire_enum_subset_option {
+    (
+        $Enum:ident, $to:ident, $from:ident;
+        $($Variant:ident => $byte:literal),+ $(,)?
+    ) => {
+        pub fn $to(e: $Enum) -> Option<u8> {
+            Some(match e {
+                $($Enum::$Variant => $byte,)+
+                _ => return None,
+            })
+        }
+        pub fn $from(b: u8) -> Option<$Enum> {
+            Some(match b {
+                $($byte => $Enum::$Variant,)+
+                _ => return None,
+            })
+        }
+    };
+}
+
+wire_enum_default! {
+    BubbleIcon, icon_to_wire, icon_from_wire, BubbleIcon::Exclaim;
+    Heart      => 0,
+    Question   => 1,
+    Exclaim    => 2,
+    Note       => 3,
+    Star       => 4,
+    Hunger     => 5,
+    Discomfort => 6,
+    Bored      => 7,
+    Lonely     => 8,
+    Home       => 9,
+    Hot        => 10,
+    Wet        => 11,
+    Cold       => 12,
 }
 
 /// Encode a vocalize frame: `[v, o, c, ' ', icon_byte]`.
@@ -283,46 +329,44 @@ pub fn decode_vbeh(data: &[u8]) -> Option<BehaviorId> {
 pub fn encode_vbeh(id: BehaviorId) -> [u8; 5] {
     let mut buf = [0u8; 5];
     buf[0..4].copy_from_slice(&TAG_VBEH);
-    buf[4] = id as u8;
+    buf[4] = behavior_to_wire(id);
     buf
 }
 
-/// Inverse of `as u8` on [`BehaviorId`]. Match-based so an
-/// out-of-range byte returns `None` rather than UB-ing into a stray
-/// discriminant.
-pub fn behavior_from_wire(b: u8) -> Option<BehaviorId> {
-    Some(match b {
-        0 => BehaviorId::Idle,
-        1 => BehaviorId::Sleeping,
-        2 => BehaviorId::Napping,
-        3 => BehaviorId::Stretching,
-        4 => BehaviorId::Kneading,
-        5 => BehaviorId::Lounging,
-        6 => BehaviorId::Investigating,
-        7 => BehaviorId::Observing,
-        8 => BehaviorId::Chattering,
-        9 => BehaviorId::Zoomies,
-        10 => BehaviorId::Vocalizing,
-        11 => BehaviorId::SelfGrooming,
-        12 => BehaviorId::BeingGroomed,
-        13 => BehaviorId::Hunting,
-        14 => BehaviorId::GiftBringing,
-        15 => BehaviorId::Pacing,
-        16 => BehaviorId::Sulking,
-        17 => BehaviorId::Mischief,
-        18 => BehaviorId::Hiding,
-        19 => BehaviorId::Training,
-        20 => BehaviorId::Playing,
-        21 => BehaviorId::Affection,
-        22 => BehaviorId::Attention,
-        23 => BehaviorId::Eating,
-        24 => BehaviorId::Startled,
-        25 => BehaviorId::Meandering,
-        26 => BehaviorId::GoTo,
-        27 => BehaviorId::Hearing,
-        28 => BehaviorId::Greeting,
-        _ => return None,
-    })
+// Wire bytes mirror the source-order discriminants `as u8` used historically;
+// generating both directions from a single table keeps them in lockstep if the
+// enum ever has variants inserted out of order.
+wire_enum_option! {
+    BehaviorId, behavior_to_wire, behavior_from_wire;
+    Idle          => 0,
+    Sleeping      => 1,
+    Napping       => 2,
+    Stretching    => 3,
+    Kneading      => 4,
+    Lounging      => 5,
+    Investigating => 6,
+    Observing     => 7,
+    Chattering    => 8,
+    Zoomies       => 9,
+    Vocalizing    => 10,
+    SelfGrooming  => 11,
+    BeingGroomed  => 12,
+    Hunting       => 13,
+    GiftBringing  => 14,
+    Pacing        => 15,
+    Sulking       => 16,
+    Mischief      => 17,
+    Hiding        => 18,
+    Training      => 19,
+    Playing       => 20,
+    Affection     => 21,
+    Attention     => 22,
+    Eating        => 23,
+    Startled      => 24,
+    Meandering    => 25,
+    GoTo          => 26,
+    Hearing       => 27,
+    Greeting      => 28,
 }
 
 /// Encode a `venv` frame. Weather/season pass through as `as u8`;
@@ -379,48 +423,23 @@ pub struct DecodedVss {
     pub sy: i32,
 }
 
-pub fn weather_to_wire(w: Weather) -> u8 {
-    match w {
-        Weather::Clear => 0,
-        Weather::Cloudy => 1,
-        Weather::Overcast => 2,
-        Weather::Windy => 3,
-        Weather::Rain => 4,
-        Weather::Storm => 5,
-        Weather::Snow => 6,
-    }
+wire_enum_default! {
+    Weather, weather_to_wire, weather_from_wire, Weather::Clear;
+    Clear    => 0,
+    Cloudy   => 1,
+    Overcast => 2,
+    Windy    => 3,
+    Rain     => 4,
+    Storm    => 5,
+    Snow     => 6,
 }
 
-pub fn weather_from_wire(b: u8) -> Weather {
-    match b {
-        0 => Weather::Clear,
-        1 => Weather::Cloudy,
-        2 => Weather::Overcast,
-        3 => Weather::Windy,
-        4 => Weather::Rain,
-        5 => Weather::Storm,
-        6 => Weather::Snow,
-        _ => Weather::Clear,
-    }
-}
-
-pub fn season_to_wire(s: Season) -> u8 {
-    match s {
-        Season::Winter => 0,
-        Season::Spring => 1,
-        Season::Summer => 2,
-        Season::Fall => 3,
-    }
-}
-
-pub fn season_from_wire(b: u8) -> Season {
-    match b {
-        0 => Season::Winter,
-        1 => Season::Spring,
-        2 => Season::Summer,
-        3 => Season::Fall,
-        _ => Season::Spring,
-    }
+wire_enum_default! {
+    Season, season_to_wire, season_from_wire, Season::Spring;
+    Winter => 0,
+    Spring => 1,
+    Summer => 2,
+    Fall   => 3,
 }
 
 pub fn decode_vss(data: &[u8]) -> Option<DecodedVss> {
@@ -456,30 +475,16 @@ pub struct DecodedVse {
     pub speed: f32,
 }
 
-/// Map a `LocationScene`-backed [`SceneId`] to a wire byte. Returns
-/// `None` for scenes that don't make sense to mirror across a visit
-/// (minigames, menus, debug screens, vacations).
-pub fn scene_id_to_wire(id: SceneId) -> Option<u8> {
-    Some(match id {
-        SceneId::Inside => 0,
-        SceneId::Outside => 1,
-        SceneId::Treehouse => 2,
-        SceneId::Bedroom => 3,
-        SceneId::Kitchen => 4,
-        _ => return None,
-    })
-}
-
-/// Inverse of [`scene_id_to_wire`]. Unknown bytes return `None`.
-pub fn scene_id_from_wire(b: u8) -> Option<SceneId> {
-    Some(match b {
-        0 => SceneId::Inside,
-        1 => SceneId::Outside,
-        2 => SceneId::Treehouse,
-        3 => SceneId::Bedroom,
-        4 => SceneId::Kitchen,
-        _ => return None,
-    })
+// `scene_id_to_wire` likewise returns `Option<u8>` rather than `u8` because
+// only `LocationScene`-backed scenes are encodable; minigames, menus, debug
+// screens, and vacations are intentionally unrepresentable.
+wire_enum_subset_option! {
+    SceneId, scene_id_to_wire, scene_id_from_wire;
+    Inside    => 0,
+    Outside   => 1,
+    Treehouse => 2,
+    Bedroom   => 3,
+    Kitchen   => 4,
 }
 
 /// Encode a `vloc` frame. Returns `None` if the scene isn't
