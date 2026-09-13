@@ -65,158 +65,44 @@ pub use training::TrainingBehavior;
 pub use vocalizing::VocalizingBehavior;
 pub use zoomies::ZoomiesBehavior;
 
-/// Enum-dispatched union of every concrete behavior implementation. New
-/// behaviors must be added here and in `from_next`.
-#[allow(dead_code)]
-pub enum ActiveBehavior {
-    Idle(IdleBehavior),
-    Sleeping(SleepingBehavior),
-    Napping(NappingBehavior),
-    Stretching(StretchingBehavior),
-    Kneading(KneadingBehavior),
-    Lounging(LoungingBehavior),
-    Investigating(InvestigatingBehavior),
-    Observing(ObservingBehavior),
-    Chattering(ChatteringBehavior),
-    Zoomies(ZoomiesBehavior),
-    Vocalizing(VocalizingBehavior),
-    SelfGrooming(SelfGroomingBehavior),
-    BeingGroomed(BeingGroomedBehavior),
-    Hunting(HuntingBehavior),
-    GiftBringing(GiftBringingBehavior),
-    Pacing(PacingBehavior),
-    Sulking(SulkingBehavior),
-    Mischief(MischiefBehavior),
-    Hiding(HidingBehavior),
-    Training(TrainingBehavior),
-    Playing(PlayingBehavior),
-    Affection(AffectionBehavior),
-    Attention(AttentionBehavior),
-    Eating(EatingBehavior),
-    Startled(StartledBehavior),
-    Meandering(MeanderingBehavior),
-    GoTo(GoToBehavior),
-    Hearing(HearingBehavior),
-    Greeting(GreetingBehavior),
-}
-
-impl ActiveBehavior {
-    pub fn from_next(next: NextBehavior) -> Self {
-        match next {
-            NextBehavior::Idle => ActiveBehavior::Idle(IdleBehavior::new()),
-            NextBehavior::Sleeping => ActiveBehavior::Sleeping(SleepingBehavior::new()),
-            NextBehavior::Napping => ActiveBehavior::Napping(NappingBehavior::new()),
-            NextBehavior::Stretching => ActiveBehavior::Stretching(StretchingBehavior::new()),
-            NextBehavior::Kneading => ActiveBehavior::Kneading(KneadingBehavior::new()),
-            NextBehavior::Lounging => ActiveBehavior::Lounging(LoungingBehavior::new()),
-            NextBehavior::Investigating => {
-                ActiveBehavior::Investigating(InvestigatingBehavior::new())
-            }
-            NextBehavior::Observing => ActiveBehavior::Observing(ObservingBehavior::new()),
-            NextBehavior::Chattering => ActiveBehavior::Chattering(ChatteringBehavior::new()),
-            NextBehavior::Zoomies => ActiveBehavior::Zoomies(ZoomiesBehavior::new()),
-            NextBehavior::Vocalizing => ActiveBehavior::Vocalizing(VocalizingBehavior::new()),
-            NextBehavior::SelfGrooming => {
-                ActiveBehavior::SelfGrooming(SelfGroomingBehavior::new())
-            }
-            NextBehavior::Hunting => ActiveBehavior::Hunting(HuntingBehavior::new()),
-            NextBehavior::Pacing => ActiveBehavior::Pacing(PacingBehavior::new()),
-            NextBehavior::Sulking => ActiveBehavior::Sulking(SulkingBehavior::new()),
-            NextBehavior::Mischief => ActiveBehavior::Mischief(MischiefBehavior::new()),
-            NextBehavior::Hiding => ActiveBehavior::Hiding(HidingBehavior::new()),
-            NextBehavior::Meandering => ActiveBehavior::Meandering(MeanderingBehavior::new()),
-            NextBehavior::Hearing(icon) => ActiveBehavior::Hearing(HearingBehavior::new(icon)),
-            NextBehavior::Playing(variant) => {
-                ActiveBehavior::Playing(PlayingBehavior::new(variant))
-            }
-            NextBehavior::Eating(source) => ActiveBehavior::Eating(EatingBehavior::new(source)),
-            NextBehavior::GiftBringing(gift) => {
-                ActiveBehavior::GiftBringing(GiftBringingBehavior::new(gift))
-            }
-            NextBehavior::Training(kind) => {
-                ActiveBehavior::Training(TrainingBehavior::new(kind))
-            }
-            NextBehavior::GoTo(params) => ActiveBehavior::GoTo(GoToBehavior::new(params)),
-            NextBehavior::Startled => ActiveBehavior::Startled(StartledBehavior::new()),
-            NextBehavior::Greeting => ActiveBehavior::Greeting(GreetingBehavior::new()),
-            NextBehavior::BeingGroomed => {
-                ActiveBehavior::BeingGroomed(BeingGroomedBehavior::new())
-            }
-            NextBehavior::Affection(variant) => {
-                ActiveBehavior::Affection(AffectionBehavior::new(variant))
-            }
-            NextBehavior::Attention(variant) => {
-                ActiveBehavior::Attention(AttentionBehavior::new(variant))
-            }
-        }
-    }
-
-    pub fn as_dyn(&self) -> &dyn Behavior {
-        match self {
-            ActiveBehavior::Idle(b) => b,
-            ActiveBehavior::Sleeping(b) => b,
-            ActiveBehavior::Napping(b) => b,
-            ActiveBehavior::Stretching(b) => b,
-            ActiveBehavior::Kneading(b) => b,
-            ActiveBehavior::Lounging(b) => b,
-            ActiveBehavior::Investigating(b) => b,
-            ActiveBehavior::Observing(b) => b,
-            ActiveBehavior::Chattering(b) => b,
-            ActiveBehavior::Zoomies(b) => b,
-            ActiveBehavior::Vocalizing(b) => b,
-            ActiveBehavior::SelfGrooming(b) => b,
-            ActiveBehavior::BeingGroomed(b) => b,
-            ActiveBehavior::Hunting(b) => b,
-            ActiveBehavior::GiftBringing(b) => b,
-            ActiveBehavior::Pacing(b) => b,
-            ActiveBehavior::Sulking(b) => b,
-            ActiveBehavior::Mischief(b) => b,
-            ActiveBehavior::Hiding(b) => b,
-            ActiveBehavior::Training(b) => b,
-            ActiveBehavior::Playing(b) => b,
-            ActiveBehavior::Affection(b) => b,
-            ActiveBehavior::Attention(b) => b,
-            ActiveBehavior::Eating(b) => b,
-            ActiveBehavior::Startled(b) => b,
-            ActiveBehavior::Meandering(b) => b,
-            ActiveBehavior::GoTo(b) => b,
-            ActiveBehavior::Hearing(b) => b,
-            ActiveBehavior::Greeting(b) => b,
-        }
-    }
-
-    pub fn as_dyn_mut(&mut self) -> &mut dyn Behavior {
-        match self {
-            ActiveBehavior::Idle(b) => b,
-            ActiveBehavior::Sleeping(b) => b,
-            ActiveBehavior::Napping(b) => b,
-            ActiveBehavior::Stretching(b) => b,
-            ActiveBehavior::Kneading(b) => b,
-            ActiveBehavior::Lounging(b) => b,
-            ActiveBehavior::Investigating(b) => b,
-            ActiveBehavior::Observing(b) => b,
-            ActiveBehavior::Chattering(b) => b,
-            ActiveBehavior::Zoomies(b) => b,
-            ActiveBehavior::Vocalizing(b) => b,
-            ActiveBehavior::SelfGrooming(b) => b,
-            ActiveBehavior::BeingGroomed(b) => b,
-            ActiveBehavior::Hunting(b) => b,
-            ActiveBehavior::GiftBringing(b) => b,
-            ActiveBehavior::Pacing(b) => b,
-            ActiveBehavior::Sulking(b) => b,
-            ActiveBehavior::Mischief(b) => b,
-            ActiveBehavior::Hiding(b) => b,
-            ActiveBehavior::Training(b) => b,
-            ActiveBehavior::Playing(b) => b,
-            ActiveBehavior::Affection(b) => b,
-            ActiveBehavior::Attention(b) => b,
-            ActiveBehavior::Eating(b) => b,
-            ActiveBehavior::Startled(b) => b,
-            ActiveBehavior::Meandering(b) => b,
-            ActiveBehavior::GoTo(b) => b,
-            ActiveBehavior::Hearing(b) => b,
-            ActiveBehavior::Greeting(b) => b,
-        }
+/// Enum-dispatched union of every concrete behavior implementation. Eight
+/// variants (Hearing, Playing, Eating, GiftBringing, Training, GoTo,
+/// Affection, Attention) carry construction payload from the matching
+/// `NextBehavior` variant; the rest construct with `::new()`.
+crate::dispatch_enum! {
+    #[allow(dead_code)]
+    pub enum ActiveBehavior from NextBehavior via from_next,
+    as dyn Behavior via as_dyn / as_dyn_mut
+    {
+        Idle(IdleBehavior)                              = IdleBehavior::new(),
+        Sleeping(SleepingBehavior)                      = SleepingBehavior::new(),
+        Napping(NappingBehavior)                        = NappingBehavior::new(),
+        Stretching(StretchingBehavior)                  = StretchingBehavior::new(),
+        Kneading(KneadingBehavior)                      = KneadingBehavior::new(),
+        Lounging(LoungingBehavior)                      = LoungingBehavior::new(),
+        Investigating(InvestigatingBehavior)            = InvestigatingBehavior::new(),
+        Observing(ObservingBehavior)                    = ObservingBehavior::new(),
+        Chattering(ChatteringBehavior)                  = ChatteringBehavior::new(),
+        Zoomies(ZoomiesBehavior)                        = ZoomiesBehavior::new(),
+        Vocalizing(VocalizingBehavior)                  = VocalizingBehavior::new(),
+        SelfGrooming(SelfGroomingBehavior)              = SelfGroomingBehavior::new(),
+        BeingGroomed(BeingGroomedBehavior)              = BeingGroomedBehavior::new(),
+        Hunting(HuntingBehavior)                        = HuntingBehavior::new(),
+        GiftBringing(GiftBringingBehavior)(gift)        = GiftBringingBehavior::new(gift),
+        Pacing(PacingBehavior)                          = PacingBehavior::new(),
+        Sulking(SulkingBehavior)                        = SulkingBehavior::new(),
+        Mischief(MischiefBehavior)                      = MischiefBehavior::new(),
+        Hiding(HidingBehavior)                          = HidingBehavior::new(),
+        Training(TrainingBehavior)(kind)                = TrainingBehavior::new(kind),
+        Playing(PlayingBehavior)(variant)               = PlayingBehavior::new(variant),
+        Affection(AffectionBehavior)(variant)           = AffectionBehavior::new(variant),
+        Attention(AttentionBehavior)(variant)           = AttentionBehavior::new(variant),
+        Eating(EatingBehavior)(source)                  = EatingBehavior::new(source),
+        Startled(StartledBehavior)                      = StartledBehavior::new(),
+        Meandering(MeanderingBehavior)                  = MeanderingBehavior::new(),
+        GoTo(GoToBehavior)(params)                      = GoToBehavior::new(params),
+        Hearing(HearingBehavior)(icon)                  = HearingBehavior::new(icon),
+        Greeting(GreetingBehavior)                      = GreetingBehavior::new(),
     }
 }
 

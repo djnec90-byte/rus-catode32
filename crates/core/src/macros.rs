@@ -63,6 +63,71 @@ macro_rules! enum_key_pair_option {
     };
 }
 
+/// Declare a dispatch enum (the "no_std box-of-trait substitute") that owns
+/// one variant per concrete type implementing `$Trait`. Generates:
+///
+/// * the enum declaration itself,
+/// * `pub fn $from_fn(src: $Source) -> Self` mapping a payload-free source
+///   enum to a freshly constructed variant,
+/// * `pub fn $as_ref(&self) -> &dyn $Trait` and matching `$as_mut`,
+///
+/// so adding a new variant means editing one place instead of four. Variant
+/// names must match between `$Source` and the dispatch enum. Each variant
+/// may optionally bind a payload pattern from its source variant via
+/// `Variant(Type)(pat) = ctor`, which expands to
+/// `$Source::Variant(pat) => Self::Variant(ctor)`.
+///
+/// ```ignore
+/// dispatch_enum! {
+///     pub enum ActiveScene from SceneId via from_id,
+///     as dyn Scene via as_scene / as_scene_mut
+///     {
+///         Inside(InsideScene) = InsideScene::new(),
+///         // ...
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! dispatch_enum {
+    (
+        $(#[$enum_meta:meta])*
+        $vis:vis enum $Enum:ident from $Source:ident via $from_fn:ident,
+        as dyn $Trait:ident via $as_ref:ident / $as_mut:ident
+        {
+            $(
+                $Variant:ident($Type:ty) $(($($pat:tt)+))? = $ctor:expr
+            ),+ $(,)?
+        }
+    ) => {
+        $(#[$enum_meta])*
+        $vis enum $Enum {
+            $($Variant($Type),)+
+        }
+
+        impl $Enum {
+            pub fn $from_fn(src: $Source) -> Self {
+                match src {
+                    $(
+                        $Source::$Variant $(($($pat)+))? => Self::$Variant($ctor),
+                    )+
+                }
+            }
+
+            pub fn $as_ref(&self) -> &dyn $Trait {
+                match self {
+                    $(Self::$Variant(b) => b,)+
+                }
+            }
+
+            pub fn $as_mut(&mut self) -> &mut dyn $Trait {
+                match self {
+                    $(Self::$Variant(b) => b,)+
+                }
+            }
+        }
+    };
+}
+
 /// Generate a paired `pub fn $to(_: $Enum) -> &'static str` /
 /// `pub fn $from(_: &str) -> $Enum` (returns the variant directly, with a
 /// designated `default:` for unknown input). Supports per-variant aliases:
