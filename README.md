@@ -177,19 +177,24 @@ To care for a sick pet and nurture them back to health, make sure they're well f
 
 ### Software Requirements
 
-- `mpremote` installed (`pip install mpremote`)
+- Rust toolchain (install via [rustup](https://rustup.rs))
+- `espflash` (`cargo install espflash`)
 
 ### Board Configuration
 
-The project supports both ESP32-C6 and ESP32-C3 boards. To configure for your board:
+The project supports both ESP32-C6 and ESP32-C3 boards. Board selection is done through Cargo features on the `catode32-firmware` crate. Exactly one of `c6` or `c3` must be active. C6 is the default.
 
-1. Open `src/config.py`
-2. Set `BOARD_TYPE` to either `"ESP32-C6"` or `"ESP32-C3"`
-
-```python
-# In src/config.py
-BOARD_TYPE = "ESP32-C6"  # Change to "ESP32-C3" for ESP32-C3 board
+Build and flash for ESP32-C6:
+```bash
+cargo run
 ```
+
+Build and flash for ESP32-C3:
+```bash
+cargo run --no-default-features --features c3 --target riscv32imc-unknown-none-elf
+```
+
+The two chips use different RISC-V variants, so the `--target` flag matters. C6 is `riscv32imac-unknown-none-elf` (with the A extension) and C3 is `riscv32imc-unknown-none-elf` (no A extension). The C6 target is set as the default in `.cargo/config.toml`, so you only need to pass `--target` when building for C3.
 
 ### Wiring
 
@@ -243,88 +248,75 @@ Choose the wiring diagram for your board. Each button connects between GPIO pin 
 
 ## Installation
 
-This project uses **custom MicroPython firmware** with asset data frozen directly into flash. The sprite/icon data lives in flash rather than RAM, which frees up a significant portion of the ~85KB heap budget. You build the firmware once, flash it, then upload only the game logic.
+The firmware is a single Rust binary. There is no separate filesystem or asset upload step. Everything (game logic, sprites, translation strings) is compiled into one image and flashed to the device.
 
 ### 1. Set Up Build Tools (one-time)
 
-Install build prerequisites:
+Install Rust via [rustup](https://rustup.rs) if you don't already have it. The `rust-toolchain.toml` in this repo pins the toolchain and installs the RISC-V targets automatically the first time you build.
+
+Install `espflash`, which builds, flashes, and monitors the device:
 ```bash
-brew install cmake ninja dfu-util   # macOS
+cargo install espflash
 ```
 
-Clone ESP-IDF and MicroPython into `~/esp/`:
+The `espflash` runner is already wired up in `.cargo/config.toml`, so `cargo run` on the firmware crate will flash and start a serial monitor.
+
+### 2. Build and Flash
+
+For ESP32-C6 (default):
 ```bash
-mkdir -p ~/esp
-
-# ESP-IDF (required version: v5.5.1)
-git clone --recursive https://github.com/espressif/esp-idf.git ~/esp/esp-idf
-cd ~/esp/esp-idf && git checkout v5.5.1
-git submodule update --init --recursive
-./install.sh esp32c6,esp32c3
-
-# MicroPython
-git clone https://github.com/micropython/micropython.git ~/esp/micropython
-cd ~/esp/micropython
-git submodule update --init --recursive
-make -C mpy-cross
+cargo run --release
 ```
 
-> If you keep ESP-IDF or MicroPython somewhere other than `~/esp/`, set the `IDF_PATH` and `MICROPYTHON_DIR` environment variables before running build scripts.
-
-### 2. Build and Flash Custom Firmware
-
+For ESP32-C3:
 ```bash
-# Build and flash in one step (auto-detects USB port):
-./tools/build_firmware.sh build-flash
-
-# Or specify board and port explicitly:
-./tools/build_firmware.sh build-flash esp32c6 /dev/tty.usbmodem1234
-./tools/build_firmware.sh build-flash esp32c3
+cargo run --release --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 ```
 
-This compiles a custom MicroPython binary with all `src/assets/` modules frozen in, then flashes bootloader, partition table, and firmware to the device.
-
-> **Note:** Flashing replaces the entire filesystem. Re-run `./upload.sh` after flashing to restore game files.
-
-### 3. Configure Board Type
-
-Before uploading, set your board type in `src/config.py`:
-```python
-BOARD_TYPE = "ESP32-C6"  # or "ESP32-C3"
-```
-
-### 4. Upload Game Files
-
+`espflash` auto-detects the serial port. If you have more than one device connected, pass `--port` after a `--` separator:
 ```bash
-./upload.sh
+cargo run --release -- --port /dev/tty.usbmodem1234
 ```
 
-This installs the `ssd1306` library, compiles and uploads all game logic. Asset files are not uploaded since they live in the firmware.
+`cargo run` will build, flash, and drop you into the serial monitor. Press `Ctrl+C` to exit the monitor without resetting the device.
 
 
 
 ## Desktop Emulator
 
-The game can be run on your computer using pygame, which allows you to experiment with it without needing to setup an ESP32.
+The game can be run on your computer, which allows you to experiment with it without needing to setup an ESP32. The desktop emulator lives in the `catode32-desktop` crate and uses SDL2 to render the same 128x64 framebuffer to a window.
 
 ### Requirements
 
-- Python 3
-- pygame (`pip install pygame`)
+- SDL2
 
-> If your system Python is externally managed (e.g. Homebrew on macOS), use a virtual environment:
-> ```bash
-> python3 -m venv venv
-> source venv/bin/activate
-> pip install pygame
-> ```
+On macOS:
+```bash
+brew install sdl2
+```
+
+On Debian/Ubuntu:
+```bash
+sudo apt install libsdl2-dev
+```
 
 ### Running
 
-From the `src/` directory:
+The workspace default target is `riscv32imac-unknown-none-elf` (for the firmware), so you need to pass `--target` with your host triple when building the desktop crate. Examples:
 
+Apple Silicon:
 ```bash
-python run.py
+cargo run -p catode32-desktop --target aarch64-apple-darwin
+```
+
+Intel Mac:
+```bash
+cargo run -p catode32-desktop --target x86_64-apple-darwin
+```
+
+Linux:
+```bash
+cargo run -p catode32-desktop --target x86_64-unknown-linux-gnu
 ```
 
 ### Controls
@@ -332,86 +324,37 @@ python run.py
 | Key | Action |
 |-----|--------|
 | Arrow keys | D-pad |
-| Z / X | A / B |
-| A / S | Menu 1 / Menu 2 |
-| Escape | Quit (saves first) |
+| A | A |
+| S | B |
+| Q | Menu 1 |
+| W | Menu 2 |
+| Escape | Quit |
 
 ### Save file
 
-The desktop save is stored at `src/save.json`, separate from the device save at `/save.json` on the ESP32.
+The desktop save is stored at `./catode32-save.json` in the current working directory. It is separate from the device save, which lives on the ESP32's `nvs` flash partition.
 
 
 
 ## Development Workflow
 
-For the fastest iteration during development, use the `dev.sh` script which compiles Python to bytecode and runs via `mpremote mount`:
+For the fastest iteration, run the game directly on the desktop. See the Desktop Emulator section above for the command that matches your machine (Apple Silicon, Intel Mac, or Linux). The desktop build uses the same `catode32-core` crate that the firmware uses, so most gameplay changes can be tested without touching hardware.
+
+When you need to test on the device itself, use `cargo run` from the workspace root. It builds the firmware crate (the default workspace member), flashes it via `espflash`, and opens a serial monitor:
 
 ```bash
-./dev.sh
+cargo run --release
 ```
 
-This script:
-- Compiles all `.py` files in `src/` to `.mpy` bytecode in `build/` (excluding `src/assets/`)
-- Converts level files from `levels/` into binary format in `build/platformer_levels/`
-- Mounts the `build/` directory on the device
-- Runs the game
-
-Asset files are skipped because they are frozen into the firmware. MicroPython resolves frozen modules before the filesystem, so uploading them would be redundant.
-
-> [!NOTE]
-> Requires `mpy-cross` (`pip install mpy-cross`) and `mpremote` (`pip install mpremote`).
-> The device must be running the custom firmware (see Installation). Asset imports will fail on stock MicroPython firmware.
+Debug builds work too and are faster to compile, but release builds are strongly recommended for on-device testing because the binary is much smaller and the game runs closer to full speed.
 
 ## Scripts
 
-### ./tools/build_firmware.sh
-
-Builds custom MicroPython firmware with asset modules frozen in flash, then optionally flashes it:
-
-```bash
-./tools/build_firmware.sh                        # build only, ESP32-C6
-./tools/build_firmware.sh build-flash            # build and flash, ESP32-C6
-./tools/build_firmware.sh build esp32c3          # build only, ESP32-C3
-./tools/build_firmware.sh flash esp32c6 /dev/tty.usbmodem1234  # flash with explicit port
-```
-
-Re-run this whenever you add new sprite data to `src/assets/` (after running `tools/convert_bytearrays.py` to convert any new `bytearray` literals to `bytes` literals first).
-
-### ./test_hardware.sh
-
-Verifies that your hardware is working correctly:
-
-```bash
-./test_hardware.sh
-```
-
-This script:
-- Resets the device
-- Scans I2C to confirm the display is detected
-- Enters an interactive button test (press buttons to see them register, Ctrl+C to exit)
-
-Run this first when setting up a new device or debugging hardware issues.
-
-### ./upload.sh
-
-Deploys the project to the ESP32's flash storage:
-
-```bash
-./upload.sh [port]
-```
-
-This script:
-- Installs the `ssd1306` library via `mip`
-- Compiles all `.py` files to `.mpy` bytecode (excluding `src/assets/`, which are frozen in firmware)
-- Converts level files from `levels/` into binary format in `build/platformer_levels/`
-- Cleans existing files from the device (preserves `lib/`, `save.json`, and `webrepl_cfg.py`)
-- Uploads compiled `.mpy` and `.bin` files and `boot.py` to the device
-
-Use this when you want the pet to run standalone without a laptop connection.
+[TODO] Add a rust version of the test_hardware script.
 
 ## Localisation
 
-All player-visible strings are marked with `t("...")` in the source code. At build time, `tools/translate.py` walks the source tree, replaces every `t(...)` call with the translated string literal, and strips the `from lang import t` import lines. The compiled `.mpy` files contain only baked string values. No translation table is loaded at runtime, so there is zero memory or performance overhead on the device.
+All player-visible strings are marked with the `t!("...")` macro in the source code. At build time, the `catode32-i18n-macros` crate rewrites each `t!` call into the translated string literal for the active language. The compiled binary contains only baked string values. No translation table is loaded at runtime, so there is zero memory or performance overhead on the device.
 
 Translation lookup order per string: **language file → English fallback → key itself**. This means a partial translation file is valid; any untranslated key silently falls back to English.
 
@@ -428,86 +371,46 @@ Translation lookup order per string: **language file → English fallback → ke
 
 ### Building with a language
 
-Pass `--lang <code>` to `dev.sh`, `upload.sh` or `run.py`:
+Language selection is done through Cargo features. Each language has a matching `lang-<code>` feature on both the firmware and desktop crates. English is the default.
 
+Firmware, C6, Spanish:
 ```bash
-# Run in desktop
-python run.py --lang es
-
-# Test on device
-./dev.sh --lang fr
-
-# Upload to device
-./upload.sh --lang de
+cargo run --release --no-default-features --features "c6 lang-es"
 ```
 
-The default is `en` if `--lang` is omitted.
+Firmware, C3, French:
+```bash
+cargo run --release --no-default-features --features "c3 lang-fr" --target riscv32imc-unknown-none-elf
+```
+
+Desktop, German (example on Apple Silicon):
+```bash
+cargo run -p catode32-desktop --no-default-features --features lang-de --target aarch64-apple-darwin
+```
 
 ### Adding a new language
 
-1. Create `tools/translations/<code>.json`
+1. Create `crates/i18n-macros/translations/<code>.json`
 2. Copy any keys from `en.json` whose values you want to translate, and replace the values with the translated text. Keys you omit fall back to English automatically.
-3. Run `./dev.sh --lang <code>` or `./upload.sh --lang <code>` to build with the new language.
+3. Add a matching `lang-<code>` feature to `crates/i18n-macros/Cargo.toml`, `crates/core/Cargo.toml`, `crates/firmware/Cargo.toml`, and `crates/desktop/Cargo.toml`, following the pattern used for the existing languages.
+4. Extend the language dispatch in `crates/i18n-macros/src/lib.rs` to recognise the new `lang-<code>` feature.
+5. Build with `--features lang-<code>` as shown above.
 
 ## Running the Game
 
-After uploading, the game starts automatically on power-up or reset.
+Once the firmware is flashed, the game starts automatically on power-up or reset.
 
-**To enter REPL mode instead:** Hold **A+B buttons** while powering on or pressing reset. This skips auto-run so `mpremote` can connect.
-
-To manually start the game from REPL:
+To flash a fresh build and drop into the serial monitor:
 
 ```bash
-mpremote
->>> import main
->>> main.main()
+cargo run --release
 ```
 
-## Troubleshooting
+To run the desktop emulator instead of flashing hardware, use the command from the Desktop Emulator section for your machine, for example:
 
-### "could not enter raw repl" error
-
-If you see `mpremote.transport.TransportError: could not enter raw repl` when running `./dev.sh` or other mpremote commands, it means `boot.py` is on the device and auto-running the game, blocking mpremote from connecting.
-
-**To fix this:**
-
-Either press A + B while `./dev.sh` to interrupt the boot sequence.
-
-Or, to remove the `boot.py` file so that it doesn't activate:
-
-1. Run `mpremote` to connect to the device
-2. Press **Ctrl+C** to interrupt the running game
-3. Press **Ctrl+B** to exit raw REPL and enter friendly REPL
-4. Remove boot.py:
-   ```python
-   import os
-   os.remove('boot.py')
-   ```
-5. Press **Ctrl+X** to exit mpremote
-
-Now `./dev.sh` should work again.
-
-### Monitoring serial output without interrupting the game
-
-To watch `print()` output from a running game without sending Ctrl+C or triggering a reset:
-
-**macOS:**
 ```bash
-screen /dev/cu.usbmodem* 115200
+cargo run -p catode32-desktop --target aarch64-apple-darwin
 ```
-
-**Linux:**
-```bash
-screen /dev/ttyACM0 115200
-```
-
-If the glob doesn't match (or you have multiple devices), find the exact port first:
-- macOS: `ls /dev/cu.*`
-- Linux: `ls /dev/ttyACM*` or `ls /dev/ttyUSB*`
-
-Press **Ctrl+A then K** to exit `screen`.
-
-This is useful after a reboot (e.g. from a context save) breaks an mpremote session; the game is still running and its output is still on the serial port.
 
 ## Contributing
 
