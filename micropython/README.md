@@ -1,3 +1,7 @@
+> [!Warning]
+> This Micropython version of the project is outdated!
+> The project has been rewritten in Rust and this old Micropython code is frozen and no longer maintained.
+
 # Catode32 - A virtual pet for your ESP32
 
 ![catstars](https://github.com/user-attachments/assets/2ffc652a-f392-42e7-9a13-d7fb91f3770d)
