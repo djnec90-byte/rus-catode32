@@ -120,7 +120,6 @@ impl TimeSystem {
     }
 
     pub fn advance(&mut self, ctx: &mut GameContext, dt: f32) {
-        let dt = dt * ctx.time_speed;
         self.accumulator += dt * GAME_MINUTES_PER_SECOND;
         if self.accumulator < 1.0 {
             return;

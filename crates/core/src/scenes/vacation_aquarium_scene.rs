@@ -305,23 +305,23 @@ impl VacationWorld for AquariumWorld {
         self.debris = None;
     }
 
-    fn tick(&mut self, _ctx: &mut GameContext, scaled_dt: f32) {
-        self.sw_timer += scaled_dt;
+    fn tick(&mut self, _ctx: &mut GameContext, dt: f32) {
+        self.sw_timer += dt;
         if self.sw_timer >= SW_FRAME_INTERVAL {
             self.sw_timer -= SW_FRAME_INTERVAL;
             self.sw_frame = (self.sw_frame + 1) % SW_FRAMES;
         }
         for f in self.fish.iter_mut() {
-            f.update(scaled_dt);
+            f.update(dt);
         }
         if let Some(oct) = self.octopus.as_mut() {
-            oct.update(scaled_dt);
+            oct.update(dt);
         }
         if let Some(b) = self.bubbles.as_mut() {
-            b.update(scaled_dt);
+            b.update(dt);
         }
         if let Some(d) = self.debris.as_mut() {
-            d.update(scaled_dt);
+            d.update(dt);
         }
     }
 

@@ -176,10 +176,10 @@ pub trait VacationWorld: Default {
     /// and reward landing are handled by the wrapper.
     fn exit(&mut self, _ctx: &mut GameContext) {}
 
-    /// Per-frame world advance. `scaled_dt` is already multiplied by
-    /// `ctx.time_speed`; the wrapper takes care of that and of ticking the
-    /// shared `VacationState` afterwards.
-    fn tick(&mut self, _ctx: &mut GameContext, _scaled_dt: f32) {}
+    /// Per-frame world advance. `dt` is the frame delta already scaled by
+    /// `ctx.time_speed` (all scaling happens once in `Game::update`). The
+    /// wrapper ticks the shared `VacationState` afterwards.
+    fn tick(&mut self, _ctx: &mut GameContext, _dt: f32) {}
 
     /// Draw the destination's art (environment layers + custom passes) between
     /// the optional sky and the character. The wrapper handles menu gating,
@@ -229,17 +229,15 @@ impl<W: VacationWorld> Scene for VacationScene<W> {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        let scaled = dt * ctx.time_speed;
-        self.world.tick(ctx, scaled);
-        self.state.tick(ctx, scaled);
+        self.world.tick(ctx, dt);
+        self.state.tick(ctx, dt);
         None
     }
 
     fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
         self.base.tick_background(ctx, dt);
-        let scaled = dt * ctx.time_speed;
-        self.world.tick(ctx, scaled);
-        self.state.tick(ctx, scaled);
+        self.world.tick(ctx, dt);
+        self.state.tick(ctx, dt);
     }
 
     fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {

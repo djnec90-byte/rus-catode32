@@ -195,9 +195,9 @@ impl VacationWorld for ParkWorld {
         self.spawn_butterflies();
     }
 
-    fn tick(&mut self, _ctx: &mut GameContext, scaled_dt: f32) {
+    fn tick(&mut self, _ctx: &mut GameContext, dt: f32) {
         for b in self.butterflies.iter_mut() {
-            b.update(scaled_dt);
+            b.update(dt);
         }
     }
 

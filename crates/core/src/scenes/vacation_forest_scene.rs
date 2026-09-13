@@ -306,8 +306,8 @@ impl VacationWorld for ForestWorld {
         self.spawn_critters(ctx);
     }
 
-    fn tick(&mut self, _ctx: &mut GameContext, scaled_dt: f32) {
-        self.update_critters(scaled_dt);
+    fn tick(&mut self, _ctx: &mut GameContext, dt: f32) {
+        self.update_critters(dt);
     }
 
     fn draw_world(&self, _ctx: &GameContext, renderer: &mut Renderer, base: &LocationScene) {

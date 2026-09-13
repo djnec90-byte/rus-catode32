@@ -186,6 +186,11 @@ impl Game {
     }
 
     fn update(&mut self, dt: f32) {
+        // Single point of `time_speed` scaling for the whole frame — every
+        // subsystem downstream (time-of-day, sky, behaviors, animations,
+        // transitions, minigames) sees the scaled dt. Mirrors the
+        // MicroPython main loop; do not re-scale inside subsystems.
+        let dt = dt * self.context.time_speed;
         self.time_system.advance(&mut self.context, dt);
         let requested = self
             .scene_manager

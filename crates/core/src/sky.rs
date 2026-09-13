@@ -633,8 +633,6 @@ impl SkyRenderer {
     }
 
     pub fn update(&mut self, ctx: &GameContext, dt: f32) {
-        // Scale sky dt by time_speed to match the main loop scaling.
-        let dt = dt * ctx.time_speed;
         self.elapsed_time += dt;
         self.twinkle_timer += dt;
         if self.twinkle_timer > TWINKLE_PERIOD {

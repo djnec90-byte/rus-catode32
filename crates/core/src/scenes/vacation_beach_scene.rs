@@ -318,8 +318,8 @@ impl VacationWorld for BeachWorld {
         self.wave_timer = 0.0;
     }
 
-    fn tick(&mut self, _ctx: &mut GameContext, scaled_dt: f32) {
-        self.wave_timer += scaled_dt;
+    fn tick(&mut self, _ctx: &mut GameContext, dt: f32) {
+        self.wave_timer += dt;
         if self.wave_timer >= TIMER_LENGTH {
             self.wave_timer -= TIMER_LENGTH;
         }

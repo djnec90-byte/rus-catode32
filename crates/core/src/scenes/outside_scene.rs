@@ -213,7 +213,7 @@ impl Scene for OutsideScene {
         if let Some(id) = self.base.update(ctx, buttons, dt) {
             return Some(id);
         }
-        self.update_critters(dt * ctx.time_speed);
+        self.update_critters(dt);
         // TODO: weather-change detection so clouds/precipitation rebuild and
         //       critters re-roll when the weather changes.
         // TODO: meteor_shower_active flag was set by SkyRenderer in stage 3c.
@@ -223,7 +223,7 @@ impl Scene for OutsideScene {
 
     fn tick_background(&mut self, ctx: &mut GameContext, dt: f32) {
         self.base.tick_background(ctx, dt);
-        self.update_critters(dt * ctx.time_speed);
+        self.update_critters(dt);
     }
 
     fn mark_behavior_almost_done(&mut self, ctx: &mut GameContext) {
