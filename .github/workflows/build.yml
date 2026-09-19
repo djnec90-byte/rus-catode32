@@ -14,18 +14,11 @@ jobs:
         with:
           targets: riscv32imc-unknown-none-elf
 
-      - name: Install espflash
-        run: cargo install cargo-espflash
-
       - name: Build Firmware for ESP32-C3
-        # Строго оригинальная команда автора из инструкции для компиляции пакета прошивки
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
-
-      - name: Generate Binary Image
-        run: cargo espflash save-image target/riscv32imc-unknown-none-elf/release/catode32-firmware --chip esp32c3 --merge firmware.bin
 
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
           name: catode32-esp32c3-firmware
-          path: firmware.bin
+          path: target/riscv32imc-unknown-none-elf/release/catode32-firmware
