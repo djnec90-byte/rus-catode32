@@ -1,0 +1,30 @@
+name: Build ESP32-C3 Firmware
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: riscv32imc-unknown-none-elf
+
+      - name: Install espflash
+        run: cargo install cargo-espflash --no-default-features --features cli
+
+      - name: Build Firmware
+        run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
+
+      - name: Generate Binary Image
+        run: cargo espflash save-image --chip esp32c3 --release -p catode32-firmware firmware.bin
+
+      - name: Upload Firmware Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: catode32-esp32c3-firmware
+          path: firmware.bin
