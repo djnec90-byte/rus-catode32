@@ -15,7 +15,7 @@ jobs:
           targets: riscv32imc-unknown-none-elf
 
       - name: Install espflash
-        run: cargo install cargo-espflash --no-default-features --features cli
+        run: cargo install cargo-espflash
 
       - name: Build Firmware
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
