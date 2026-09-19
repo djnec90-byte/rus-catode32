@@ -123,7 +123,8 @@ impl Renderer {
             text, 
             pos, 
             u8g2_fonts::types::VerticalPosition::Top, 
-            BinaryColor::On, 
+            u8g2_fonts::types::HorizontalAlignment::Left,
+            u8g2_fonts::types::FontColor::Transparent(BinaryColor::On), 
             &mut self.display
         ).unwrap();
     }
@@ -134,7 +135,8 @@ impl Renderer {
             text, 
             pos, 
             u8g2_fonts::types::VerticalPosition::Top, 
-            BinaryColor::Off, // Используем инвертированный цвет для выделения
+            u8g2_fonts::types::HorizontalAlignment::Left,
+            u8g2_fonts::types::FontColor::Transparent(BinaryColor::Off), 
             &mut self.display
         ).unwrap();
     }
