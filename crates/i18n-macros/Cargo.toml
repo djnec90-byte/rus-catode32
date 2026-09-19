@@ -17,6 +17,7 @@ lang-es = []
 lang-fr = []
 lang-it = []
 lang-nl = []
+lang-ru = []
 
 [dependencies]
 proc-macro2 = "1"
