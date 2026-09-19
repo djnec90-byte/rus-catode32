@@ -18,7 +18,7 @@ jobs:
         run: cargo install cargo-espflash
 
       - name: Build Firmware
-        run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
+        run: cargo build --release --workspace --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 
       - name: Generate Binary Image
         run: cargo espflash save-image --chip esp32c3 --release -p catode32-firmware firmware.bin
