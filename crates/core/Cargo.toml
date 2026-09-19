@@ -45,6 +45,7 @@ c3 = [
 desktop = []
 
 # Language selection — exactly one should be active. Defaults to English.
+lang-ru = ["catode32-i18n-macros/lang-ru"]
 lang-en = ["catode32-i18n-macros/lang-en"]
 lang-de = ["catode32-i18n-macros/lang-de"]
 lang-es = ["catode32-i18n-macros/lang-es"]
