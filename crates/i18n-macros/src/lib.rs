@@ -24,10 +24,13 @@ fn active_lang() -> &'static str {
         "it"
     } else if cfg!(feature = "lang-nl") {
         "nl"
+    } else if cfg!(feature = "lang-ru") {
+        "ru"
     } else {
-        "en"
+        "ru" // Сделали русский основным языком по умолчанию вместо английского!
     }
 }
+
 
 fn translations_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("translations")
