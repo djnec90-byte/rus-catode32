@@ -376,6 +376,7 @@ impl Game {
 
         let mut rtc = Rtc::new(unsafe { LPWR::steal() });
         //rtc.sleep_deep(&[&ext1]);
+        loop {}
     }
 
     #[cfg(feature = "desktop")]
