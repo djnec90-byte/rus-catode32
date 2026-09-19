@@ -330,7 +330,7 @@ impl Game {
             gpio::RtcPinWithResistors,
             peripherals::{GPIO0, GPIO1, GPIO2, GPIO3, LPWR},
             rtc_cntl::{
-                sleep::{Ext1WakeupSource, WakeupLevel},
+                sleep::{Uart1WakeupSource, WakeupLevel},
                 Rtc,
             },
         };
