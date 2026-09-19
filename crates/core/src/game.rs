@@ -372,10 +372,10 @@ impl Game {
             (&mut g2, WakeupLevel::Low),
             (&mut g3, WakeupLevel::Low),
         ];
-        let ext1 = Ext1WakeupSource::new(&mut pins);
+        //let ext1 = Ext1WakeupSource::new(&mut pins);
 
         let mut rtc = Rtc::new(unsafe { LPWR::steal() });
-        rtc.sleep_deep(&[&ext1]);
+        //rtc.sleep_deep(&[&ext1]);
     }
 
     #[cfg(feature = "desktop")]
