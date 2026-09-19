@@ -14,6 +14,7 @@ lang-es = ["catode32-core/lang-es"]
 lang-fr = ["catode32-core/lang-fr"]
 lang-it = ["catode32-core/lang-it"]
 lang-nl = ["catode32-core/lang-nl"]
+lang-ru = ["catode32-core/lang-ru"]
 
 [dependencies]
 catode32-core = { path = "../core", default-features = false, features = ["desktop"] }
