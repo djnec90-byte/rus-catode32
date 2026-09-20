@@ -62,7 +62,7 @@ pub struct Renderer {
 impl Renderer {
     #[cfg(not(feature = "desktop"))]
     pub fn new(i2c: I2c<'static, Blocking>) -> Self {
-        let interface = I2CDisplayInterface::new(i2c);
+        let interface = I2CDisplayInterface::new_custom_address(i2c, 0x3D);
         let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
             .into_buffered_graphics_mode();
         display.init().unwrap();
