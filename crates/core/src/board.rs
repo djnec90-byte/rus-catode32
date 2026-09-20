@@ -54,8 +54,8 @@ mod firmware {
         #[cfg(feature = "c3")]
         let i2c = I2c::new(peripherals.I2C0, i2c_config)
             .unwrap()
-            .with_sda(peripherals.GPIO3)
-            .with_scl(peripherals.GPIO11);
+            .with_sda(peripherals.GPIO2)
+            .with_scl(peripherals.GPIO3);
 
         let input_config = InputConfig::default().with_pull(Pull::Up);
         // Button order: UP, DOWN, LEFT, RIGHT, A, B, MENU1, MENU2
@@ -74,12 +74,12 @@ mod firmware {
         let buttons = Buttons::new([
             Input::new(peripherals.GPIO0, input_config),
             Input::new(peripherals.GPIO1, input_config),
-            Input::new(peripherals.GPIO2, input_config),
             Input::new(peripherals.GPIO20, input_config),
+            Input::new(peripherals.GPIO21, input_config),
             Input::new(peripherals.GPIO4, input_config),
             Input::new(peripherals.GPIO5, input_config),
             Input::new(peripherals.GPIO10, input_config),
-            Input::new(peripherals.GPIO21, input_config),
+            Input::new(peripherals.GPIO11, input_config),
         ]);
 
         let led = Led::new(peripherals.RMT, peripherals.GPIO8);
