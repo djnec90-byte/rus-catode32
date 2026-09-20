@@ -14,11 +14,20 @@ jobs:
         with:
           targets: riscv32imc-unknown-none-elf
 
+      # Ставим официальную системную утилиту от Espressif через питон
+      - name: Install esptool
+        run: pip install esptool
+
       - name: Build Firmware for ESP32-C3
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
+
+      # Сами очищаем файл от отладочной информации и превращаем его в правильный легкий .bin
+      - name: Convert ELF to Flash BIN
+        run: |
+          esptool.py --chip esp32c3 elf2image --output firmware.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
 
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
           name: catode32-esp32c3-firmware
-          path: target/riscv32imc-unknown-none-elf/release/catode32-firmware
+          path: firmware.bin
