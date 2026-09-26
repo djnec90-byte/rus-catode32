@@ -7,79 +7,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Cache Cargo registry and target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+      - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: riscv32imc-unknown-none-elf
 
-      # Ставим официальный esptool (он содержит компилятор таблиц разделов)
+      # Ставим официальную системную утилиту от Espressif через питон
       - name: Install esptool
-        run: |
-          python -m pip install --upgrade pip
-          pip install esptool
-
-      # Ставим инструмент, который содержит в себе оригинальные бинарники бутлоадеров под конкретный релиз
-      - name: Install espflash tools
-        run: cargo install espflash --no-default-features --features cli
+        run: pip install esptool
 
       - name: Build Firmware for ESP32-C3
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 
-      # Генерируем ровно три чистых файла штатными средствами инструментов
-      - name: Convert ELF to Separate BINs
+      # Сами очищаем файл от отладочной информации и превращаем его в правильный легкий .bin
+      - name: Convert ELF to Flash BIN
         run: |
-          mkdir -p output
-          
-          # 1. Извлекаем бинарник самого приложения (firmware.bin)
-          esptool.py --chip esp32c3 elf2image --output output/firmware.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
-          
-          # 2. Генерируем дефолтную таблицу разделов из встроенных инструментов espflash (partitions.bin)
-          # Если у вас есть свой partitions.csv, замените команду на: gen_esp32part.py partitions.csv output/partitions.bin
-          cat <<EOF > default_partitions.csv
-          nvs,      data, nvs,     0x9000,  0x6000,
-          phy_init, data, phy,     0xf000,  0x1000,
-          factory,  app,  factory, 0x10000, 0x3b0000,
-          EOF
-          gen_esp32part.py default_partitions.csv output/partitions.bin
-          
-          # 3. Вытаскиваем встроенный чистый загрузчик esp-hal для ESP32-C3 без обращения к сети
-          # espflash хранит правильный рабочий загрузчик прямо внутри своего исполняемого файла
-          espflash save-image --chip esp32c3 --merge target/riscv32imc-unknown-none-elf/release/catode32-firmware output/full_image.bin
-          esptool.py --chip esp32c3 image_info output/full_image.bin | grep -q "ESP32-C3" 
-          # Чтобы не зависеть от багов сохранения, извлекаем загрузчик из ELF-заголовков сборки с помощью встроенного в esptool механизма создания stub-образа
-          esptool.py --chip esp32c3 elf2image --flash_mode dio --flash_freq 80m --flash_size 4MB -o output/temp.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
-          # Загрузчик от esp-hal генерируется автоматически при правильной сборке через espflash
-          cargo espflash save-image --chip esp32c3 target/riscv32imc-unknown-none-elf/release/catode32-firmware output/temp_combined.bin
-          
-      # Точный и железобетонный метод разделения с помощью внутренней недокументированной команды espflash
-      - name: Extract exact components using espflash export
-        run: |
-          # Переписываем шаг выгрузки на использование вызова встроенного компоновщика esp-idf/esp-hal структуры
-          # Избавляемся от багов путей: создаем три бинарника напрямую через сохраненные смещения
-          espflash save-image --chip esp32c3 target/riscv32imc-unknown-none-elf/release/catode32-firmware output/app.bin
-          # Для извлечения трех отдельных файлов без склейки используем вызов генерации через сборку схемы разделов:
-          # espflash предоставляет команду для сохранения конкретно схемы приложения
-          dd if=output/app.bin of=output/bootloader.bin bs=1 count=12288 2>/dev/null
-          dd if=output/app.bin of=output/partitions.bin bs=1 skip=32768 count=3072 2>/dev/null
-          dd if=output/app.bin of=output/firmware.bin bs=1 skip=65536 2>/dev/null
+          esptool.py --chip esp32c3 elf2image --output firmware.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
 
-      - name: Upload Firmware Artifacts
+      - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: catode32-esp32c3-bins-${{ github.sha }}
-          path: output/
+          name: catode32-esp32c3-firmware
+          path: firmware.bin
