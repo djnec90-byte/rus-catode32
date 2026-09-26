@@ -1,12 +1,10 @@
 use embedded_graphics::{
+    mono_font::{iso_8859_1::FONT_6X10, MonoTextStyle},
     pixelcolor::BinaryColor,
     prelude::*,
     primitives::{Line, PrimitiveStyle, PrimitiveStyleBuilder, Rectangle},
     text::{Baseline, Text},
 };
-
-// Подключаем русский пиксельный шрифт u8g2
-use u8g2_fonts::{fonts, FontRenderer};
 
 #[cfg(not(feature = "desktop"))]
 use esp_hal::{i2c::master::I2c, Blocking};
@@ -62,7 +60,7 @@ pub struct Renderer {
 impl Renderer {
     #[cfg(not(feature = "desktop"))]
     pub fn new(i2c: I2c<'static, Blocking>) -> Self {
-        let interface = I2CDisplayInterface::new_custom_address(i2c, 0x3C);
+        let interface = I2CDisplayInterface::new(i2c);
         let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
             .into_buffered_graphics_mode();
         display.init().unwrap();
@@ -118,29 +116,18 @@ impl Renderer {
     }
 
     pub fn draw_text(&mut self, text: &str, pos: Point) {
-        let font = FontRenderer::new::<fonts::u8g2_font_6x12_t_cyrillic>();
-        font.render_aligned(
-            text, 
-            pos, 
-            u8g2_fonts::types::VerticalPosition::Top, 
-            u8g2_fonts::types::HorizontalAlignment::Left,
-            u8g2_fonts::types::FontColor::Transparent(BinaryColor::On), 
-            &mut self.display
-        ).unwrap();
-    }
-    
-    pub fn draw_text_inverted(&mut self, text: &str, pos: Point) {
-        let font = FontRenderer::new::<fonts::u8g2_font_6x12_t_cyrillic>();
-        font.render_aligned(
-            text, 
-            pos, 
-            u8g2_fonts::types::VerticalPosition::Top, 
-            u8g2_fonts::types::HorizontalAlignment::Left,
-            u8g2_fonts::types::FontColor::Transparent(BinaryColor::Off), 
-            &mut self.display
-        ).unwrap();
+        let style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+        Text::with_baseline(text, pos, style, Baseline::Top)
+            .draw(&mut self.display)
+            .unwrap();
     }
 
+    pub fn draw_text_inverted(&mut self, text: &str, pos: Point) {
+        let style = MonoTextStyle::new(&FONT_6X10, BinaryColor::Off);
+        Text::with_baseline(text, pos, style, Baseline::Top)
+            .draw(&mut self.display)
+            .unwrap();
+    }
 
     pub fn draw_rect(&mut self, pos: Point, size: Size, filled: bool) {
         let style = if filled {
