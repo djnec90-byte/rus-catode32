@@ -10,7 +10,7 @@ repository = "https://github.com/moonbench/catode32"
 proc-macro = true
 
 [features]
-default = ["lang-ru"]
+default = ["lang-de"]
 lang-en = []
 lang-de = []
 lang-es = []
