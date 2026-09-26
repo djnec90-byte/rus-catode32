@@ -1,49 +1,12 @@
-name: Build ESP32-C3 Firmware
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Cache Cargo registry and target
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      # Устанавливаем Rust и инструмент cargo-espflash
-      - name: Install Rust & espflash
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: riscv32imc-unknown-none-elf
-
-      # Устанавливаем espflash для генерации раздельных bin-файлов
+      # Ставим актуальный espflash
       - name: Install espflash
         run: cargo install espflash --no-default-features --features cli
 
       - name: Build Firmware for ESP32-C3
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 
-      # Генерируем 3 раздельных файла: bootloader, partitions и app
+      # Генерируем ровно 3 файла встроенными средствами espflash
       - name: Convert ELF to Separate BINs
         run: |
           mkdir -p output
-          espflash save-image --chip esp32c3 target/riscv32imc-unknown-none-elf/release/catode32-firmware output/firmware.bin
-
-      # Загружаем всю папку с тремя bin-файлами
-      - name: Upload Firmware Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: catode32-esp32c3-bins-${{ github.sha }}
-          path: output/
+          espflash save-image --chip esp32c3 --format bin target/riscv32imc-unknown-none-elf/release/catode32-firmware output/
