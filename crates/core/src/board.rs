@@ -82,7 +82,7 @@ mod firmware {
             Input::new(peripherals.GPIO11, input_config),
         ]);
 
-        let led = Led::new(peripherals.RMT, peripherals.GPIO8);
+        let led = Led::new(peripherals.RMT, peripherals.GPIO20);
 
         let sw =
             esp_hal::interrupt::software::SoftwareInterruptControl::new(peripherals.SW_INTERRUPT);
