@@ -12,23 +12,13 @@ mod firmware {
     pub struct Led;
 
     impl Led {
-        // Компилятор будет доволен, так как типы данных строго соблюдены
         pub fn new(_rmt: RMT<'static>, _pin: GPIO8<'static>) -> Self {
             Self
         }
 
-        // Заглушка: игра вызывает метод, но мы ничего не отправляем в RMT
         pub fn set(&mut self, _r: u8, _g: u8, _b: u8) {}
 
-        // Заглушка
         pub fn off(&mut self) {}
-    }
-}
-
-
-        pub fn off(&mut self) {
-            self.set(0, 0, 0);
-        }
     }
 }
 
