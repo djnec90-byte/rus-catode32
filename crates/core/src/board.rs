@@ -72,11 +72,11 @@ mod firmware {
         ]);
         #[cfg(feature = "c3")]
         let buttons = Buttons::new([
-            Input::new(peripherals.GPIO0, input_config),
+            Input::new(peripherals.GPIO4, input_config),
             Input::new(peripherals.GPIO1, input_config),
             Input::new(peripherals.GPIO2, input_config),
             Input::new(peripherals.GPIO3, input_config),
-            Input::new(peripherals.GPIO4, input_config),
+            Input::new(peripherals.GPIO0, input_config),
             Input::new(peripherals.GPIO5, input_config),
             Input::new(peripherals.GPIO10, input_config),
             Input::new(peripherals.GPIO11, input_config),
