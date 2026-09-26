@@ -39,8 +39,7 @@ jobs:
       - name: Convert ELF to Separate BINs
         run: |
           mkdir -p output
-          espflash save-image --chip esp32c3 --merge=false target/riscv32imc-unknown-none-elf/release/catode32-firmware output/
-          # Переименовываем для удобства артефактов (espflash создаст файлы в папке output/)
+          espflash save-image --chip esp32c3 target/riscv32imc-unknown-none-elf/release/catode32-firmware output/firmware.bin
 
       # Загружаем всю папку с тремя bin-файлами
       - name: Upload Firmware Artifacts
