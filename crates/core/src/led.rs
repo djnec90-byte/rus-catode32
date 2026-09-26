@@ -7,18 +7,37 @@
 
 #[cfg(not(feature = "desktop"))]
 mod firmware {
-    use esp_hal::peripherals::{GPIO8, RMT};
+    use esp_hal::{
+        peripherals::{GPIO8, RMT},
+        rmt::Rmt,
+        time::Rate,
+        Blocking,
+    };
+    use esp_hal_smartled::{buffer_size, Ws2812SmartLeds};
+    use smart_leds::{SmartLedsWrite, RGB8};
 
-    pub struct Led;
+    const LED_BUFFER: usize = buffer_size::<RGB8>(1);
+
+    type Strip = Ws2812SmartLeds<'static, LED_BUFFER, Blocking>;
+
+    pub struct Led {
+        strip: Strip,
+    }
 
     impl Led {
-        pub fn new(_rmt: RMT<'static>, _pin: GPIO8<'static>) -> Self {
-            Self
+        pub fn new(rmt: RMT<'static>, pin: GPIO8<'static>) -> Self {
+            let rmt = Rmt::new(rmt, Rate::from_mhz(80)).unwrap();
+            let strip = Ws2812SmartLeds::new(rmt.channel0, pin).unwrap();
+            Self { strip }
         }
 
-        pub fn set(&mut self, _r: u8, _g: u8, _b: u8) {}
+        pub fn set(&mut self, r: u8, g: u8, b: u8) {
+            let _ = self.strip.write(core::iter::once(RGB8 { r, g, b }));
+        }
 
-        pub fn off(&mut self) {}
+        pub fn off(&mut self) {
+            self.set(0, 0, 0);
+        }
     }
 }
 
