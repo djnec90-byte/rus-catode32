@@ -24,30 +24,7 @@ jobs:
       # Сами очищаем файл от отладочной информации и превращаем его в правильный легкий .bin
       - name: Convert ELF to Flash BIN
         run: |
-          # 1. Сначала превращаем ELF в честный бинарник приложения (App)
-          esptool.py --chip esp32c3 elf2image \
-            --flash_mode dio \
-            --flash_size 4MB \
-            --flash_freq 40m \
-            -o app.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
-
-          # 2. Скачиваем стандартную пустую таблицу разделов и бутлоадер под архитектуру C3
-          # Это предотвратит Boot Loop и создаст корректный NVS-раздел
-          curl -L -o bootloader.bin https://github.com
-          
-          # Создаем минимальную рабочую таблицу разделов (Bootloader + App + NVS)
-          printf "nvs,data,nvs,0x9000,0x6000,\notadata,data,otadata,0xf000,0x2000,\nphy_init,data,phy,0x11000,0x1000,\nfactory,app,factory,0x20000,0x1e0000,\n" > partitions.csv
-          esptool.py --chip esp32c3 write_partition_table partitions.csv partition-table.bin
-
-          # 3. Склеиваем всё в один монолитный фабричный образ для адреса 0x0
-          esptool.py --chip esp32c3 merge_bin \
-            -o firmware.bin \
-            --flash_mode dio \
-            --flash_size 4MB \
-            --flash_freq 40m \
-            0x0 bootloader.bin \
-            0x8000 partition-table.bin \
-            0x20000 app.bin
+          esptool.py --chip esp32c3 elf2image --output firmware.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
 
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
