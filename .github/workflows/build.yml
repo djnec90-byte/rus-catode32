@@ -7,27 +7,44 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Cache Cargo registry and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Устанавливаем Rust и инструмент cargo-espflash
+      - name: Install Rust & espflash
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: riscv32imc-unknown-none-elf
 
-      # Ставим официальную системную утилиту от Espressif через питон
-      - name: Install esptool
-        run: pip install esptool
+      # Устанавливаем espflash для генерации раздельных bin-файлов
+      - name: Install espflash
+        run: cargo install espflash --no-default-features --features cli
 
       - name: Build Firmware for ESP32-C3
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 
-      # Сами очищаем файл от отладочной информации и превращаем его в правильный легкий .bin
-      - name: Convert ELF to Flash BIN
+      # Генерируем 3 раздельных файла: bootloader, partitions и app
+      - name: Convert ELF to Separate BINs
         run: |
-          esptool.py --chip esp32c3 elf2image --output firmware.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
+          mkdir -p output
+          espflash save-image --chip esp32c3 --merge=false target/riscv32imc-unknown-none-elf/release/catode32-firmware output/
+          # Переименовываем для удобства артефактов (espflash создаст файлы в папке output/)
 
-      - name: Upload Firmware Artifact
+      # Загружаем всю папку с тремя bin-файлами
+      - name: Upload Firmware Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: catode32-esp32c3-firmware
-          path: firmware.bin
+          name: catode32-esp32c3-bins-${{ github.sha }}
+          path: output/
