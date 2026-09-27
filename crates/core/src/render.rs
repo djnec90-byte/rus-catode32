@@ -65,6 +65,9 @@ impl Renderer {
         let interface = I2CDisplayInterface::new_custom_address(i2c, 0x3C);
         let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
             .into_buffered_graphics_mode();
+        // Добавляем смещение. Отрицательное значение y поднимет картинку вверх.
+        // Давай начнем с -4 пикселей, чтобы компенсировать срез на кнопках.
+        display.set_display_offset(4, -4).unwrap();
         display.init().unwrap();
         Self {
             display,
