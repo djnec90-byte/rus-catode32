@@ -79,7 +79,7 @@ mod firmware {
             Input::new(peripherals.GPIO4, input_config),
             Input::new(peripherals.GPIO5, input_config),
             Input::new(peripherals.GPIO10, input_config),
-            Input::new(peripherals.GPIO11, input_config),
+            Input::new(peripherals.GPIO20, input_config),
         ]);
 
         let led = Led::new(peripherals.RMT, peripherals.GPIO8);
