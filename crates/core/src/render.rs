@@ -65,9 +65,6 @@ impl Renderer {
         let interface = I2CDisplayInterface::new_custom_address(i2c, 0x3C);
         let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
             .into_buffered_graphics_mode();
-        // Добавляем смещение. Отрицательное значение y поднимет картинку вверх.
-        // Давай начнем с -4 пикселей, чтобы компенсировать срез на кнопках.
-        display.set_display_offset(4, -4).unwrap();
         display.init().unwrap();
         Self {
             display,
@@ -121,7 +118,7 @@ impl Renderer {
     }
 
     pub fn draw_text(&mut self, text: &str, pos: Point) {
-        let font = FontRenderer::new::<fonts::u8g2_font_6x12_t_cyrillic>();
+        let font = FontRenderer::new::<fonts::u8g2_font_5x10_t_cyrillic>();
         font.render_aligned(
             text, 
             pos, 
@@ -133,7 +130,7 @@ impl Renderer {
     }
     
     pub fn draw_text_inverted(&mut self, text: &str, pos: Point) {
-        let font = FontRenderer::new::<fonts::u8g2_font_6x12_t_cyrillic>();
+        let font = FontRenderer::new::<fonts::u8g2_font_5x10_t_cyrillic>();
         font.render_aligned(
             text, 
             pos, 
