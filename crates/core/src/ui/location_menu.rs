@@ -338,8 +338,18 @@ fn push_count(
     if items.is_full() {
         return;
     }
+    
+    // Безопасно высчитываем лимит символов для текста названия (оставляя место под пробел и "(X)")
+    // LABEL_LEN обычно равен 16 или 24.
+    let max_chars = if LABEL_LEN > 4 { LABEL_LEN - 4 } else { 1 };
+    
     let mut s: String<LABEL_LEN> = String::new();
-    let _ = s.push_str(&name[..name.len().min(LABEL_LEN - 4)]);
+    
+    // Безопасно берем только нужное количество СИМВОЛОВ, не ломая UTF-8
+    for ch in name.chars().take(max_chars) {
+        let _ = s.push(ch);
+    }
+    
     let _ = write!(&mut s, " ({})", count);
     let _ = items.push(Item {
         label: s,
