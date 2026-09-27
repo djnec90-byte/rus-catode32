@@ -427,7 +427,7 @@ impl AdoptionScene {
 
     fn draw_profile(&self, renderer: &mut Renderer) {
         self.popup.draw(renderer, true);
-        renderer.draw_text(t!("[A]Adopt [B]Back"), Point::new(0, 56));
+        renderer.draw_text(t!("[A]Adopt [B]Back"), Point::new(0, 54));
     }
 
     fn draw_confirm(&self, renderer: &mut Renderer) {
