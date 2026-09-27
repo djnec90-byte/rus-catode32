@@ -427,7 +427,7 @@ impl AdoptionScene {
 
     fn draw_profile(&self, renderer: &mut Renderer) {
         self.popup.draw(renderer, true);
-        renderer.draw_text(t!("[A]Adopt [B]Back"), Point::new(0, 54));
+        renderer.draw_text(t!("[A]Adopt [B]Back"), Point::new(0, 55));
     }
 
     fn draw_confirm(&self, renderer: &mut Renderer) {
@@ -436,7 +436,7 @@ impl AdoptionScene {
         renderer.draw_rect(Point::new(4, 12), Size::new(120, 40), false);
         let q = t!("Is this the cat you want to adopt?");
         wrap_and_draw_confirm(renderer, q);
-        renderer.draw_text(t!("[A]Yes [B]No"), Point::new(20, 42));
+        renderer.draw_text(t!("[A]Yes [B]No"), Point::new(20, 55));
     }
 
     fn draw_moment(&self, renderer: &mut Renderer) {
