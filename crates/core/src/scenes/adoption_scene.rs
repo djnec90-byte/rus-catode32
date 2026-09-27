@@ -592,15 +592,15 @@ fn food_label(item: crate::context::FoodItem) -> &'static str {
 fn toy_label(toy: crate::context::ToyVariant) -> &'static str {
     toy.label()
 }
-
 /// Word-wrap a confirm prompt to ~14 chars/line and draw inside the dialog
 /// frame at (8, 14..). Same metrics as `ui::menu`.
 fn wrap_and_draw_confirm(renderer: &mut Renderer, text: &str) {
     const CHARS_PER_LINE: usize = 14;
-    const LINE_BUF: usize = 24;
+    const LINE_BUF: usize = 48; // Увеличили буфер байт, так как кириллица весит в 2 раза больше
     let mut current: String<LINE_BUF> = String::new();
     let mut line_idx: i32 = 0;
     let mut flush =
+
         |line: &mut String<LINE_BUF>, line_idx: &mut i32, renderer: &mut Renderer| {
             if !line.is_empty() {
                 renderer.draw_text(line.as_str(), Point::new(8, 14 + *line_idx * 8));
@@ -610,16 +610,22 @@ fn wrap_and_draw_confirm(renderer: &mut Renderer, text: &str) {
         };
     for word in text.split(' ') {
         let needs_space = !current.is_empty();
-        let extra = if needs_space { 1 } else { 0 } + word.len();
-        if current.len() + extra <= CHARS_PER_LINE {
+        let word_char_count = word.chars().count();
+        let extra = if needs_space { 1 } else { 0 } + word_char_count;
+        
+        if current.chars().count() + extra <= CHARS_PER_LINE {
             if needs_space {
                 let _ = current.push(' ');
             }
             let _ = current.push_str(word);
         } else {
             flush(&mut current, &mut line_idx, renderer);
-            let _ = current.push_str(&word[..word.len().min(CHARS_PER_LINE)]);
+            // Безопасно берем только N символов, не ломая UTF-8
+            for ch in word.chars().take(CHARS_PER_LINE) {
+                let _ = current.push(ch);
+            }
         }
     }
     flush(&mut current, &mut line_idx, renderer);
 }
+
