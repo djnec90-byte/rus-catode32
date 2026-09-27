@@ -118,7 +118,7 @@ impl Renderer {
     }
 
     pub fn draw_text(&mut self, text: &str, pos: Point) {
-        let font = FontRenderer::new::<fonts::u8g2_font_5x7_t_cyrillic>();
+        let font = FontRenderer::new::<fonts::u8g2_font_6x12_t_cyrillic>();
         font.render_aligned(
             text, 
             pos, 
@@ -130,7 +130,7 @@ impl Renderer {
     }
     
     pub fn draw_text_inverted(&mut self, text: &str, pos: Point) {
-        let font = FontRenderer::new::<fonts::u8g2_font_5x7_t_cyrillic>();
+        let font = FontRenderer::new::<fonts::u8g2_font_6x12_t_cyrillic>();
         font.render_aligned(
             text, 
             pos, 
