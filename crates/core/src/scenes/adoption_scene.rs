@@ -369,7 +369,7 @@ impl AdoptionScene {
 
     fn draw_grid(&self, renderer: &mut Renderer) {
         let title = t!("Adoptable Pets");
-        let title_x = (128 - title.chars().count() as i32 * 8) / 2;
+        let title_x = (128 - title.chars().count() as i32 * 8) / 2 + 4;
         renderer.draw_text(title, Point::new(title_x, 0));
 
         for (i, cand) in self.candidates.iter().enumerate() {
