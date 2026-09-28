@@ -107,29 +107,19 @@ fn sectors_for(payload_len: usize) -> usize {
 fn read_header(flash: &mut FlashStorage, part: PartitionInfo, sector: usize) -> Option<Record> {
     let mut buf = [0u8; HEADER_LEN];
     let addr = part.offset + (sector * SECTOR_SIZE) as u32;
-    
-    match flash.read(addr, &mut buf) {
-        Ok(_) => {
-            if buf[..4] != MAGIC {
-                // Если сектор пустой или там нет слова "SAVE", выводим лог для отладки
-                println!("[Storage Debug] Sector {} has no MAGIC. Found bytes: {:?}", sector, &buf[..4]);
-                return None;
-            }
-            
-            Some(Record {
-                start_sector: sector,
-                seq: u32::from_le_bytes(buf[4..8].try_into().unwrap_or([0; 4])),
-                len: u32::from_le_bytes(buf[8..12].try_into().unwrap_or([0; 4])),
-            })
-        }
-        Err(e) => {
-            // Вот эта строчка покажет аппаратную ошибку выравнивания или чтения драйвера!
-            println!("[Storage CRITICAL] Header read failed at sector {} (addr 0x{:X}): {:?}", sector, addr, e);
-            None
-        }
+    if let Err(e) = flash.read(addr, &mut buf) {
+        println!("[Storage] Header read failed at sector {}: {:?}", sector, e);
+        return None;
     }
+    if buf[..4] != MAGIC {
+        return None;
+    }
+    Some(Record {
+        start_sector: sector,
+        seq: u32::from_le_bytes(buf[4..8].try_into().ok()?),
+        len: u32::from_le_bytes(buf[8..12].try_into().ok()?),
+    })
 }
-
 
 fn find_latest(flash: &mut FlashStorage, part: PartitionInfo) -> Option<Record> {
     let mut best: Option<Record> = None;
@@ -316,33 +306,27 @@ pub fn write_next(payload: &[u8]) -> bool {
         }
     }
 
-       // Commit by writing the header last.
-    // Увеличиваем буфер до 32 байт, чтобы гарантировать сброс кэша на ESP32-C3
-    let mut header = [0u8; 32]; 
+    // Commit by writing the header last.
+    let mut header = [0u8; HEADER_LEN];
     header[..4].copy_from_slice(&MAGIC);
     header[4..8].copy_from_slice(&next_seq.to_le_bytes());
     header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
-    
-    // Заполняем остаток 32-байтового блока чистыми флеш-байтами 0xFF
-    for b in &mut header[12..32] {
-        *b = 0xFF;
-    }
-
     let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
-    
-    // Передаем правильную ссылку во встроенный метод write
     if let Err(e) = flash.write(start_addr, &header) {
         println!("[Storage] Header write failed: {:?}", e);
         return false;
     }
 
-    // Verify-after-write: читаем обратно первые 16 байт для проверки
+    // Verify-after-write: read the header back and confirm it persisted as
+    // we expect before declaring success. Catches silent flash failures
+    // (write-cache anomalies, partial erases, etc) so save errors surface
+    // immediately rather than at next boot.
     let mut readback = [0u8; HEADER_LEN];
     if let Err(e) = flash.read(start_addr, &mut readback) {
         println!("[Storage] Header verify-read failed: {:?}", e);
         return false;
     }
-    if readback != header[..HEADER_LEN] {
+    if readback != header {
         println!(
             "[Storage] Header verify mismatch, wrote {:?}, read {:?}",
             &header[..12],
@@ -360,7 +344,8 @@ pub fn write_next(payload: &[u8]) -> bool {
     );
     true
 }
-// mod firmware
+
+} // mod firmware
 
 #[cfg(not(feature = "desktop"))]
 pub use firmware::{erase_all, has_save, init, read_latest, write_next};
