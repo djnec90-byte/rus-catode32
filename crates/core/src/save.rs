@@ -414,7 +414,7 @@ impl<'de> Deserialize<'de> for StubMap {
 }
 
 #[derive(Serialize, Deserialize)]
-#[repr(C)] // <-- Альтернативный вариант, если packed не скомпилируется
+#[repr(packed)] // <-- ДОБАВЬ ЭТУ СТРОКУ ЗДЕСЬ
 struct SaveData {
     #[serde(default)] v: u8,
     #[serde(default)] env: EnvData,
