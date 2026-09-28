@@ -388,7 +388,6 @@ pub fn write_next(payload: &[u8]) -> bool {
         next_seq
     );
     true
-}
 
 } // mod firmware
 
