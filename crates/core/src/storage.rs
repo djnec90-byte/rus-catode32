@@ -107,19 +107,29 @@ fn sectors_for(payload_len: usize) -> usize {
 fn read_header(flash: &mut FlashStorage, part: PartitionInfo, sector: usize) -> Option<Record> {
     let mut buf = [0u8; HEADER_LEN];
     let addr = part.offset + (sector * SECTOR_SIZE) as u32;
-    if let Err(e) = flash.read(addr, &mut buf) {
-        println!("[Storage] Header read failed at sector {}: {:?}", sector, e);
-        return None;
+    
+    match flash.read(addr, &mut buf) {
+        Ok(_) => {
+            if buf[..4] != MAGIC {
+                // Если сектор пустой или там нет слова "SAVE", выводим лог для отладки
+                println!("[Storage Debug] Sector {} has no MAGIC. Found bytes: {:?}", sector, &buf[..4]);
+                return None;
+            }
+            
+            Some(Record {
+                start_sector: sector,
+                seq: u32::from_le_bytes(buf[4..8].try_into().unwrap_or([0; 4])),
+                len: u32::from_le_bytes(buf[8..12].try_into().unwrap_or([0; 4])),
+            })
+        }
+        Err(e) => {
+            // Вот эта строчка покажет аппаратную ошибку выравнивания или чтения драйвера!
+            println!("[Storage CRITICAL] Header read failed at sector {} (addr 0x{:X}): {:?}", sector, addr, e);
+            None
+        }
     }
-    if buf[..4] != MAGIC {
-        return None;
-    }
-    Some(Record {
-        start_sector: sector,
-        seq: u32::from_le_bytes(buf[4..8].try_into().ok()?),
-        len: u32::from_le_bytes(buf[8..12].try_into().ok()?),
-    })
 }
+
 
 fn find_latest(flash: &mut FlashStorage, part: PartitionInfo) -> Option<Record> {
     let mut best: Option<Record> = None;
