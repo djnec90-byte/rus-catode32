@@ -47,7 +47,7 @@ impl Button {
     }
 }
 
-const DEBOUNCE: Duration = Duration::from_millis(50);
+const DEBOUNCE: Duration = Duration::from_millis(100);
 
 #[cfg(not(feature = "desktop"))]
 pub type ButtonPin = esp_hal::gpio::Input<'static>;
