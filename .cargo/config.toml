@@ -11,6 +11,7 @@ rustflags = [
 runner = "espflash flash --monitor"
 rustflags = [
   "-C", "link-arg=-Tlinkall.x",
+  "-C", "target-feature=+atomic_cas",
 ]
 
 [env]
