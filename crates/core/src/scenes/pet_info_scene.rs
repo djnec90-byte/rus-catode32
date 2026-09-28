@@ -413,11 +413,11 @@ fn push_blank(lines: &mut Vec<String<LINE_CAP>, LINES_CAP>) {
 fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize) {
     let cpl = cpl.min(LINE_CAP);
     let mut current: String<LINE_CAP> = String::new();
+    
     for raw_word in text.split(' ') {
         let mut word = raw_word;
-        // Hyphenation: append fragments before letting the leftover fall
-        // through to the normal append path.
-        while word.len() > cpl - 1 && cpl > 1 {
+        
+        while word.chars().count() > cpl - 1 && cpl > 1 {
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
@@ -428,11 +428,18 @@ fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize)
             }
             let _ = frag.push('-');
             let _ = out.push(frag);
-            word = &word[cpl - 1..];
+            
+            if let Some((idx, _)) = word.char_indices().nth(cpl - 1) {
+                word = &word[idx..];
+            } else {
+                word = "";
+            }
         }
+        
         let needs_space = !current.is_empty();
-        let extra = if needs_space { 1 } else { 0 } + word.len();
-        if current.len() + extra <= cpl {
+        let extra = if needs_space { 1 } else { 0 } + word.chars().count();
+        
+        if current.chars().count() + extra <= cpl {
             if needs_space {
                 let _ = current.push(' ');
             }
