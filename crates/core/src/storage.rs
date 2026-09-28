@@ -234,85 +234,93 @@ pub fn erase_all() -> bool {
 
 /// Persist `payload` as the next record. Returns true on success.
 pub fn write_next(payload: &[u8]) -> bool {
-    let flash = flash()?;
-    let part = find_nvs_partition(flash)?;
     if payload.len() > MAX_PAYLOAD {
-        println!("[Storage] Save payload too large to write: {}", payload.len());
+        println!(
+            "[Storage] Save payload {} > MAX_PAYLOAD {}",
+            payload.len(),
+            MAX_PAYLOAD
+        );
+        return false;
+    }
+    let Some(flash) = flash() else {
+        println!("[Storage] FLASH not initialised");
+        return false;
+    };
+    let Some(part) = find_nvs_partition(flash) else {
+        println!("[Storage] No nvs partition found");
+        return false;
+    };
+    let sectors_total = part.sectors;
+    if sectors_total == 0 {
+        return false;
+    }
+    let needed = sectors_for(payload.len());
+    if needed > sectors_total {
+        println!(
+            "[Storage] Save needs {} sectors but partition has {}",
+            needed, sectors_total
+        );
         return false;
     }
 
     let latest = find_latest(flash, part);
-    let next_seq = latest.map(|r| r.seq.wrapping_add(1)).unwrap_or(0);
-
-    let start = match latest {
-        Some(r) => (r.start_sector + r.sectors()) % part.sectors,
-        None => 0,
+    let (start, next_seq) = match latest {
+        Some(r) => (
+            (r.start_sector + r.sectors()) % sectors_total,
+            r.seq.wrapping_add(1),
+        ),
+        None => (0, 1),
     };
 
-    let needed = sectors_for(payload.len());
-    if needed > part.sectors - 1 {
-        println!("[Storage] Save too large for partition layout limit");
-        return false;
-    }
-
-    // 1. Очищаем сектора с явным приведением всех типов к u32
+    // Erase the sectors we're about to write.
     for i in 0..needed {
-        let idx = (start + i) % part.sectors;
-        let addr_start: u32 = part.offset + (idx * SECTOR_SIZE) as u32;
-        let addr_end: u32 = addr_start + SECTOR_SIZE as u32;
-        
-        // Передаем строго u32 в обе границы
-        if flash.erase(addr_start, addr_end).is_err() {
-            println!("[Storage] Save erase failed at sector {}", idx);
+        let sector = (start + i) % sectors_total;
+        let addr = part.offset + (sector * SECTOR_SIZE) as u32;
+        if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
+            println!("[Storage] Sector {} erase failed", sector);
             return false;
         }
     }
 
-    // Подготовка заголовка
+    // Stream the payload across sectors (skipping the 16-byte header at the
+    // start of the first sector; it's filled in last so a mid-write power
+    // loss leaves no MAGIC and the previous record remains canonical).
+    let mut scratch = [0u8; SECTOR_SIZE];
+    let mut written = 0;
+    let mut sector_idx = start;
+    let mut sector_offset = HEADER_LEN;
+    while written < payload.len() {
+        let space = SECTOR_SIZE - sector_offset;
+        let chunk_len = space.min(payload.len() - written);
+        let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
+        let chunk = &payload[written..written + chunk_len];
+        if !write_chunk(flash, addr, chunk, &mut scratch) {
+            println!("[Storage] Payload write failed at sector {}", sector_idx);
+            return false;
+        }
+        written += chunk_len;
+        sector_offset += chunk_len;
+        if sector_offset >= SECTOR_SIZE {
+            sector_idx = (sector_idx + 1) % sectors_total;
+            sector_offset = 0;
+        }
+    }
+
+    // Commit by writing the header last.
     let mut header = [0u8; HEADER_LEN];
     header[..4].copy_from_slice(&MAGIC);
     header[4..8].copy_from_slice(&next_seq.to_le_bytes());
     header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
-
-    // Создаем буфер первого сектора
-    let mut first_sector_buf = [0xFFu8; SECTOR_SIZE];
-    // Копируем заголовок без использования лишних срезов типа [..]
-    first_sector_buf[..HEADER_LEN].copy_from_slice(&header);
-
-    let first_sector_payload_space = SECTOR_SIZE - HEADER_LEN;
-    let bytes_to_first_sector = first_sector_payload_space.min(payload.len());
-
-    if bytes_to_first_sector > 0 {
-        first_sector_buf[HEADER_LEN..HEADER_LEN + bytes_to_first_sector]
-            .copy_from_slice(&payload[..bytes_to_first_sector]);
-    }
-
-    // 2. АТОМАРНАЯ ЗАПИСЬ: Используем стандартное взятие ссылки &first_sector_buf
     let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
-    if let Err(e) = flash.write(start_addr, &first_sector_buf) {
-        println!("[Storage] First sector atomic write failed: {:?}", e);
+    if let Err(e) = flash.write(start_addr, &header) {
+        println!("[Storage] Header write failed: {:?}", e);
         return false;
     }
 
-    // 3. Запись оставшейся части payload
-    let mut written = bytes_to_first_sector;
-    let mut sector_idx = (start + 1) % part.sectors;
-    let mut scratch = [0u8; SECTOR_SIZE];
-
-    while written < payload.len() {
-        let chunk_len = (SECTOR_SIZE).min(payload.len() - written);
-        let addr = part.offset + (sector_idx * SECTOR_SIZE) as u32;
-
-        if !write_chunk(flash, addr, &payload[written..written + chunk_len], &mut scratch) {
-            println!("[Storage] Tail payload write failed at sector {}", sector_idx);
-            return false;
-        }
-
-        written += chunk_len;
-        sector_idx = (sector_idx + 1) % part.sectors;
-    }
-
-    // 4. Верификация
+    // Verify-after-write: read the header back and confirm it persisted as
+    // we expect before declaring success. Catches silent flash failures
+    // (write-cache anomalies, partial erases, etc) so save errors surface
+    // immediately rather than at next boot.
     let mut readback = [0u8; HEADER_LEN];
     if let Err(e) = flash.read(start_addr, &mut readback) {
         println!("[Storage] Header verify-read failed: {:?}", e);
@@ -336,7 +344,6 @@ pub fn write_next(payload: &[u8]) -> bool {
     );
     true
 }
-
 
 } // mod firmware
 
