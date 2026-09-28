@@ -360,36 +360,7 @@ pub fn write_next(payload: &[u8]) -> bool {
     );
     true
 }
-
-
-    // Verify-after-write: read the header back and confirm it persisted as
-    // we expect before declaring success. Catches silent flash failures
-    // (write-cache anomalies, partial erases, etc) so save errors surface
-    // immediately rather than at next boot.
-    let mut readback = [0u8; HEADER_LEN];
-    if let Err(e) = flash.read(start_addr, &mut readback) {
-        println!("[Storage] Header verify-read failed: {:?}", e);
-        return false;
-    }
-    if readback != header {
-        println!(
-            "[Storage] Header verify mismatch, wrote {:?}, read {:?}",
-            &header[..12],
-            &readback[..12]
-        );
-        return false;
-    }
-
-    println!(
-        "[Storage] Saved {} bytes spanning {} sector(s) starting at {} (seq {})",
-        payload.len(),
-        needed,
-        start,
-        next_seq
-    );
-    true
-
-} // mod firmware
+// mod firmware
 
 #[cfg(not(feature = "desktop"))]
 pub use firmware::{erase_all, has_save, init, read_latest, write_next};
