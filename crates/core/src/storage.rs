@@ -255,27 +255,30 @@ pub fn write_next(payload: &[u8]) -> bool {
         return false;
     }
 
-    // 1. Очищаем все сектора, которые потребуются для этого сохранения
+    // 1. Очищаем сектора с явным приведением всех типов к u32
     for i in 0..needed {
         let idx = (start + i) % part.sectors;
-        let addr = part.offset + (idx * SECTOR_SIZE) as u32;
-        if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
+        let addr_start: u32 = part.offset + (idx * SECTOR_SIZE) as u32;
+        let addr_end: u32 = addr_start + SECTOR_SIZE as u32;
+        
+        // Передаем строго u32 в обе границы
+        if flash.erase(addr_start, addr_end).is_err() {
             println!("[Storage] Save erase failed at sector {}", idx);
             return false;
         }
     }
 
-    // Подготавливаем заголовок
+    // Подготовка заголовка
     let mut header = [0u8; HEADER_LEN];
     header[..4].copy_from_slice(&MAGIC);
     header[4..8].copy_from_slice(&next_seq.to_le_bytes());
     header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
 
-    // Выделяем временный буфер под ПЕРВЫЙ сектор, чтобы объединить заголовок и данные
+    // Создаем буфер первого сектора
     let mut first_sector_buf = [0xFFu8; SECTOR_SIZE];
+    // Копируем заголовок без использования лишних срезов типа [..]
     first_sector_buf[..HEADER_LEN].copy_from_slice(&header);
 
-    // Вычисляем, сколько байт полезной нагрузки поместится в первый сектор
     let first_sector_payload_space = SECTOR_SIZE - HEADER_LEN;
     let bytes_to_first_sector = first_sector_payload_space.min(payload.len());
 
@@ -284,14 +287,14 @@ pub fn write_next(payload: &[u8]) -> bool {
             .copy_from_slice(&payload[..bytes_to_first_sector]);
     }
 
-    // 2. АТОМАРНАЯ ЗАПИСЬ: Пишем весь первый сектор за один раз (включая заголовок)
+    // 2. АТОМАРНАЯ ЗАПИСЬ: Используем стандартное взятие ссылки &first_sector_buf
     let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
     if let Err(e) = flash.write(start_addr, &first_sector_buf) {
         println!("[Storage] First sector atomic write failed: {:?}", e);
         return false;
     }
 
-    // 3. Дозаписываем оставшуюся часть payload в следующие сектора (если сохранение большое)
+    // 3. Запись оставшейся части payload
     let mut written = bytes_to_first_sector;
     let mut sector_idx = (start + 1) % part.sectors;
     let mut scratch = [0u8; SECTOR_SIZE];
@@ -309,7 +312,7 @@ pub fn write_next(payload: &[u8]) -> bool {
         sector_idx = (sector_idx + 1) % part.sectors;
     }
 
-    // 4. Честная верификация: Считываем обратно только заголовок для проверки
+    // 4. Верификация
     let mut readback = [0u8; HEADER_LEN];
     if let Err(e) = flash.read(start_addr, &mut readback) {
         println!("[Storage] Header verify-read failed: {:?}", e);
