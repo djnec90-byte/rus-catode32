@@ -316,36 +316,33 @@ pub fn write_next(payload: &[u8]) -> bool {
         }
     }
 
-        // Commit by writing the header last.
-    let mut header = [0u8; HEADER_LEN];
+       // Commit by writing the header last.
+    // Увеличиваем буфер до 32 байт, чтобы гарантировать сброс кэша на ESP32-C3
+    let mut header = [0u8; 32]; 
     header[..4].copy_from_slice(&MAGIC);
     header[4..8].copy_from_slice(&next_seq.to_le_bytes());
     header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
-    let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
-
-    // ИСПОРАВЛЕНИЕ ДЛЯ ESP32-C3: Пишем заголовок через выровненный scratch-буфер,
-    // чтобы принудительно протолкнуть данные через кэш записи контроллера.
-    let mut commit_scratch = [0u8; SECTOR_SIZE];
-    commit_scratch[..HEADER_LEN].copy_from_slice(&header);
     
-    // Дозаписываем остаток сектора дефолтными байтами стертого флеша, 
-    // чтобы транзакция записи сектора закрылась на физическом уровне чипа
-    if !write_chunk(flash, start_addr, &commit_scratch[..HEADER_LEN], &mut commit_scratch) {
-        println!("[Storage] Header write failed via write_chunk");
+    // Заполняем остаток 32-байтового блока чистыми флеш-байтами 0xFF
+    for b in &mut header[12..32] {
+        *b = 0xFF;
+    }
+
+    let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
+    
+    // Передаем правильную ссылку во встроенный метод write
+    if let Err(e) = flash.write(start_addr, &header) {
+        println!("[Storage] Header write failed: {:?}", e);
         return false;
     }
 
-    // Трейт embedded-storage не имеет метода flush(), поэтому мы делаем 
-    // повторный вызов инициализации контроллера или полагаемся на закрытую 
-    // транзакцию выровненной записи через write_chunk.
-
-    // Verify-after-write: read the header back and confirm it persisted
+    // Verify-after-write: читаем обратно первые 16 байт для проверки
     let mut readback = [0u8; HEADER_LEN];
     if let Err(e) = flash.read(start_addr, &mut readback) {
         println!("[Storage] Header verify-read failed: {:?}", e);
         return false;
     }
-    if readback != header {
+    if readback != header[..HEADER_LEN] {
         println!(
             "[Storage] Header verify mismatch, wrote {:?}, read {:?}",
             &header[..12],
