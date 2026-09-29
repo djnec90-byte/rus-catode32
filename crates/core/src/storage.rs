@@ -36,6 +36,8 @@ const WORD_SIZE: usize = 4;
 pub const MAX_PAYLOAD: usize = SECTOR_SIZE * 5 - HEADER_LEN;
 
 #[cfg(not(feature = "desktop"))]
+#[repr(align(4))]
+struct AlignedBuffer([u8; SECTOR_SIZE]);
 mod firmware {
 use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
 use esp_bootloader_esp_idf::partitions::{
@@ -161,7 +163,8 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
         return None;
     }
 
-    let mut scratch = [0u8; SECTOR_SIZE];
+    let mut aligned_scratch = AlignedBuffer([0u8; SECTOR_SIZE]);
+    let scratch = &mut aligned_scratch.0;
     let mut read = 0;
     let mut sector_idx = r.start_sector;
     let mut sector_offset = HEADER_LEN;
@@ -182,11 +185,9 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
             return None;
         }
         buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
-read += chunk;
-// Выравниваем шаг смещения адреса по 4 байта для ESP32-C3
-let padding_step = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
-sector_offset += padding_step;
-if sector_offset >= SECTOR_SIZE {
+        read += chunk;
+        sector_offset += chunk;
+        if sector_offset >= SECTOR_SIZE {
             sector_idx = (sector_idx + 1) % part.sectors;
             sector_offset = 0;
         }
@@ -287,7 +288,8 @@ pub fn write_next(payload: &[u8]) -> bool {
     // Stream the payload across sectors (skipping the 16-byte header at the
     // start of the first sector; it's filled in last so a mid-write power
     // loss leaves no MAGIC and the previous record remains canonical).
-    let mut scratch = [0u8; SECTOR_SIZE];
+    let mut aligned_scratch = AlignedBuffer([0u8; SECTOR_SIZE]);
+    let scratch = &mut aligned_scratch.0;
     let mut written = 0;
     let mut sector_idx = start;
     let mut sector_offset = HEADER_LEN;
@@ -301,9 +303,7 @@ pub fn write_next(payload: &[u8]) -> bool {
             return false;
         }
         written += chunk_len;
-        // Выравниваем шаг смещения адреса по 4 байта для ESP32-C3
-        let padding_step = (chunk_len + WORD_SIZE - 1) & !(WORD_SIZE - 1);
-        sector_offset += padding_step;
+        sector_offset += chunk_len;
         if sector_offset >= SECTOR_SIZE {
             sector_idx = (sector_idx + 1) % sectors_total;
             sector_offset = 0;
