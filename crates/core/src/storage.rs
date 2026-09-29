@@ -320,20 +320,27 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
         next_seq
     );
     true
+} // <--- Закрывает функцию write_next
 
-    pub fn erase_all() -> bool {
-        let Some(flash) = flash() else { return false; };
-        let Some(part) = find_nvs_partition(flash) else { return false; };
-        for i in 0..part.sectors {
-            let addr = part.offset + (i * SECTOR_SIZE) as u32;
-            if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
-                return false;
-            }
+pub fn erase_all() -> bool {
+    let Some(flash) = flash() else {
+        return false;
+    };
+    let Some(part) = find_nvs_partition(flash) else {
+        return false;
+    };
+    for i in 0..part.sectors {
+        let addr = part.offset + (i * SECTOR_SIZE) as u32;
+        if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
+            println!("[Storage] Factory erase failed at sector {}", i);
+            return false;
         }
-        true
     }
-}
- // mod firmware
+    println!("[Storage] Factory reset, wiped {} sectors", part.sectors);
+    true
+} // <--- Закрывает функцию erase_all
+
+} // <--- КРИТИЧЕСКАЯ СКОБКА! Она закрывает `mod firmware`
 
 #[cfg(not(feature = "desktop"))]
 pub use firmware::{erase_all, has_save, init, read_latest, write_next};
