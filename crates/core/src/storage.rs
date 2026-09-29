@@ -182,9 +182,11 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
             return None;
         }
         buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
-        read += chunk;
-        sector_offset += chunk;
-        if sector_offset >= SECTOR_SIZE {
+read += chunk;
+// Выравниваем шаг смещения адреса по 4 байта для ESP32-C3
+let padding_step = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
+sector_offset += padding_step;
+if sector_offset >= SECTOR_SIZE {
             sector_idx = (sector_idx + 1) % part.sectors;
             sector_offset = 0;
         }
@@ -299,7 +301,9 @@ pub fn write_next(payload: &[u8]) -> bool {
             return false;
         }
         written += chunk_len;
-        sector_offset += chunk_len;
+        // Выравниваем шаг смещения адреса по 4 байта для ESP32-C3
+        let padding_step = (chunk_len + WORD_SIZE - 1) & !(WORD_SIZE - 1);
+        sector_offset += padding_step;
         if sector_offset >= SECTOR_SIZE {
             sector_idx = (sector_idx + 1) % sectors_total;
             sector_offset = 0;
