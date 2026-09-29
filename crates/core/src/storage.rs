@@ -278,37 +278,48 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
         }
 
         // Запись главного заголовка в самый последний момент для атомарности
-        let mut header = [0u8; HEADER_LEN];
-        header[..4].copy_from_slice(&MAGIC);
-        header[4..8].copy_from_slice(&next_seq.to_le_bytes());
-        header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
-        
-        let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
-        if let Err(e) = flash.write(start_addr, &header) {
-            println!("[Storage] Header write failed: {:?}", e);
-            return false;
-        }
-
-         // ВАЖНОЕ ИСПРАВЛЕНИЕ: принудительно сбрасываем кэш на физический чип флеш-памяти ESP32-C3
-        if let Err(e) = flash.flush() {
-            println!("[Storage] Flash flush failed: {:?}", e);
-            return false;
-        }
-        
-        // Проверка верификации
-        let mut readback = [0u8; HEADER_LEN];
-        if let Err(e) = flash.read(start_addr, &mut readback) {
-            println!("[Storage] Header verify-read failed: {:?}", e);
-            return false;
-        }
-        if readback != header {
-            println!("[Storage] Header verify mismatch");
-            return false;
-        }
-
-        println!("[Storage] Saved {} bytes (seq {})", payload.len(), next_seq);
-        true
+            // Commit by writing the header last.
+    let mut header = [0u8; HEADER_LEN];
+    header[..4].copy_from_slice(&MAGIC);
+    header[4..8].copy_from_slice(&next_seq.to_le_bytes());
+    header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
+    
+    let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
+    if let Err(e) = flash.write(start_addr, &header) {
+        println!("[Storage] Header write failed: {:?}", e);
+        return false;
     }
+
+    // === ТРЮК ДЛЯ ESP32-C3 ДЛЯ СБРОСА КЭША MMU ===
+    // Читаем 4 байта из самого начала флеш-памяти (адрес 0). 
+    // Это заставляет контроллер прервать текущую транзакцию кэша записи 
+    // и физически зафиксировать (commit) данные сохранения на чип.
+    let mut cache_trigger = [0u8; 4];
+    let _ = flash.read(0, &mut cache_trigger); 
+
+    // Verify-after-write: read the header back and confirm it persisted
+    let mut readback = [0u8; HEADER_LEN];
+    if let Err(e) = flash.read(start_addr, &mut readback) {
+        println!("[Storage] Header verify-read failed: {:?}", e);
+        return false;
+    }
+    if readback != header {
+        println!(
+            "[Storage] Header verify mismatch, wrote {:?}, read {:?}",
+            &header[..12],
+            &readback[..12]
+        );
+        return false;
+    }
+
+    println!(
+        "[Storage] Saved {} bytes spanning {} sector(s) starting at {} (seq {})",
+        payload.len(),
+        needed,
+        start,
+        next_seq
+    );
+    true
 
     pub fn erase_all() -> bool {
         let Some(flash) = flash() else { return false; };
