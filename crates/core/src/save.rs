@@ -863,13 +863,21 @@ pub fn has_save() -> bool {
 
 /// Load the most recent save into `ctx`. Returns true on success.
 pub fn load(ctx: &mut GameContext) -> bool {
-    // SAFETY: single-threaded boot path; JSON_BUF is only touched here and in
-    // `save` below, never concurrently.
     let buf = unsafe { &mut *core::ptr::addr_of_mut!(JSON_BUF) };
     let Some(len) = storage::read_latest(buf) else {
         println!("[Save] storage::read_latest returned None, no save loaded");
         return false;
     };
+
+    // ОГЛАШЕНИЕ ЛОГОВ ДЛЯ ОТЛАДКИ:
+    if len > 10 {
+        println!("[Save] First 10 bytes from flash: {:?}", &buf[..10]);
+        // Попробуем вывести как текст, если это валидный ASCII JSON
+        if let Ok(s) = core::str::from_utf8(&buf[..len.min(50)]) {
+            println!("[Save] JSON Start preview: {}", s);
+        }
+    }
+
     match serde_json_core::from_slice::<SaveData>(&buf[..len]) {
         Ok((data, consumed)) => {
             apply(&data, ctx);
@@ -878,11 +886,13 @@ pub fn load(ctx: &mut GameContext) -> bool {
             true
         }
         Err(e) => {
-            println!("[Save] Parse failed ({} bytes): {:?}", len, e);
+            // ВАЖНО: Выводим точную причину ошибки компиляции JSON
+            println!("[Save] PARSE CRITICAL ERROR ({} bytes): {:?}", len, e);
             false
         }
     }
 }
+
 
 /// Encode `ctx` to JSON and persist it. Returns true on success.
 pub fn save(ctx: &mut GameContext) -> bool {
