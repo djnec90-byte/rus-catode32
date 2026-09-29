@@ -73,16 +73,17 @@ struct PartitionInfo {
     sectors: usize,
 }
 
-fn find_nvs_partition(_flash: &mut FlashStorage) -> Option<PartitionInfo> {
-    // Игнорируем чтение таблицы разделов из флеша.
-    // Жестко задаем стандартный адрес NVS для ESP32-C3: 
-    // Смещение: 0x9000, Количество секторов: 6 (24 КБ)
+fn find_nvs_partition(flash: &mut FlashStorage) -> Option<PartitionInfo> {
+    let mut table_buf = [0u8; PARTITION_TABLE_MAX_LEN];
+    let pt = read_partition_table(flash, &mut table_buf).ok()?;
+    let entry = pt
+        .find_partition(PartitionType::Data(DataPartitionSubType::Nvs))
+        .ok()??;
     Some(PartitionInfo {
-        offset: 0x9000,
-        sectors: 6,
+        offset: entry.offset(),
+        sectors: (entry.len() as usize) / SECTOR_SIZE,
     })
 }
-
 
 #[derive(Clone, Copy)]
 struct Record {
