@@ -289,6 +289,12 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
             return false;
         }
 
+         // ВАЖНОЕ ИСПРАВЛЕНИЕ: принудительно сбрасываем кэш на физический чип флеш-памяти ESP32-C3
+        if let Err(e) = flash.flush() {
+            println!("[Storage] Flash flush failed: {:?}", e);
+            return false;
+        }
+        
         // Проверка верификации
         let mut readback = [0u8; HEADER_LEN];
         if let Err(e) = flash.read(start_addr, &mut readback) {
