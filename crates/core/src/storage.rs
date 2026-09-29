@@ -137,54 +137,61 @@ mod firmware {
 
     /// ИСПРАВЛЕНО ДЛЯ ESP32-C3: Чтение происходит строго выровненными по WORD_SIZE блоками,
     /// исключая дробные смещения адресов на стыках секторов.
-    pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
-        let flash = flash()?;
-        let part = find_nvs_partition(flash)?;
-        let r = find_latest(flash, part)?;
-        let len = r.len as usize;
-        if len > buf.len() || len > MAX_PAYLOAD {
-            println!("[Storage] Save payload too large: {}", len);
+    /// ОКОНЧАТЕЛЬНОЕ ИСПРАВЛЕНИЕ ДЛЯ ESP32-C3
+/// Гарантирует выравнивание адресов для чипа и отдаёт парсеру JSON чистую строку без 0xFF на конце.
+pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
+    let flash = flash()?;
+    let part = find_nvs_partition(flash)?;
+    let r = find_latest(flash, part)?;
+    let len = r.len as usize;
+    if len > buf.len() || len > MAX_PAYLOAD {
+        println!("[Storage] Save payload too large: {}", len);
+        return None;
+    }
+
+    let mut scratch = [0u8; SECTOR_SIZE];
+    let mut read = 0;
+    let mut sector_idx = r.start_sector;
+    let mut sector_offset = HEADER_LEN; // Начинаем с 16 (кратно 4)
+
+    while read < len {
+        let space = SECTOR_SIZE - sector_offset;
+        let chunk = space.min(len - read);
+
+        // Округляем размер чтения до слова (кратно 4 байтам) для встроенного контроллера C3
+        let aligned_chunk = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
+        let aligned_chunk = aligned_chunk.min(space);
+
+        // Вычисляем физический адрес. Он ВСЕГДА кратен 4 байтам
+        let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
+        
+        // Читаем блок во временный scratch
+        if let Err(e) = flash.read(addr, &mut scratch[..aligned_chunk]) {
+            println!(
+                "[Storage] Payload read failed at sector {} offset {}: {:?}",
+                sector_idx, sector_offset, e
+            );
             return None;
         }
 
-        let mut scratch = [0u8; SECTOR_SIZE];
-        let mut read = 0;
-        let mut sector_idx = r.start_sector;
-        let mut sector_offset = HEADER_LEN;
+        // ВАЖНО: Копируем в буфер JSON ТОЛЬКО полезные байты строки (chunk), без 0xFF!
+        buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
+        
+        read += chunk;
+        
+        // Смещаем смещение сектора строго на aligned_chunk, чтобы адрес следующего чтения остался кратным 4
+        sector_offset += aligned_chunk;
 
-        while read < len {
-            let space = SECTOR_SIZE - sector_offset;
-            let chunk = space.min(len - read);
-
-            // Решение для C3: Считываем из флеша блок, выровненный вверх до WORD_SIZE.
-            // Но чтобы адрес (addr) и длина гарантированно подходили чипу,
-            // мы округляем размер считываемого куска.
-            let aligned_chunk = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
-            let aligned_chunk = aligned_chunk.min(space);
-
-            let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
-            
-            if let Err(e) = flash.read(addr, &mut scratch[..aligned_chunk]) {
-                println!(
-                    "[Storage] Payload read failed at sector {} offset {}: {:?}",
-                    sector_idx, sector_offset, e
-                );
-                return None;
-            }
-
-            // Копируем только реальные полезные байты в целевой буфер
-            buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
-            
-            read += chunk;
-            sector_offset += chunk;
-
-            if sector_offset >= SECTOR_SIZE {
-                sector_idx = (sector_idx + 1) % part.sectors;
-                sector_offset = 0;
-            }
+        if sector_offset >= SECTOR_SIZE {
+            sector_idx = (sector_idx + 1) % part.sectors;
+            sector_offset = 0;
         }
-        Some(len)
     }
+    
+    // Возвращаем строго оригинальную длину текста JSON (например, 3261), чтобы Serde не ругался на мусор в конце
+    Some(len)
+}
+
 
     /// Вспомогательная функция безопасной блочной записи для ESP32-C3
     fn write_chunk(
