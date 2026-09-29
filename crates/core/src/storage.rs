@@ -37,9 +37,6 @@ pub const MAX_PAYLOAD: usize = SECTOR_SIZE * 5 - HEADER_LEN;
 
 #[cfg(not(feature = "desktop"))]
 mod firmware {
-    // Вставляем структуру СЮДА:
-    #[repr(align(4))]
-    struct AlignedBuffer([u8; super::SECTOR_SIZE]);
 use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
 use esp_bootloader_esp_idf::partitions::{
     read_partition_table, DataPartitionSubType, PartitionType, PARTITION_TABLE_MAX_LEN,
@@ -76,17 +73,16 @@ struct PartitionInfo {
     sectors: usize,
 }
 
-fn find_nvs_partition(flash: &mut FlashStorage) -> Option<PartitionInfo> {
-    let mut table_buf = [0u8; PARTITION_TABLE_MAX_LEN];
-    let pt = read_partition_table(flash, &mut table_buf).ok()?;
-    let entry = pt
-        .find_partition(PartitionType::Data(DataPartitionSubType::Nvs))
-        .ok()??;
+fn find_nvs_partition(_flash: &mut FlashStorage) -> Option<PartitionInfo> {
+    // Игнорируем чтение таблицы разделов из флеша.
+    // Жестко задаем стандартный адрес NVS для ESP32-C3: 
+    // Смещение: 0x9000, Количество секторов: 6 (24 КБ)
     Some(PartitionInfo {
-        offset: entry.offset(),
-        sectors: (entry.len() as usize) / SECTOR_SIZE,
+        offset: 0x9000,
+        sectors: 6,
     })
 }
+
 
 #[derive(Clone, Copy)]
 struct Record {
@@ -164,8 +160,7 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
         return None;
     }
 
-    let mut aligned_scratch = AlignedBuffer([0u8; SECTOR_SIZE]);
-    let scratch = &mut aligned_scratch.0;
+    let mut scratch = [0u8; SECTOR_SIZE];
     let mut read = 0;
     let mut sector_idx = r.start_sector;
     let mut sector_offset = HEADER_LEN;
@@ -289,8 +284,7 @@ pub fn write_next(payload: &[u8]) -> bool {
     // Stream the payload across sectors (skipping the 16-byte header at the
     // start of the first sector; it's filled in last so a mid-write power
     // loss leaves no MAGIC and the previous record remains canonical).
-    let mut aligned_scratch = AlignedBuffer([0u8; SECTOR_SIZE]);
-    let scratch = &mut aligned_scratch.0;
+    let mut scratch = [0u8; SECTOR_SIZE];
     let mut written = 0;
     let mut sector_idx = start;
     let mut sector_offset = HEADER_LEN;
@@ -299,7 +293,7 @@ pub fn write_next(payload: &[u8]) -> bool {
         let chunk_len = space.min(payload.len() - written);
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
         let chunk = &payload[written..written + chunk_len];
-        if !write_chunk(flash, addr, chunk, scratch) {
+        if !write_chunk(flash, addr, chunk, &mut scratch) {
             println!("[Storage] Payload write failed at sector {}", sector_idx);
             return false;
         }
