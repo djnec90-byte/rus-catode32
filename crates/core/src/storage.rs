@@ -107,6 +107,7 @@ mod firmware {
             return None;
         }
         if buf[..4] != MAGIC {
+            println!("[Storage] Sector {} magic mismatch. Found bytes: {:?}", sector, &buf[..4]);
             return None;
         }
         Some(Record {
