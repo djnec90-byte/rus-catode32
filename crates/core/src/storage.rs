@@ -299,7 +299,7 @@ pub fn write_next(payload: &[u8]) -> bool {
         let chunk_len = space.min(payload.len() - written);
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
         let chunk = &payload[written..written + chunk_len];
-        if !write_chunk(flash, addr, chunk, &mut scratch) {
+        if !write_chunk(flash, addr, chunk, scratch) {
             println!("[Storage] Payload write failed at sector {}", sector_idx);
             return false;
         }
