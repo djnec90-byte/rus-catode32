@@ -36,9 +36,10 @@ const WORD_SIZE: usize = 4;
 pub const MAX_PAYLOAD: usize = SECTOR_SIZE * 5 - HEADER_LEN;
 
 #[cfg(not(feature = "desktop"))]
-#[repr(align(4))]
-struct AlignedBuffer([u8; SECTOR_SIZE]);
 mod firmware {
+    // Вставляем структуру СЮДА:
+    #[repr(align(4))]
+    struct AlignedBuffer([u8; super::SECTOR_SIZE]);
 use embedded_storage::nor_flash::{NorFlash, ReadNorFlash};
 use esp_bootloader_esp_idf::partitions::{
     read_partition_table, DataPartitionSubType, PartitionType, PARTITION_TABLE_MAX_LEN,
