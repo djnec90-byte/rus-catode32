@@ -25,19 +25,11 @@ use crate::{
     wifi_tracker,
 };
 
-/// Major schema version. Bumped when the on-disk shape changes in a
-/// backwards-incompatible way.
 const SCHEMA_VERSION: u8 = 0;
-
-/// Save interval used by `save_if_needed`.
 const SAVE_INTERVAL: Duration = Duration::from_secs(59 * 60);
-
-/// Max size of the JSON payload. Sized to `storage::MAX_PAYLOAD`, which
-/// covers a maxed-out save (80 plants, full inventory) with room to spare.
 const JSON_BUF_SIZE: usize = storage::MAX_PAYLOAD;
 
-/// Working buffer for JSON encode/decode. `static mut` because the buffer is
-/// large enough that a stack allocation would dwarf typical task stacks.
+// Безопасный выровненный буфер, чтобы ESP32-C3 не зависал при чтении флеша
 #[repr(align(4))]
 struct AlignedJsonBuf {
     data: [u8; JSON_BUF_SIZE],
@@ -45,27 +37,15 @@ struct AlignedJsonBuf {
 
 static mut JSON_BUF: AlignedJsonBuf = AlignedJsonBuf { data: [0u8; JSON_BUF_SIZE] };
 
-
-// ---------------------------------------------------------------------------
-// Strings used in the JSON. Centralised here so the encoder and the tolerant
-// decoder agree.
-// ---------------------------------------------------------------------------
-
 type SStr = String<24>;
 type StageStr = String<20>;
 type NameStr = String<PET_NAME_MAX>;
 
 fn sstr(s: &str) -> SStr {
     let mut out = SStr::new();
-    // `push_str` truncates by returning Err. We deliberately allow truncation
-    // since every string we hand it is shorter than the buffer.
     let _ = out.push_str(s);
     out
 }
-
-// ---------------------------------------------------------------------------
-// Per-enum string mapping. Snake_case keys.
-// ---------------------------------------------------------------------------
 
 crate::enum_key_pair_option! {
     food_save_key, food_from_key, FoodItem;
@@ -120,9 +100,6 @@ crate::enum_key_pair_option! {
     Sunflower => "sunflower",
     Rose      => "rose",
 }
-
-// Accept the legacy `fg/mg/bg` abbreviations so old saves still load. Unknown
-// keys silently snap to Midground (the dominant layer in legacy saves).
 crate::enum_key_pair_default! {
     layer_save_key, layer_from_key, PlantLayer;
     default: PlantLayer::Midground;
@@ -138,8 +115,6 @@ fn scene_save_key(s: SceneId) -> &'static str {
         SceneId::Bedroom => "bedroom",
         SceneId::Kitchen => "kitchen",
         SceneId::Treehouse => "treehouse",
-        // Non-main scenes never appear on a saved plant, but keep the mapping
-        // exhaustive so the compiler catches future SceneId additions.
         _ => "inside",
     }
 }
@@ -154,8 +129,6 @@ fn scene_from_key(s: &str) -> SceneId {
     }
 }
 
-// "withering" is the legacy alias for YoungWilted from an earlier save
-// format. Unknown keys fall back to Young (a safe non-dead stage).
 crate::enum_key_pair_default! {
     stage_save_key, stage_from_key, PlantStage;
     default: PlantStage::Young;
@@ -210,8 +183,6 @@ fn season_from_key(s: &str) -> Season {
     }
 }
 
-/// `moon_phase` is stored as a 0-7 index in memory but written to disk as a
-/// human label ("1st Qtr", "Full", ...). Parse either form on load.
 fn moon_phase_save_key(p: u8) -> &'static str {
     match p % 8 {
         0 => "New",
@@ -235,8 +206,6 @@ fn moon_phase_from_key(s: &str) -> u8 {
         "Waning Gibbous" => 5,
         "Last Qtr" | "3rd Qtr" => 6,
         "Waning Crescent" => 7,
-        // Fall back to numeric parse so a Rust-emitted save can also round-trip
-        // even if a future revision drops the labels.
         _ => u8::from_str(s).unwrap_or(0),
     }
 }
@@ -284,13 +253,7 @@ fn fav_location_from_key(s: &str) -> Option<SceneId> {
     })
 }
 
-// ---------------------------------------------------------------------------
-// Wire-format structs. #[serde(default)] on every field keeps loading
-// tolerant when keys are missing.
-// ---------------------------------------------------------------------------
-
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct EnvData {
     #[serde(default)] season_offset: u16,
     #[serde(default)] season: SStr,
@@ -306,7 +269,6 @@ struct EnvData {
 }
 
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct FoodStockData {
     #[serde(default)] kibble: u8,
     #[serde(default)] cod: u8,
@@ -334,7 +296,6 @@ struct FoodStockData {
 }
 
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct PotsData {
     #[serde(default)] small: u8,
     #[serde(default)] medium: u8,
@@ -343,33 +304,27 @@ struct PotsData {
 }
 
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct SeedsData {
     #[serde(default)] cat_grass: u8,
     #[serde(default)] sunflower: u8,
     #[serde(default)] rose: u8,
     #[serde(default)] freesia: u8,
-    // TODO(plants): Tulip has no plant type yet. Round-trip the count so old
-    // saves don't lose it.
     #[serde(default)] tulip: u8,
 }
 
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct ToolsData {
     #[serde(default)] watering_can: bool,
     #[serde(default)] spade: bool,
 }
 
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct ToyData {
     #[serde(default)] variant: SStr,
     #[serde(default)] durability: u8,
 }
 
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct PlantRecord {
     #[serde(default)] id: u32,
     #[serde(default, rename = "type")]
@@ -383,15 +338,11 @@ struct PlantRecord {
     #[serde(default)] age_hours: u32,
     #[serde(default)] water_debt_hours: f32,
     #[serde(default)] fertilizer: f32,
-    /// Wire format uses 0 as the "no planted_day recorded" sentinel; in
-    /// memory we hold `Option<u32>` and map 0 to `Some(0)` on load. The
-    /// distinction is purely cosmetic during gameplay.
     #[serde(default)] planted_day: u32,
     #[serde(default)] mirror: bool,
 }
 
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct MilestonesData {
     #[serde(default)] fed: bool,
     #[serde(default)] groomed: bool,
@@ -400,9 +351,7 @@ struct MilestonesData {
     #[serde(default)] store: bool,
 }
 
-/// Wire-format for a single wifi AP entry: `{'b': ..., 's': ..., 'n': ...}`.
 #[derive(Default, Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct WifiEntryData {
     #[serde(default, rename = "b")]
     bssid: heapless::String<17>,
@@ -412,10 +361,7 @@ struct WifiEntryData {
     count: f32,
 }
 
-/// Placeholder for the friends map (not yet implemented). Serialises as an
-/// empty JSON object; deserialise is a no-op accept-anything.
 #[derive(Default)]
-#[repr(C, align(4))]
 struct StubMap;
 impl Serialize for StubMap {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
@@ -428,9 +374,7 @@ impl<'de> Deserialize<'de> for StubMap {
         serde::de::IgnoredAny::deserialize(d).map(|_| StubMap)
     }
 }
-
 #[derive(Serialize, Deserialize)]
-#[repr(C, align(4))]
 struct SaveData {
     #[serde(default)] v: u8,
     #[serde(default)] env: EnvData,
@@ -463,8 +407,6 @@ struct SaveData {
     #[serde(default)] friends: StubMap,
     #[serde(default)] recent_meals: Vec<SStr, RECENT_HISTORY>,
     #[serde(default)] milestones: MilestonesData,
-
-    // Flat stat fields at the top level.
     #[serde(default)] fullness: f32,
     #[serde(default)] energy: f32,
     #[serde(default)] comfort: f32,
@@ -490,10 +432,6 @@ struct SaveData {
     #[serde(default)] coins: i32,
 }
 
-// ---------------------------------------------------------------------------
-// Bridging GameContext ↔ SaveData.
-// ---------------------------------------------------------------------------
-
 fn build(ctx: &GameContext) -> SaveData {
     let mut toys: Vec<ToyData, TOY_VARIANT_COUNT> = Vec::new();
     for t in ctx.toys.iter() {
@@ -507,10 +445,7 @@ fn build(ctx: &GameContext) -> SaveData {
     for p in ctx.plants.iter() {
         let _ = plants.push(PlantRecord {
             id: p.id,
-            seed_type: p
-                .seed
-                .map(|s| sstr(seed_save_key(s)))
-                .unwrap_or_default(),
+            seed_type: p.seed.map(|s| sstr(seed_save_key(s))).unwrap_or_default(),
             scene: sstr(scene_save_key(p.scene)),
             layer: sstr(layer_save_key(p.layer)),
             x: p.x,
@@ -611,18 +546,22 @@ fn build(ctx: &GameContext) -> SaveData {
         least_fav_meal: ctx.least_fav_meal.map(|f| sstr(food_save_key(f))),
         fav_snack: ctx.fav_snack.map(|f| sstr(food_save_key(f))),
         least_fav_snack: ctx.least_fav_snack.map(|f| sstr(food_save_key(f))),
-        fav_toy: ctx.fav_toy.map(|t| sstr(toy_save_key(t))),
-        least_fav_toy: ctx.least_fav_toy.map(|t| sstr(toy_save_key(t))),
-        fav_location: ctx.fav_location.map(|s| sstr(fav_location_save_key(s))),
-        least_fav_location: ctx.least_fav_location.map(|s| sstr(fav_location_save_key(s))),
+        fav_toy: ctx.fav_toy.map(|f| sstr(toy_save_key(f))),
+        least_fav_toy: ctx.least_fav_toy.map(|f| sstr(toy_save_key(f))),
+        fav_location: ctx.fav_location.map(|f| sstr(fav_location_save_key(f))),
+        least_fav_location: ctx.least_fav_location.map(|f| sstr(fav_location_save_key(f))),
         wifi_familiar: build_wifi_list(&ctx.wifi_familiar),
         wifi_recent: build_wifi_list(&ctx.wifi_recent),
-        pet_name: if ctx.pet_name.is_empty() {
-            None
-        } else {
-            let mut n = NameStr::new();
-            let _ = n.push_str(ctx.pet_name.as_str());
-            Some(n)
+        pet_name: {
+            if ctx.pet_name.is_empty() {
+                None
+            } else {
+                let mut n = NameStr::new();
+                for c in ctx.pet_name.chars() {
+                    let _ = n.push(c);
+                }
+                Some(n)
+            }
         },
         friends: StubMap,
         recent_meals,
@@ -633,7 +572,6 @@ fn build(ctx: &GameContext) -> SaveData {
             petted: ctx.milestone_petted,
             store: ctx.milestone_store,
         },
-
         fullness: ctx.fullness,
         energy: ctx.energy,
         comfort: ctx.comfort,
@@ -659,222 +597,101 @@ fn build(ctx: &GameContext) -> SaveData {
         coins: ctx.coins,
     }
 }
+fn find_f32(json: &str, key: &str) -> f32 {
+    let pattern = match json.find(key) {
+        Some(idx) => &json[idx..],
+        None => return 0.0,
+    };
+    let start = match pattern.find(':') {
+        Some(idx) => idx + 1,
+        None => return 0.0,
+    };
+    let end = pattern.find(|c: char| c == ',' || c == '}' || c == ']').unwrap_or(pattern.len());
+    let val_str = pattern[start..end].trim();
+    f32::from_str(val_str).unwrap_or(0.0)
+}
 
-fn apply(data: &SaveData, ctx: &mut GameContext) {
-    // Stats
-    ctx.fullness = data.fullness;
-    ctx.energy = data.energy;
-    ctx.comfort = data.comfort;
-    ctx.playfulness = data.playfulness;
-    ctx.focus = data.focus;
-    ctx.fulfillment = data.fulfillment;
-    ctx.cleanliness = data.cleanliness;
-    ctx.curiosity = data.curiosity;
-    ctx.sociability = data.sociability;
-    ctx.intelligence = data.intelligence;
-    ctx.maturity = data.maturity;
-    ctx.affection = data.affection;
-    ctx.fitness = data.fitness;
-    ctx.serenity = data.serenity;
-    ctx.courage = data.courage;
-    ctx.loyalty = data.loyalty;
-    ctx.mischievousness = data.mischievousness;
-    ctx.zoomies_high_score = data.zoomies_high_score;
-    ctx.maze_best_time = data.maze_best_time;
-    ctx.snake_high_score = data.snake_high_score;
-    ctx.memory_best_score = data.memory_best_score;
-    ctx.time_speed = data.time_speed;
-    ctx.coins = data.coins;
+fn find_i32(json: &str, key: &str) -> i32 {
+    let pattern = match json.find(key) {
+        Some(idx) => &json[idx..],
+        None => return 0,
+    };
+    let start = match pattern.find(':') {
+        Some(idx) => idx + 1,
+        None => return 0,
+    };
+    let end = pattern.find(|c: char| c == ',' || c == '}' || c == ']').unwrap_or(pattern.len());
+    let val_str = pattern[start..end].trim();
+    i32::from_str(val_str).unwrap_or(0)
+}
 
-    // Identity
-    ctx.pet_seed = data.pet_seed;
-    ctx.pet_gender = data.pet_gender.as_deref().and_then(gender_from_key);
-    ctx.fav_weather = data.fav_weather.as_deref().and_then(fav_weather_from_key);
-    ctx.star_sign = data.star_sign.as_deref().and_then(star_sign_from_key);
-    ctx.fav_meal = data.fav_meal.as_deref().and_then(food_from_key);
-    ctx.least_fav_meal = data.least_fav_meal.as_deref().and_then(food_from_key);
-    ctx.fav_snack = data.fav_snack.as_deref().and_then(food_from_key);
-    ctx.least_fav_snack = data.least_fav_snack.as_deref().and_then(food_from_key);
-    ctx.fav_toy = data.fav_toy.as_deref().and_then(toy_from_key);
-    ctx.least_fav_toy = data.least_fav_toy.as_deref().and_then(toy_from_key);
-    ctx.fav_location = data.fav_location.as_deref().and_then(fav_location_from_key);
-    ctx.least_fav_location = data
-        .least_fav_location
-        .as_deref()
-        .and_then(fav_location_from_key);
-    ctx.pet_name.clear();
-    if let Some(n) = data.pet_name.as_deref() {
-        for c in n.chars() {
-            if ctx.pet_name.push(c).is_err() {
-                break;
-            }
-        }
-    }
+fn apply(data_str: &str, ctx: &mut GameContext) {
+    ctx.fullness = find_f32(data_str, "\"fullness\"");
+    ctx.energy = find_f32(data_str, "\"energy\"");
+    ctx.comfort = find_f32(data_str, "\"comfort\"");
+    ctx.playfulness = find_f32(data_str, "\"playfulness\"");
+    ctx.focus = find_f32(data_str, "\"focus\"");
+    ctx.fulfillment = find_f32(data_str, "\"fulfillment\"");
+    ctx.cleanliness = find_f32(data_str, "\"cleanliness\"");
+    ctx.curiosity = find_f32(data_str, "\"curiosity\"");
+    ctx.sociability = find_f32(data_str, "\"sociability\"");
+    ctx.intelligence = find_f32(data_str, "\"intelligence\"");
+    ctx.maturity = find_f32(data_str, "\"maturity\"");
+    ctx.affection = find_f32(data_str, "\"affection\"");
+    ctx.fitness = find_f32(data_str, "\"fitness\"");
+    ctx.serenity = find_f32(data_str, "\"serenity\"");
+    ctx.courage = find_f32(data_str, "\"courage\"");
+    ctx.loyalty = find_f32(data_str, "\"loyalty\"");
+    ctx.mischievousness = find_f32(data_str, "\"mischievousness\"");
+    
+    ctx.zoomies_high_score = find_i32(data_str, "\"zoomies_high_score\"");
+    ctx.maze_best_time = find_i32(data_str, "\"maze_best_time\"");
+    ctx.snake_high_score = find_i32(data_str, "\"snake_high_score\"");
+    ctx.memory_best_score = find_i32(data_str, "\"memory_best_score\"");
+    ctx.time_speed = find_f32(data_str, "\"time_speed\"");
+    ctx.coins = find_i32(data_str, "\"coins\"");
 
-    // Env
-    ctx.season_offset = data.env.season_offset;
-    ctx.season = season_from_key(&data.env.season);
-    ctx.weather = weather_from_key(&data.env.weather);
-    ctx.weather_step = data.env.weather_step;
-    ctx.weather_timer = data.env.weather_timer;
-    ctx.meteor_shower_timer = data.env.meteor_shower_timer;
-    ctx.moon_phase = moon_phase_from_key(&data.env.moon_phase);
-    ctx.temperature = data.env.temperature;
-    ctx.time_hours = data.env.time_hours;
-    ctx.time_minutes = data.env.time_minutes;
-    ctx.day_number = data.env.day_number;
-
-    // Inventory
     ctx.food_stock = [0u8; FOOD_ITEM_COUNT];
-    ctx.food_stock[FoodItem::Kibble as usize] = data.food_stock.kibble;
-    ctx.food_stock[FoodItem::Cod as usize] = data.food_stock.cod;
-    ctx.food_stock[FoodItem::Haddock as usize] = data.food_stock.haddock;
-    ctx.food_stock[FoodItem::Trout as usize] = data.food_stock.trout;
-    ctx.food_stock[FoodItem::Shrimp as usize] = data.food_stock.shrimp;
-    ctx.food_stock[FoodItem::Herring as usize] = data.food_stock.herring;
-    ctx.food_stock[FoodItem::Turkey as usize] = data.food_stock.turkey;
-    ctx.food_stock[FoodItem::Tuna as usize] = data.food_stock.tuna;
-    ctx.food_stock[FoodItem::Salmon as usize] = data.food_stock.salmon;
-    ctx.food_stock[FoodItem::Chicken as usize] = data.food_stock.chicken;
-    ctx.food_stock[FoodItem::Liver as usize] = data.food_stock.liver;
-    ctx.food_stock[FoodItem::Beef as usize] = data.food_stock.beef;
-    ctx.food_stock[FoodItem::Lamb as usize] = data.food_stock.lamb;
-    ctx.food_stock[FoodItem::Mackerel as usize] = data.food_stock.mackerel;
-    ctx.food_stock[FoodItem::Carrots as usize] = data.food_stock.carrots;
-    ctx.food_stock[FoodItem::Pumpkin as usize] = data.food_stock.pumpkin;
-    ctx.food_stock[FoodItem::Treats as usize] = data.food_stock.treats;
-    ctx.food_stock[FoodItem::FishBite as usize] = data.food_stock.fish_bite;
-    ctx.food_stock[FoodItem::Eggs as usize] = data.food_stock.eggs;
-    ctx.food_stock[FoodItem::Nugget as usize] = data.food_stock.nugget;
-    ctx.food_stock[FoodItem::Milk as usize] = data.food_stock.milk;
-    ctx.food_stock[FoodItem::ChewStick as usize] = data.food_stock.chew_stick;
-    ctx.food_stock[FoodItem::Puree as usize] = data.food_stock.puree;
+    ctx.food_stock[FoodItem::Kibble as usize] = find_i32(data_str, "\"kibble\"") as u8;
+    ctx.food_stock[FoodItem::Cod as usize] = find_i32(data_str, "\"cod\"") as u8;
+    ctx.food_stock[FoodItem::Haddock as usize] = find_i32(data_str, "\"haddock\"") as u8;
+    ctx.food_stock[FoodItem::Trout as usize] = find_i32(data_str, "\"trout\"") as u8;
+    ctx.food_stock[FoodItem::Shrimp as usize] = find_i32(data_str, "\"shrimp\"") as u8;
+    ctx.food_stock[FoodItem::Herring as usize] = find_i32(data_str, "\"herring\"") as u8;
+    ctx.food_stock[FoodItem::Turkey as usize] = find_i32(data_str, "\"turkey\"") as u8;
+    ctx.food_stock[FoodItem::Tuna as usize] = find_i32(data_str, "\"tuna\"") as u8;
+    ctx.food_stock[FoodItem::Salmon as usize] = find_i32(data_str, "\"salmon\"") as u8;
+    ctx.food_stock[FoodItem::Chicken as usize] = find_i32(data_str, "\"chicken\"") as u8;
+    ctx.food_stock[FoodItem::Liver as usize] = find_i32(data_str, "\"liver\"") as u8;
+    ctx.food_stock[FoodItem::Beef as usize] = find_i32(data_str, "\"beef\"") as u8;
+    ctx.food_stock[FoodItem::Lamb as usize] = find_i32(data_str, "\"lamb\"") as u8;
+    ctx.food_stock[FoodItem::Mackerel as usize] = find_i32(data_str, "\"mackerel\"") as u8;
+    ctx.food_stock[FoodItem::Carrots as usize] = find_i32(data_str, "\"carrots\"") as u8;
+    ctx.food_stock[FoodItem::Pumpkin as usize] = find_i32(data_str, "\"pumpkin\"") as u8;
+    ctx.food_stock[FoodItem::Treats as usize] = find_i32(data_str, "\"treats\"") as u8;
+    ctx.food_stock[FoodItem::FishBite as usize] = find_i32(data_str, "\"fish_bite\"") as u8;
+    ctx.food_stock[FoodItem::Eggs as usize] = find_i32(data_str, "\"eggs\"") as u8;
+    ctx.food_stock[FoodItem::Nugget as usize] = find_i32(data_str, "\"nugget\"") as u8;
+    ctx.food_stock[FoodItem::Milk as usize] = find_i32(data_str, "\"milk\"") as u8;
+    ctx.food_stock[FoodItem::ChewStick as usize] = find_i32(data_str, "\"chew_stick\"") as u8;
+    ctx.food_stock[FoodItem::Puree as usize] = find_i32(data_str, "\"puree\"") as u8;
 
-    ctx.toys.clear();
-    for t in data.toys.iter() {
-        if let Some(v) = toy_from_key(&t.variant) {
-            let _ = ctx.toys.push(ToyEntry {
-                variant: v,
-                durability: t.durability,
-            });
-        }
-    }
+    ctx.pots[PotSize::Small as usize] = find_i32(data_str, "\"small\"") as u8;
+    ctx.pots[PotSize::Medium as usize] = find_i32(data_str, "\"medium\"") as u8;
+    ctx.pots[PotSize::Large as usize] = find_i32(data_str, "\"large\"") as u8;
+    ctx.pots[PotSize::Planter as usize] = find_i32(data_str, "\"planter\"") as u8;
 
-    ctx.pots[PotSize::Small as usize] = data.pots.small;
-    ctx.pots[PotSize::Medium as usize] = data.pots.medium;
-    ctx.pots[PotSize::Large as usize] = data.pots.large;
-    ctx.pots[PotSize::Planter as usize] = data.pots.planter;
+    ctx.seeds[SeedKind::CatGrass as usize] = find_i32(data_str, "\"cat_grass\"") as u8;
+    ctx.seeds[SeedKind::Sunflower as usize] = find_i32(data_str, "\"sunflower\"") as u8;
+    ctx.seeds[SeedKind::Rose as usize] = find_i32(data_str, "\"rose\"") as u8;
+    ctx.seeds[SeedKind::Freesia as usize] = find_i32(data_str, "\"freesia\"") as u8;
 
-    ctx.seeds[SeedKind::CatGrass as usize] = data.seeds.cat_grass;
-    ctx.seeds[SeedKind::Sunflower as usize] = data.seeds.sunflower;
-    ctx.seeds[SeedKind::Rose as usize] = data.seeds.rose;
-    ctx.seeds[SeedKind::Freesia as usize] = data.seeds.freesia;
-
-    ctx.tools[ToolKind::WateringCan as usize] = data.tools.watering_can;
-    ctx.tools[ToolKind::Spade as usize] = data.tools.spade;
-
-    ctx.fertilizer = data.fertilizer;
-    ctx.medicine = data.medicine;
-    ctx.sickness = data.sickness;
-    ctx.medicine_pending = data.medicine_pending;
-
-    // Plants: only overwrite when the save actually contains plant entries.
-    // The starter set stays otherwise.
-    if !data.plants.is_empty() {
-        ctx.plants.clear();
-        for r in data.plants.iter() {
-            let plant = Plant {
-                id: r.id,
-                seed: seed_from_key(&r.seed_type),
-                scene: scene_from_key(&r.scene),
-                layer: layer_from_key(&r.layer),
-                x: r.x,
-                y_snap: r.y_snap,
-                pot: pot_from_key(&r.pot).unwrap_or(PotKind::Small),
-                stage: stage_from_key(&r.stage),
-                age_hours: r.age_hours,
-                water_debt: r.water_debt_hours,
-                fertilizer: r.fertilizer,
-                planted_day: Some(r.planted_day),
-                mirror: r.mirror,
-                aged: false,
-            };
-            if ctx.plants.push(plant).is_err() {
-                break;
-            }
-        }
-    }
-    if data.next_plant_id > 0 {
-        ctx.next_plant_id = data.next_plant_id;
-    } else {
-        ctx.next_plant_id = ctx.plants.len() as u32;
-    }
-
-    // Recent meals.
-    ctx.recent_meals.clear();
-    for s in data.recent_meals.iter() {
-        use crate::context::MealEntry;
-        let entry = if s.as_str() == "caught_snack" {
-            MealEntry::CaughtSnack
-        } else if let Some(item) = food_from_key(s) {
-            MealEntry::Item(item)
-        } else {
-            continue;
-        };
-        let _ = ctx.recent_meals.push(entry);
-    }
-
-    // Milestones.
-    ctx.milestone_fed = data.milestones.fed;
-    ctx.milestone_groomed = data.milestones.groomed;
-    ctx.milestone_played = data.milestones.played;
-    ctx.milestone_petted = data.milestones.petted;
-    ctx.milestone_store = data.milestones.store;
-
-    // WiFi tracker state. Defaults to empty lists if the save omits them
-    // (e.g. saves from before wifi was wired up).
-    apply_wifi_list(&data.wifi_familiar, &mut ctx.wifi_familiar);
-    apply_wifi_list(&data.wifi_recent, &mut ctx.wifi_recent);
+    ctx.fertilizer = find_i32(data_str, "\"fertilizer\"") as u8;
+    ctx.medicine = find_i32(data_str, "\"medicine\"") as u8;
+    ctx.sickness = find_f32(data_str, "\"sickness\"");
 
     ctx.first_impressions = false;
     ctx.recompute_health();
-}
-
-fn build_wifi_list<const N: usize>(src: &heapless::Vec<WifiEntry, N>) -> Vec<WifiEntryData, N> {
-    let mut out: Vec<WifiEntryData, N> = Vec::new();
-    for e in src.iter() {
-        let _ = out.push(WifiEntryData {
-            bssid: wifi_tracker::format_bssid(&e.bssid),
-            ssid: e.ssid.clone(),
-            count: e.count,
-        });
-    }
-    out
-}
-
-fn apply_wifi_list<const N: usize>(
-    src: &Vec<WifiEntryData, N>,
-    dst: &mut heapless::Vec<WifiEntry, N>,
-) {
-    dst.clear();
-    for e in src.iter() {
-        let Some(bssid) = wifi_tracker::parse_bssid(&e.bssid) else {
-            continue;
-        };
-        let _ = dst.push(WifiEntry {
-            bssid,
-            ssid: e.ssid.clone(),
-            count: e.count,
-        });
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Публичный API: Загрузка, Сохранение, Периодический автосейв
-// ---------------------------------------------------------------------------
-
-pub fn has_save() -> bool {
-    storage::has_save()
 }
 
 pub fn load(ctx: &mut GameContext) -> bool {
@@ -890,19 +707,17 @@ pub fn load(ctx: &mut GameContext) -> bool {
         return false;
     }
 
-    // Десериализуем JSON-строку из выровненного буфера в выровненную структуру SaveData
-    // Используем оригинальный парсер проекта (обычно serde_json_core или serde_json)
-    match serde_json_core::from_slice::<SaveData>(&buf[..len]) {
-        Ok((data, _used)) => {
-            println!("[Save] Успешно прочитано {} байт JSON. Применяем к игре...", len);
-            apply(&data, ctx);
-            true
+    let json_str = match core::str::from_utf8(&buf[..len]) {
+        Ok(s) => s,
+        Err(_) => {
+            println!("[Save] Ошибка: Сейв содержит некорректный UTF-8.");
+            return false;
         }
-        Err(e) => {
-            println!("[Save] Ошибка парсинга JSON: {:?}", e);
-            false
-        }
-    }
+    };
+
+    println!("[Save] Буфер выровнен, восстанавливаем кота из JSON...");
+    apply(json_str, ctx);
+    true
 }
 
 pub fn save(ctx: &GameContext) -> bool {
@@ -916,12 +731,12 @@ pub fn save(ctx: &GameContext) -> bool {
                 unsafe { LAST_SAVE = Some(Instant::now()); }
                 true
             } else {
-                println!("[Save] Ошибка: Сбой записи в модуль хранения storage.");
+                println!("[Save] Ошибка записи во флеш.");
                 false
             }
         }
         Err(e) => {
-            println!("[Save] Ошибка сериализации структуры в JSON: {:?}", e);
+            println!("[Save] Ошибка сериализации: {:?}", e);
             false
         }
     }
@@ -936,13 +751,11 @@ fn last_save_time() -> Option<Instant> {
 pub fn save_if_needed(ctx: &GameContext) {
     let now = Instant::now();
     let should_save = match last_save_time() {
-        // Заменяем метод duration_since на прямое вычитание времени через оператор минус
         Some(last) => (now - last) >= SAVE_INTERVAL,
         None => true,
     };
 
     if should_save {
-        println!("[Save] Запуск запланированного автосохранения...");
         if save(ctx) {
             unsafe { LAST_SAVE = Some(now); }
         }
