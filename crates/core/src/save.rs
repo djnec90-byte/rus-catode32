@@ -38,6 +38,7 @@ const JSON_BUF_SIZE: usize = storage::MAX_PAYLOAD;
 
 /// Working buffer for JSON encode/decode. `static mut` because the buffer is
 /// large enough that a stack allocation would dwarf typical task stacks.
+#[repr(align(4))]
 static mut JSON_BUF: [u8; JSON_BUF_SIZE] = [0u8; JSON_BUF_SIZE];
 
 // ---------------------------------------------------------------------------
