@@ -929,7 +929,8 @@ fn last_save_time() -> Option<Instant> {
 pub fn save_if_needed(ctx: &GameContext) {
     let now = Instant::now();
     let should_save = match last_save_time() {
-        Some(last) => now.duration_since(last) >= SAVE_INTERVAL,
+        // Заменяем метод duration_since на прямое вычитание времени через оператор минус
+        Some(last) => (now - last) >= SAVE_INTERVAL,
         None => true,
     };
 
@@ -940,4 +941,3 @@ pub fn save_if_needed(ctx: &GameContext) {
         }
     }
 }
-
