@@ -129,22 +129,24 @@ fn read_header(flash: &mut FlashStorage, part: PartitionInfo, sector: usize) -> 
 
 fn find_latest(flash: &mut FlashStorage, part: PartitionInfo) -> Option<Record> {
     let mut best: Option<Record> = None;
-    crate::println!("[DEBUG_READ] Vsego nvs sectorov na plate: {}", part.sectors);
     for i in 0..part.sectors {
         if let Some(r) = read_header(flash, part, i) {
             match best {
-                Some(b) if b.seq >= r.seq => {
-                    crate::println!("[DEBUG_READ] Propuskaem sector {}, tak kak u nas est' seq {} >= {}", i, b.seq, r.seq);
-                }
-                _ => {
-                    crate::println!("[DEBUG_READ] Teper' luchshiy sector: {} (seq {})", i, r.seq);
+                // Строго проверяем: если у нового сектора seq строго БОЛЬШЕ, 
+                // то он гарантированно становится лучшим (самым свежим)
+                Some(b) if r.seq > b.seq => {
                     best = Some(r);
                 }
+                None => {
+                    best = Some(r);
+                }
+                _ => {} // Если меньше или равен, то игнорируем
             }
         }
     }
     best
 }
+
 
 
 /// True when at least one sector holds a syntactically valid save record.
