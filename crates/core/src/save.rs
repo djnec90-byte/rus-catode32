@@ -38,22 +38,8 @@ const JSON_BUF_SIZE: usize = storage::MAX_PAYLOAD;
 
 /// Working buffer for JSON encode/decode. `static mut` because the buffer is
 /// large enough that a stack allocation would dwarf typical task stacks.
-#[repr(align(4))]
-struct AlignedJsonBuf {
-    data: [u8; JSON_BUF_SIZE],
-}
-
-static mut ALIGNED_CONTAINER: AlignedJsonBuf = AlignedJsonBuf { data: [0u8; JSON_BUF_SIZE] };
-
-// Перенаправляем старое имя на выровненный массив внутри контейнера через макрос,
-// чтобы компилятор счел это обычным статическим массивом u8 во всех функциях ниже!
-#[allow(unused_macros)]
-macro_rules! JSON_BUF {
-    () => {
-        unsafe { &mut ALIGNED_CONTAINER.data }
-    };
-}
-
+#[repr(C)]
+static mut JSON_BUF: [u8; JSON_BUF_SIZE] = [0u8; JSON_BUF_SIZE];
 
 // ---------------------------------------------------------------------------
 // Strings used in the JSON. Centralised here so the encoder and the tolerant
@@ -880,7 +866,7 @@ pub fn has_save() -> bool {
 pub fn load(ctx: &mut GameContext) -> bool {
     // SAFETY: single-threaded boot path; JSON_BUF is only touched here and in
     // `save` below, never concurrently.
-    let buf = unsafe { &mut ALIGNED_CONTAINER.data };
+    let buf = unsafe { &mut *core::ptr::addr_of_mut!(JSON_BUF) };
     let Some(len) = storage::read_latest(buf) else {
         println!("[Save] storage::read_latest returned None, no save loaded");
         return false;
@@ -903,7 +889,7 @@ pub fn load(ctx: &mut GameContext) -> bool {
 pub fn save(ctx: &mut GameContext) -> bool {
     let data = build(ctx);
     // SAFETY: see `load`.
-    let buf = unsafe { &mut ALIGNED_CONTAINER.data };
+    let buf = unsafe { &mut *core::ptr::addr_of_mut!(JSON_BUF) };
     let len = match serde_json_core::to_slice(&data, buf) {
         Ok(n) => n,
         Err(_) => {
