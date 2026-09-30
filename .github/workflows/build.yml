@@ -1,4 +1,4 @@
-name: Build ESP32-C3 Firmware Components
+name: Build ESP32-C3 Monolithic Firmware
 
 on:
   workflow_dispatch:
@@ -20,14 +20,15 @@ jobs:
       - name: Build Firmware for ESP32-C3
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 
-      # Генерируем раздельные файлы. Флаг --flash-mode dio жестко зашивается внутрь загрузчика.
-      - name: Convert ELF to Separated Images
+      # Генерируем ОДИН монолитный файл, но ПРИНУДИТЕЛЬНО внедряем туда 
+      # режим DIO и твой конфигурационный файл partitions.csv с 24 КБ NVS.
+      # Если partitions.csv лежит в корне, путь оставляем как есть. Если в crates/firmware/, укажи правильный путь.
+      - name: Convert ELF to Monolithic DIO BIN
         run: |
-          espflash save-image --chip esp32c3 --flash-size 4mb --flash-mode dio target/riscv32imc-unknown-none-elf/release/catode32-firmware output.bin
+          espflash save-image --chip esp32c3 --flash-size 4mb --flash-mode dio --partition-table partitions.csv target/riscv32imc-unknown-none-elf/release/catode32-firmware firmware.bin
 
-      # Просто забираем ВСЕ бинарники, которые создала утилита espflash в корневой папке
-      - name: Upload All Components
+      - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: catode32-separated-bins
-          path: "./*.bin"
+          name: catode32-esp32c3-firmware
+          path: firmware.bin
