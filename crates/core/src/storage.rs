@@ -33,7 +33,7 @@ const WORD_SIZE: usize = 4;
 /// Cap on payload bytes per save. Sized so a save never consumes the entire
 /// partition: there's always at least one sector left between consecutive
 /// records, which gives us baseline wear leveling.
-pub const MAX_PAYLOAD: usize = SECTOR_SIZE * 4 - HEADER_LEN;
+pub const MAX_PAYLOAD: usize = SECTOR_SIZE * 5 - HEADER_LEN;
 
 #[cfg(not(feature = "desktop"))]
 mod firmware {
@@ -272,30 +272,34 @@ pub fn write_next(payload: &[u8]) -> bool {
         None => (0, 1),
     };
 
+    crate::println!("[DEBUG] 1. Opredelili sector starta: {}, seq: {}", start, next_seq);
+
     // Erase the sectors we're about to write.
     for i in 0..needed {
         let sector = (start + i) % sectors_total;
         let addr = part.offset + (sector * SECTOR_SIZE) as u32;
+        crate::println!("[DEBUG] 2. Stiraem sector {} po adresu 0x{:X}", sector, addr);
         if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
-            println!("[Storage] Sector {} erase failed", sector);
+            crate::println!("[Storage] Sector {} erase failed", sector);
             return false;
         }
     }
+    crate::println!("[DEBUG] 3. Stiranie uspeshno zaversheno!");
 
-    // Stream the payload across sectors (skipping the 16-byte header at the
-    // start of the first sector; it's filled in last so a mid-write power
-    // loss leaves no MAGIC and the previous record remains canonical).
     let mut scratch = [0u8; SECTOR_SIZE];
     let mut written = 0;
     let mut sector_idx = start;
     let mut sector_offset = HEADER_LEN;
+    
+    crate::println!("[DEBUG] 4. Nachinaem zapis payload, dlina: {}", payload.len());
     while written < payload.len() {
         let space = SECTOR_SIZE - sector_offset;
         let chunk_len = space.min(payload.len() - written);
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
         let chunk = &payload[written..written + chunk_len];
+        
         if !write_chunk(flash, addr, chunk, &mut scratch) {
-            println!("[Storage] Payload write failed at sector {}", sector_idx);
+            crate::println!("[Storage] Payload write failed at sector {}", sector_idx);
             return false;
         }
         written += chunk_len;
@@ -305,6 +309,7 @@ pub fn write_next(payload: &[u8]) -> bool {
             sector_offset = 0;
         }
     }
+    crate::println!("[DEBUG] 5. Payload zapisan. Pyshem zagolovok...");
 
     // Commit by writing the header last.
     let mut header = [0u8; HEADER_LEN];
@@ -312,8 +317,17 @@ pub fn write_next(payload: &[u8]) -> bool {
     header[4..8].copy_from_slice(&next_seq.to_le_bytes());
     header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
     let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
+    
     if let Err(e) = flash.write(start_addr, &header) {
-        println!("[Storage] Header write failed: {:?}", e);
+        crate::println!("[Storage] Header write failed: {:?}", e);
+        return false;
+    }
+    crate::println!("[DEBUG] 6. Zagolovok zapisan. Zapusk verifikacii...");
+
+    // Verify-after-write
+    let mut readback = [0u8; HEADER_LEN];
+    if let Err(e) = flash.read(start_addr, &mut readback) {
+        crate::println!("[Storage] Header verify-read failed: {:?}", e);
         return false;
     }
 
