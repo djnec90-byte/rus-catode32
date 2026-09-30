@@ -23,9 +23,11 @@ jobs:
 
       # Генерируем ОДИН готовый образ, включающий в себя загрузчик, 
       # правильную таблицу разделов и саму игру для записи с адреса 0x0
+            # Генерируем правильный образ строго в режиме DIO без лишних отступов
+      # Смещение загрузчика ставится на 0x0 автоматически
       - name: Convert ELF to Monolithic Flash BIN
         run: |
-          espflash save-image --chip esp32c3 --flash-size 4mb target/riscv32imc-unknown-none-elf/release/catode32-firmware firmware.bin
+          espflash save-image --chip esp32c3 --flash-size 4mb --flash-mode dio target/riscv32imc-unknown-none-elf/release/catode32-firmware firmware.bin
 
       - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
