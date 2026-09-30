@@ -145,13 +145,7 @@ pub fn has_save() -> bool {
     find_latest(flash, part).is_some()
 }
 
-/// Read the latest save payload into `buf`, walking across sector boundaries.
-///
-/// `esp-storage`'s default `NorFlash::read` requires the read length to be a
-/// multiple of WORD_SIZE (4 bytes). The on-disk payload is padded with 0xFF
-/// to that alignment by `write_chunk`, so we read into an aligned scratch
-/// region and copy the meaningful bytes out.
-/// Безопасное выровненное чтение, которое никогда не повесит экран
+/// Исправленное выровненное чтение по 4 байта через scratch-буфер
 pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     let flash = flash()?;
     let part = find_nvs_partition(flash)?;
@@ -161,30 +155,20 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
         return None;
     }
 
-    // scratch ВСЕГДА выровнен по умолчанию, так как его размер кратен 4096
     let mut scratch = [0u8; SECTOR_SIZE];
     let mut read = 0;
     let mut sector_idx = r.start_sector;
     let mut sector_offset = HEADER_LEN;
-    
     while read < len {
         let space = SECTOR_SIZE - sector_offset;
         let chunk = space.min(len - read);
-        
-        // Жесткое выравнивание длины чтения по 4 байтам вверх
         let aligned_chunk = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
         let aligned_chunk = aligned_chunk.min(space);
-        
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
-        
-        // Читаем строго выровненный блок в выровненный scratch
-        if flash.read(addr, &mut scratch[..aligned_chunk]).is_err() {
+        if let Err(e) = flash.read(addr, &mut scratch[..aligned_chunk]) {
             return None;
         }
-        
-        // Копируем в буфер игры только чистые полезные байты, не ломая её внутреннюю память
         buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
-        
         read += chunk;
         sector_offset += chunk;
         if sector_offset >= SECTOR_SIZE {
@@ -195,7 +179,7 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     Some(len)
 }
 
-/// Исправленная функция записи чанков с жестким выравниванием
+/// Исправленная выровненная запись чанков
 fn write_chunk(
     flash: &mut FlashStorage,
     addr: u32,
@@ -203,55 +187,22 @@ fn write_chunk(
     scratch: &mut [u8; SECTOR_SIZE],
 ) -> bool {
     let padded = chunk.len().div_ceil(WORD_SIZE) * WORD_SIZE;
-    
-    // Принудительно переносим данные в выровненный scratch-буфер перед отправкой на шину SPI
     scratch[..chunk.len()].copy_from_slice(chunk);
     for b in &mut scratch[chunk.len()..padded] {
-        *b = 0xFF; // Забиваем хвост пустыми байтами флеша
+        *b = 0xFF;
     }
-    
-    // Записываем только блоки кратные WORD_SIZE и по выровненным адресам
     flash.write(addr, &scratch[..padded]).is_ok()
-}
-
-}
-
-/// Wipe every sector of the nvs partition so `has_save` returns false on
-/// next boot. Used for the debug factory-reset flow.
-pub fn erase_all() -> bool {
-    let Some(flash) = flash() else {
-        return false;
-    };
-    let Some(part) = find_nvs_partition(flash) else {
-        return false;
-    };
-    for i in 0..part.sectors {
-        let addr = part.offset + (i * SECTOR_SIZE) as u32;
-        if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
-            println!("[Storage] Factory erase failed at sector {}", i);
-            return false;
-        }
-    }
-    println!("[Storage] Factory reset, wiped {} sectors", part.sectors);
-    true
 }
 
 /// Persist `payload` as the next record. Returns true on success.
 pub fn write_next(payload: &[u8]) -> bool {
     if payload.len() > MAX_PAYLOAD {
-        println!(
-            "[Storage] Save payload {} > MAX_PAYLOAD {}",
-            payload.len(),
-            MAX_PAYLOAD
-        );
         return false;
     }
     let Some(flash) = flash() else {
-        println!("[Storage] FLASH not initialised");
         return false;
     };
     let Some(part) = find_nvs_partition(flash) else {
-        println!("[Storage] No nvs partition found");
         return false;
     };
     let sectors_total = part.sectors;
@@ -260,10 +211,6 @@ pub fn write_next(payload: &[u8]) -> bool {
     }
     let needed = sectors_for(payload.len());
     if needed > sectors_total {
-        println!(
-            "[Storage] Save needs {} sectors but partition has {}",
-            needed, sectors_total
-        );
         return false;
     }
 
@@ -276,19 +223,14 @@ pub fn write_next(payload: &[u8]) -> bool {
         None => (0, 1),
     };
 
-    // Erase the sectors we're about to write.
     for i in 0..needed {
         let sector = (start + i) % sectors_total;
         let addr = part.offset + (sector * SECTOR_SIZE) as u32;
         if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
-            println!("[Storage] Sector {} erase failed", sector);
             return false;
         }
     }
 
-    // Stream the payload across sectors (skipping the 16-byte header at the
-    // start of the first sector; it's filled in last so a mid-write power
-    // loss leaves no MAGIC and the previous record remains canonical).
     let mut scratch = [0u8; SECTOR_SIZE];
     let mut written = 0;
     let mut sector_idx = start;
@@ -299,7 +241,6 @@ pub fn write_next(payload: &[u8]) -> bool {
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
         let chunk = &payload[written..written + chunk_len];
         if !write_chunk(flash, addr, chunk, &mut scratch) {
-            println!("[Storage] Payload write failed at sector {}", sector_idx);
             return false;
         }
         written += chunk_len;
@@ -310,45 +251,48 @@ pub fn write_next(payload: &[u8]) -> bool {
         }
     }
 
-    // Commit by writing the header last.
     let mut header = [0u8; HEADER_LEN];
     header[..4].copy_from_slice(&MAGIC);
     header[4..8].copy_from_slice(&next_seq.to_le_bytes());
     header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
     let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
-    if let Err(e) = flash.write(start_addr, &header) {
-        println!("[Storage] Header write failed: {:?}", e);
+    if let Err(_) = flash.write(start_addr, &header) {
         return false;
     }
 
-    // Verify-after-write: read the header back and confirm it persisted as
-    // we expect before declaring success. Catches silent flash failures
-    // (write-cache anomalies, partial erases, etc) so save errors surface
-    // immediately rather than at next boot.
     let mut readback = [0u8; HEADER_LEN];
-    if let Err(e) = flash.read(start_addr, &mut readback) {
-        println!("[Storage] Header verify-read failed: {:?}", e);
+    if let Err(_) = flash.read(start_addr, &mut readback) {
         return false;
     }
     if readback != header {
-        println!(
-            "[Storage] Header verify mismatch, wrote {:?}, read {:?}",
-            &header[..12],
-            &readback[..12]
-        );
         return false;
     }
 
-    println!(
-        "[Storage] Saved {} bytes spanning {} sector(s) starting at {} (seq {})",
-        payload.len(),
-        needed,
-        start,
-        next_seq
-    );
     true
+}
 
-} // mod firmware
+/// Wipe every sector of the nvs partition so `has_save` returns false on next boot.
+pub fn erase_all() -> bool {
+    let Some(flash) = flash() else {
+        return false;
+    };
+    let Some(part) = find_nvs_partition(flash) else {
+        return false;
+    };
+    for i in 0..part.sectors {
+        let addr = part.offset + (i * SECTOR_SIZE) as u32;
+        if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
+            return false;
+        }
+    }
+    true
+}
+
+} // <--- ВОТ ТУТ МЫ ЗАКРЫВАЕМ mod firmware! Строго после функции erase_all.
+
+// =========================================================================
+// А ВСЁ, ЧТО НИЖЕ — ИДЕТ УЖЕ СНАРУЖИ МОДУЛЯ
+// =========================================================================
 
 #[cfg(not(feature = "desktop"))]
 pub use firmware::{erase_all, has_save, init, read_latest, write_next};
