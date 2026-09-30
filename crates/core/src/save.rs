@@ -693,6 +693,9 @@ fn apply(data_str: &str, ctx: &mut GameContext) {
     ctx.first_impressions = false;
     ctx.recompute_health();
 }
+pub fn has_save() -> bool {
+    storage::has_save()
+}
 
 pub fn load(ctx: &mut GameContext) -> bool {
     let buf = unsafe { &mut JSON_BUF.data };
@@ -718,6 +721,17 @@ pub fn load(ctx: &mut GameContext) -> bool {
     println!("[Save] Буфер выровнен, восстанавливаем кота из JSON...");
     apply(json_str, ctx);
     true
+}
+fn build_wifi_list<const N: usize>(src: &heapless::Vec<WifiEntry, N>) -> Vec<WifiEntryData, N> {
+    let mut out: Vec<WifiEntryData, N> = Vec::new();
+    for e in src.iter() {
+        let _ = out.push(WifiEntryData {
+            bssid: wifi_tracker::format_bssid(&e.bssid),
+            ssid: e.ssid.clone(),
+            count: e.count,
+        });
+    }
+    out
 }
 
 pub fn save(ctx: &GameContext) -> bool {
