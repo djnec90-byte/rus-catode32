@@ -20,26 +20,14 @@ jobs:
       - name: Build Firmware for ESP32-C3
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 
-      # espflash save-image БЕЗ флага --merge автоматически создаст ТРИ раздельных файла:
-      # 1. Загрузчик (firmware.bootloader.bin)
-      # 2. Правильную таблицу разделов (firmware.partition-table.bin) c 24 КБ NVS под сохранения
-      # 3. Само приложение игры (firmware.bin)
+      # Генерируем раздельные файлы. Флаг --flash-mode dio жестко зашивается внутрь загрузчика.
       - name: Convert ELF to Separated Images
         run: |
-          espflash save-image --chip esp32c3 --flash-size 4mb --flash-mode dio target/riscv32imc-unknown-none-elf/release/catode32-firmware firmware.bin
+          espflash save-image --chip esp32c3 --flash-size 4mb --flash-mode dio target/riscv32imc-unknown-none-elf/release/catode32-firmware output.bin
 
-      # Переименуем их для удобства перед отправкой в артефакты
-      - name: Prepare Files
-        run: |
-          mv firmware.bootloader.bin bootloader.bin
-          mv firmware.partition-table.bin partitions.bin
-          mv firmware.bin app.bin
-
+      # Просто забираем ВСЕ бинарники, которые создала утилита espflash в корневой папке
       - name: Upload All Components
         uses: actions/upload-artifact@v4
         with:
           name: catode32-separated-bins
-          path: |
-            app.bin
-            bootloader.bin
-            partitions.bin
+          path: "./*.bin"
