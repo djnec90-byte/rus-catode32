@@ -14,34 +14,27 @@ jobs:
         with:
           targets: riscv32imc-unknown-none-elf
 
-      # Устанавливаем необходимые инструменты сборки от Espressif
-      - name: Install esptool and espflash
-        run: |
-          pip install esptool
-          cargo install espflash --no-default-features --features cli
+      - name: Install espflash
+        run: cargo install espflash --no-default-features --features cli
 
       - name: Build Firmware for ESP32-C3
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 
-      # 1. Извлекаем чистый образ самой игры (Приложение) в режиме DIO
-      # Смещение для app.bin при раздельной прошивке всегда равно 0x10000
-      - name: Convert ELF to App BIN
+      # espflash save-image БЕЗ флага --merge автоматически создаст ТРИ раздельных файла:
+      # 1. Загрузчик (firmware.bootloader.bin)
+      # 2. Правильную таблицу разделов (firmware.partition-table.bin) c 24 КБ NVS под сохранения
+      # 3. Само приложение игры (firmware.bin)
+      - name: Convert ELF to Separated Images
         run: |
-          esptool.py --chip esp32c3 elf2image --flash_mode dio --output app.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
+          espflash save-image --chip esp32c3 --flash-size 4mb --flash-mode dio target/riscv32imc-unknown-none-elf/release/catode32-firmware firmware.bin
 
-      # 2. Принудительно заставляем espflash сгенерировать родной загрузчик для архитектуры C3 (RISC-V)
-      - name: Generate Bootloader
+      # Переименуем их для удобства перед отправкой в артефакты
+      - name: Prepare Files
         run: |
-          espflash bootloader --chip esp32c3 --flash-mode dio ./bootloader.bin
+          mv firmware.bootloader.bin bootloader.bin
+          mv firmware.partition-table.bin partitions.bin
+          mv firmware.bin app.bin
 
-      # 3. Принудительно генерируем правильную таблицу разделов. 
-      # По умолчанию espflash создает разметку, где под NVS выделено ровно 24 КБ (6 секторов), 
-      # что идеально подходит под логику кольцевого буфера в storage.rs
-      - name: Generate Partition Table
-        run: |
-          espflash partition-table --chip esp32c3 ./partitions.bin
-
-      # 4. Упаковываем все три раздельных файла в один артефакт
       - name: Upload All Components
         uses: actions/upload-artifact@v4
         with:
