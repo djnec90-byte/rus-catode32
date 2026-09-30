@@ -112,18 +112,12 @@ fn read_header(flash: &mut FlashStorage, part: PartitionInfo, sector: usize) -> 
         return None;
     }
     if buf[..4] != MAGIC {
-        // Уберем лишний спам, выводим только если сектор пустой
         return None;
     }
-    
-    let seq = u32::from_le_bytes(buf[4..8].try_into().ok()?);
-    let len = u32::from_le_bytes(buf[8..12].try_into().ok()?);
-    crate::println!("[DEBUG_READ] Nashel zagolovok в sector {}, seq: {}, len: {}", sector, seq, len);
-    
     Some(Record {
         start_sector: sector,
-        seq,
-        len,
+        seq: u32::from_le_bytes(buf[4..8].try_into().ok()?),
+        len: u32::from_le_bytes(buf[8..12].try_into().ok()?),
     })
 }
 
@@ -132,22 +126,13 @@ fn find_latest(flash: &mut FlashStorage, part: PartitionInfo) -> Option<Record> 
     for i in 0..part.sectors {
         if let Some(r) = read_header(flash, part, i) {
             match best {
-                // Строго проверяем: если у нового сектора seq строго БОЛЬШЕ, 
-                // то он гарантированно становится лучшим (самым свежим)
-                Some(b) if r.seq > b.seq => {
-                    best = Some(r);
-                }
-                None => {
-                    best = Some(r);
-                }
-                _ => {} // Если меньше или равен, то игнорируем
+                Some(b) if b.seq >= r.seq => {}
+                _ => best = Some(r),
             }
         }
     }
     best
 }
-
-
 
 /// True when at least one sector holds a syntactically valid save record.
 pub fn has_save() -> bool {
@@ -171,12 +156,8 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     let part = find_nvs_partition(flash)?;
     let r = find_latest(flash, part)?;
     let len = r.len as usize;
-    
-    // НАШ ГЛАВНЫЙ МАЯЧОК: проверяем, хватает ли буфера в ОЗУ
-    crate::println!("[DEBUG_READ] Proverka razmera: dlina seyva {}, razmer bufera v OZU {}", len, buf.len());
-    
     if len > buf.len() || len > MAX_PAYLOAD {
-        crate::println!("[Storage] Save payload too large: {} (max buf: {})", len, buf.len());
+        println!("[Storage] Save payload too large: {}", len);
         return None;
     }
 
@@ -187,11 +168,17 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     while read < len {
         let space = SECTOR_SIZE - sector_offset;
         let chunk = space.min(len - read);
+        // Round up to WORD_SIZE. esp-storage rejects unaligned reads. The
+        // tail bytes on flash were written as 0xFF padding, so we just
+        // discard them after the read.
         let aligned_chunk = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
         let aligned_chunk = aligned_chunk.min(space);
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
         if let Err(e) = flash.read(addr, &mut scratch[..aligned_chunk]) {
-            crate::println!("[Storage] Payload read failed: {:?}", e); // Добавим вывод ошибки
+            println!(
+                "[Storage] Payload read failed at sector {} offset {}: {:?}",
+                sector_idx, sector_offset, e
+            );
             return None;
         }
         buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
@@ -202,10 +189,8 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
             sector_offset = 0;
         }
     }
-    crate::println!("[DEBUG_READ] Uspešno pročli usya korzina!");
     Some(len)
 }
-
 
 /// Pad `chunk` up to the next 4-byte multiple with 0xFF (erased flash) and
 /// write it to flash. `NorFlash::write` requires word-aligned lengths.
@@ -287,34 +272,30 @@ pub fn write_next(payload: &[u8]) -> bool {
         None => (0, 1),
     };
 
-    crate::println!("[DEBUG] 1. Opredelili sector starta: {}, seq: {}", start, next_seq);
-
     // Erase the sectors we're about to write.
     for i in 0..needed {
         let sector = (start + i) % sectors_total;
         let addr = part.offset + (sector * SECTOR_SIZE) as u32;
-        crate::println!("[DEBUG] 2. Stiraem sector {} po adresu 0x{:X}", sector, addr);
         if flash.erase(addr, addr + SECTOR_SIZE as u32).is_err() {
-            crate::println!("[Storage] Sector {} erase failed", sector);
+            println!("[Storage] Sector {} erase failed", sector);
             return false;
         }
     }
-    crate::println!("[DEBUG] 3. Stiranie uspeshno zaversheno!");
 
+    // Stream the payload across sectors (skipping the 16-byte header at the
+    // start of the first sector; it's filled in last so a mid-write power
+    // loss leaves no MAGIC and the previous record remains canonical).
     let mut scratch = [0u8; SECTOR_SIZE];
     let mut written = 0;
     let mut sector_idx = start;
     let mut sector_offset = HEADER_LEN;
-    
-    crate::println!("[DEBUG] 4. Nachinaem zapis payload, dlina: {}", payload.len());
     while written < payload.len() {
         let space = SECTOR_SIZE - sector_offset;
         let chunk_len = space.min(payload.len() - written);
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
         let chunk = &payload[written..written + chunk_len];
-        
         if !write_chunk(flash, addr, chunk, &mut scratch) {
-            crate::println!("[Storage] Payload write failed at sector {}", sector_idx);
+            println!("[Storage] Payload write failed at sector {}", sector_idx);
             return false;
         }
         written += chunk_len;
@@ -324,7 +305,6 @@ pub fn write_next(payload: &[u8]) -> bool {
             sector_offset = 0;
         }
     }
-    crate::println!("[DEBUG] 5. Payload zapisan. Pyshem zagolovok...");
 
     // Commit by writing the header last.
     let mut header = [0u8; HEADER_LEN];
@@ -332,17 +312,8 @@ pub fn write_next(payload: &[u8]) -> bool {
     header[4..8].copy_from_slice(&next_seq.to_le_bytes());
     header[8..12].copy_from_slice(&(payload.len() as u32).to_le_bytes());
     let start_addr = part.offset + (start * SECTOR_SIZE) as u32;
-    
     if let Err(e) = flash.write(start_addr, &header) {
-        crate::println!("[Storage] Header write failed: {:?}", e);
-        return false;
-    }
-    crate::println!("[DEBUG] 6. Zagolovok zapisan. Zapusk verifikacii...");
-
-    // Verify-after-write
-    let mut readback = [0u8; HEADER_LEN];
-    if let Err(e) = flash.read(start_addr, &mut readback) {
-        crate::println!("[Storage] Header verify-read failed: {:?}", e);
+        println!("[Storage] Header write failed: {:?}", e);
         return false;
     }
 
@@ -363,11 +334,6 @@ pub fn write_next(payload: &[u8]) -> bool {
         );
         return false;
     }
-    
-    unsafe {
-        esp_hal::rom::spi_flash::SpiFlashCacheInit(); // Полный перезапуск кэша чтения/записи
-    }
-
 
     println!(
         "[Storage] Saved {} bytes spanning {} sector(s) starting at {} (seq {})",
