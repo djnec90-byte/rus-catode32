@@ -169,8 +169,12 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     let part = find_nvs_partition(flash)?;
     let r = find_latest(flash, part)?;
     let len = r.len as usize;
+    
+    // НАШ ГЛАВНЫЙ МАЯЧОК: проверяем, хватает ли буфера в ОЗУ
+    crate::println!("[DEBUG_READ] Proverka razmera: dlina seyva {}, razmer bufera v OZU {}", len, buf.len());
+    
     if len > buf.len() || len > MAX_PAYLOAD {
-        println!("[Storage] Save payload too large: {}", len);
+        crate::println!("[Storage] Save payload too large: {} (max buf: {})", len, buf.len());
         return None;
     }
 
@@ -181,17 +185,11 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     while read < len {
         let space = SECTOR_SIZE - sector_offset;
         let chunk = space.min(len - read);
-        // Round up to WORD_SIZE. esp-storage rejects unaligned reads. The
-        // tail bytes on flash were written as 0xFF padding, so we just
-        // discard them after the read.
         let aligned_chunk = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
         let aligned_chunk = aligned_chunk.min(space);
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
         if let Err(e) = flash.read(addr, &mut scratch[..aligned_chunk]) {
-            println!(
-                "[Storage] Payload read failed at sector {} offset {}: {:?}",
-                sector_idx, sector_offset, e
-            );
+            crate::println!("[Storage] Payload read failed: {:?}", e); // Добавим вывод ошибки
             return None;
         }
         buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
@@ -202,8 +200,10 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
             sector_offset = 0;
         }
     }
+    crate::println!("[DEBUG_READ] Uspešno pročli usya korzina!");
     Some(len)
 }
+
 
 /// Pad `chunk` up to the next 4-byte multiple with 0xFF (erased flash) and
 /// write it to flash. `NorFlash::write` requires word-aligned lengths.
