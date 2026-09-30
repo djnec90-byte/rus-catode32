@@ -38,7 +38,13 @@ const JSON_BUF_SIZE: usize = storage::MAX_PAYLOAD;
 
 /// Working buffer for JSON encode/decode. `static mut` because the buffer is
 /// large enough that a stack allocation would dwarf typical task stacks.
-static mut JSON_BUF: [u8; JSON_BUF_SIZE] = [0u8; JSON_BUF_SIZE];
+#[repr(align(4))]
+struct AlignedJsonBuf {
+    data: [u8; JSON_BUF_SIZE],
+}
+
+static mut JSON_BUF: AlignedJsonBuf = AlignedJsonBuf { data: [0u8; JSON_BUF_SIZE] };
+
 
 // ---------------------------------------------------------------------------
 // Strings used in the JSON. Centralised here so the encoder and the tolerant
@@ -284,6 +290,7 @@ fn fav_location_from_key(s: &str) -> Option<SceneId> {
 // ---------------------------------------------------------------------------
 
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct EnvData {
     #[serde(default)] season_offset: u16,
     #[serde(default)] season: SStr,
@@ -357,6 +364,7 @@ struct ToyData {
 }
 
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct PlantRecord {
     #[serde(default)] id: u32,
     #[serde(default, rename = "type")]
@@ -388,6 +396,7 @@ struct MilestonesData {
 
 /// Wire-format for a single wifi AP entry: `{'b': ..., 's': ..., 'n': ...}`.
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct WifiEntryData {
     #[serde(default, rename = "b")]
     bssid: heapless::String<17>,
@@ -414,6 +423,7 @@ impl<'de> Deserialize<'de> for StubMap {
 }
 
 #[derive(Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct SaveData {
     #[serde(default)] v: u8,
     #[serde(default)] env: EnvData,
@@ -853,63 +863,80 @@ fn apply_wifi_list<const N: usize>(
 }
 
 // ---------------------------------------------------------------------------
-// Public API.
+// Публичный API: Загрузка, Сохранение, Периодический автосейв
 // ---------------------------------------------------------------------------
 
-/// True iff the storage layer holds at least one syntactically valid save.
 pub fn has_save() -> bool {
     storage::has_save()
 }
 
-/// Load the most recent save into `ctx`. Returns true on success.
 pub fn load(ctx: &mut GameContext) -> bool {
-    // SAFETY: single-threaded boot path; JSON_BUF is only touched here and in
-    // `save` below, never concurrently.
-    let buf = unsafe { &mut *core::ptr::addr_of_mut!(JSON_BUF) };
+    let buf = unsafe { &mut JSON_BUF.data };
+    buf.fill(0);
+
     let Some(len) = storage::read_latest(buf) else {
-        println!("[Save] storage::read_latest returned None, no save loaded");
+        println!("[Save] Новых записей сохранения не обнаружено.");
         return false;
     };
+
+    if len == 0 {
+        return false;
+    }
+
+    // Десериализуем JSON-строку из выровненного буфера в выровненную структуру SaveData
+    // Используем оригинальный парсер проекта (обычно serde_json_core или serde_json)
     match serde_json_core::from_slice::<SaveData>(&buf[..len]) {
-        Ok((data, consumed)) => {
+        Ok((data, _used)) => {
+            println!("[Save] Успешно прочитано {} байт JSON. Применяем к игре...", len);
             apply(&data, ctx);
-            ctx.last_save_time = Some(Instant::now());
-            println!("[Save] Loaded {} bytes ({} parsed)", len, consumed);
             true
         }
         Err(e) => {
-            println!("[Save] Parse failed ({} bytes): {:?}", len, e);
+            println!("[Save] Ошибка парсинга JSON: {:?}", e);
             false
         }
     }
 }
 
-/// Encode `ctx` to JSON and persist it. Returns true on success.
-pub fn save(ctx: &mut GameContext) -> bool {
+pub fn save(ctx: &GameContext) -> bool {
     let data = build(ctx);
-    // SAFETY: see `load`.
-    let buf = unsafe { &mut *core::ptr::addr_of_mut!(JSON_BUF) };
-    let len = match serde_json_core::to_slice(&data, buf) {
-        Ok(n) => n,
-        Err(_) => {
-            println!("[Save] Encode failed");
-            return false;
+    let buf = unsafe { &mut JSON_BUF.data };
+
+    match serde_json_core::to_slice(&data, buf) {
+        Ok(len) => {
+            println!("[Save] Запись сохранения во флеш ({} байт)...", len);
+            if storage::write_next(&buf[..len]) {
+                unsafe { LAST_SAVE = Some(Instant::now()); }
+                true
+            } else {
+                println!("[Save] Ошибка: Сбой записи в модуль хранения storage.");
+                false
+            }
         }
-    };
-    if !storage::write_next(&buf[..len]) {
-        return false;
+        Err(e) => {
+            println!("[Save] Ошибка сериализации структуры в JSON: {:?}", e);
+            false
+        }
     }
-    ctx.last_save_time = Some(Instant::now());
-    true
 }
 
-/// If `SAVE_INTERVAL` has elapsed since the last save, save now.
-pub fn save_if_needed(ctx: &mut GameContext) {
-    let due = match ctx.last_save_time {
+static mut LAST_SAVE: Option<Instant> = None;
+
+fn last_save_time() -> Option<Instant> {
+    unsafe { LAST_SAVE }
+}
+
+pub fn save_if_needed(ctx: &GameContext) {
+    let now = Instant::now();
+    let should_save = match last_save_time() {
+        Some(last) => now.duration_since(last) >= SAVE_INTERVAL,
         None => true,
-        Some(t) => Instant::now().duration_since_epoch() - t.duration_since_epoch() > SAVE_INTERVAL,
     };
-    if due {
-        save(ctx);
+
+    if should_save {
+        println!("[Save] Запуск запланированного автосохранения...");
+        if save(ctx) {
+            unsafe { LAST_SAVE = Some(now); }
+        }
     }
 }
