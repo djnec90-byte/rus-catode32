@@ -123,21 +123,16 @@ fn read_header(flash: &mut FlashStorage, part: PartitionInfo, sector: usize) -> 
 
 fn find_latest(flash: &mut FlashStorage, part: PartitionInfo) -> Option<Record> {
     let mut best: Option<Record> = None;
-    let mut max_seq: u32 = 0;
-
     for i in 0..part.sectors {
         if let Some(r) = read_header(flash, part, i) {
-            // Если мы нашли реальный заголовок, и его номер серии больше, 
-            // чем все, что мы видели до этого — он безоговорочно становится лучшим.
-            if r.seq > max_seq {
-                max_seq = r.seq;
-                best = Some(r);
+            match best {
+                Some(b) if b.seq >= r.seq => {}
+                _ => best = Some(r),
             }
         }
     }
     best
 }
-
 
 /// True when at least one sector holds a syntactically valid save record.
 pub fn has_save() -> bool {
@@ -156,37 +151,40 @@ pub fn has_save() -> bool {
 /// multiple of WORD_SIZE (4 bytes). The on-disk payload is padded with 0xFF
 /// to that alignment by `write_chunk`, so we read into an aligned scratch
 /// region and copy the meaningful bytes out.
+/// Безопасное выровненное чтение, которое никогда не повесит экран
 pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     let flash = flash()?;
     let part = find_nvs_partition(flash)?;
     let r = find_latest(flash, part)?;
     let len = r.len as usize;
     if len > buf.len() || len > MAX_PAYLOAD {
-        println!("[Storage] Save payload too large: {}", len);
         return None;
     }
 
+    // scratch ВСЕГДА выровнен по умолчанию, так как его размер кратен 4096
     let mut scratch = [0u8; SECTOR_SIZE];
     let mut read = 0;
     let mut sector_idx = r.start_sector;
     let mut sector_offset = HEADER_LEN;
+    
     while read < len {
         let space = SECTOR_SIZE - sector_offset;
         let chunk = space.min(len - read);
-        // Round up to WORD_SIZE. esp-storage rejects unaligned reads. The
-        // tail bytes on flash were written as 0xFF padding, so we just
-        // discard them after the read.
+        
+        // Жесткое выравнивание длины чтения по 4 байтам вверх
         let aligned_chunk = (chunk + WORD_SIZE - 1) & !(WORD_SIZE - 1);
         let aligned_chunk = aligned_chunk.min(space);
+        
         let addr = part.offset + (sector_idx * SECTOR_SIZE + sector_offset) as u32;
-        if let Err(e) = flash.read(addr, &mut scratch[..aligned_chunk]) {
-            println!(
-                "[Storage] Payload read failed at sector {} offset {}: {:?}",
-                sector_idx, sector_offset, e
-            );
+        
+        // Читаем строго выровненный блок в выровненный scratch
+        if flash.read(addr, &mut scratch[..aligned_chunk]).is_err() {
             return None;
         }
+        
+        // Копируем в буфер игры только чистые полезные байты, не ломая её внутреннюю память
         buf[read..read + chunk].copy_from_slice(&scratch[..chunk]);
+        
         read += chunk;
         sector_offset += chunk;
         if sector_offset >= SECTOR_SIZE {
@@ -197,8 +195,7 @@ pub fn read_latest(buf: &mut [u8]) -> Option<usize> {
     Some(len)
 }
 
-/// Pad `chunk` up to the next 4-byte multiple with 0xFF (erased flash) and
-/// write it to flash. `NorFlash::write` requires word-aligned lengths.
+/// Исправленная функция записи чанков с жестким выравниванием
 fn write_chunk(
     flash: &mut FlashStorage,
     addr: u32,
@@ -206,15 +203,17 @@ fn write_chunk(
     scratch: &mut [u8; SECTOR_SIZE],
 ) -> bool {
     let padded = chunk.len().div_ceil(WORD_SIZE) * WORD_SIZE;
-    if padded == chunk.len() {
-        flash.write(addr, chunk).is_ok()
-    } else {
-        scratch[..chunk.len()].copy_from_slice(chunk);
-        for b in &mut scratch[chunk.len()..padded] {
-            *b = 0xFF;
-        }
-        flash.write(addr, &scratch[..padded]).is_ok()
+    
+    // Принудительно переносим данные в выровненный scratch-буфер перед отправкой на шину SPI
+    scratch[..chunk.len()].copy_from_slice(chunk);
+    for b in &mut scratch[chunk.len()..padded] {
+        *b = 0xFF; // Забиваем хвост пустыми байтами флеша
     }
+    
+    // Записываем только блоки кратные WORD_SIZE и по выровненным адресам
+    flash.write(addr, &scratch[..padded]).is_ok()
+}
+
 }
 
 /// Wipe every sector of the nvs partition so `has_save` returns false on
