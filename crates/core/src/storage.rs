@@ -33,7 +33,7 @@ const WORD_SIZE: usize = 4;
 /// Cap on payload bytes per save. Sized so a save never consumes the entire
 /// partition: there's always at least one sector left between consecutive
 /// records, which gives us baseline wear leveling.
-pub const MAX_PAYLOAD: usize = SECTOR_SIZE * 5 - HEADER_LEN;
+pub const MAX_PAYLOAD: usize = SECTOR_SIZE * 4 - HEADER_LEN;
 
 #[cfg(not(feature = "desktop"))]
 mod firmware {
