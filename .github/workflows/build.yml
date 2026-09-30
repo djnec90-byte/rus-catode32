@@ -1,4 +1,4 @@
-name: Build ESP32-C3 Firmware Components
+name: Build ESP32-C3 Firmware
 
 on:
   workflow_dispatch:
@@ -14,34 +14,20 @@ jobs:
         with:
           targets: riscv32imc-unknown-none-elf
 
+      # Ставим официальную системную утилиту от Espressif через питон
       - name: Install esptool
         run: pip install esptool
 
-      # Собираем чистый ELF-файл игры под архитектуру ESP32-C3
       - name: Build Firmware for ESP32-C3
         run: cargo build --release -p catode32-firmware --no-default-features --features c3 --target riscv32imc-unknown-none-elf
 
-      # 1. Извлекаем чистый app.bin игры строго в аппаратном режиме DIO
-      - name: Convert ELF to Clean App BIN
+      # Сами очищаем файл от отладочной информации и превращаем его в правильный легкий .bin
+      - name: Convert ELF to Flash BIN
         run: |
-          esptool.py --chip esp32c3 elf2image --flash_mode dio --output app.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
+          esptool.py --chip esp32c3 elf2image --output firmware.bin target/riscv32imc-unknown-none-elf/release/catode32-firmware
 
-      # 2. Скачиваем официальный стабильный Bootloader (DIO) от разработчиков esp-hal
-      - name: Download Official Bootloader
-        run: |
-          curl -L -o bootloader.bin https://github.com
-
-      # 3. Скачиваем официальную таблицу разделов (NVS 24KB) от разработчиков esp-hal
-      - name: Download Official Partition Table
-        run: |
-          curl -L -o partitions.bin https://github.com
-
-      # 4. Упаковываем все 3 полученных файла в один архив
-      - name: Upload All Components Artifact
+      - name: Upload Firmware Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: catode32-esp32c3-separated-bins
-          path: |
-            app.bin
-            bootloader.bin
-            partitions.bin
+          name: catode32-esp32c3-firmware
+          path: firmware.bin
