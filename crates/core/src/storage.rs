@@ -112,27 +112,40 @@ fn read_header(flash: &mut FlashStorage, part: PartitionInfo, sector: usize) -> 
         return None;
     }
     if buf[..4] != MAGIC {
+        // Уберем лишний спам, выводим только если сектор пустой
         return None;
     }
+    
+    let seq = u32::from_le_bytes(buf[4..8].try_into().ok()?);
+    let len = u32::from_le_bytes(buf[8..12].try_into().ok()?);
+    crate::println!("[DEBUG_READ] Nashel zagolovok в sector {}, seq: {}, len: {}", sector, seq, len);
+    
     Some(Record {
         start_sector: sector,
-        seq: u32::from_le_bytes(buf[4..8].try_into().ok()?),
-        len: u32::from_le_bytes(buf[8..12].try_into().ok()?),
+        seq,
+        len,
     })
 }
 
 fn find_latest(flash: &mut FlashStorage, part: PartitionInfo) -> Option<Record> {
     let mut best: Option<Record> = None;
+    crate::println!("[DEBUG_READ] Vsego nvs sectorov na plate: {}", part.sectors);
     for i in 0..part.sectors {
         if let Some(r) = read_header(flash, part, i) {
             match best {
-                Some(b) if b.seq >= r.seq => {}
-                _ => best = Some(r),
+                Some(b) if b.seq >= r.seq => {
+                    crate::println!("[DEBUG_READ] Propuskaem sector {}, tak kak u nas est' seq {} >= {}", i, b.seq, r.seq);
+                }
+                _ => {
+                    crate::println!("[DEBUG_READ] Teper' luchshiy sector: {} (seq {})", i, r.seq);
+                    best = Some(r);
+                }
             }
         }
     }
     best
 }
+
 
 /// True when at least one sector holds a syntactically valid save record.
 pub fn has_save() -> bool {
