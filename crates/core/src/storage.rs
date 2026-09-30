@@ -364,6 +364,13 @@ pub fn write_next(payload: &[u8]) -> bool {
         return false;
     }
 
+    unsafe {
+        esp_hal::rom::Cache_Writeback_Addr(
+            part.offset + (start * SECTOR_SIZE) as u32,
+            (needed * SECTOR_SIZE) as u32,
+        );
+    }
+
     println!(
         "[Storage] Saved {} bytes spanning {} sector(s) starting at {} (seq {})",
         payload.len(),
