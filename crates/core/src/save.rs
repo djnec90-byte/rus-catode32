@@ -306,6 +306,7 @@ struct EnvData {
 }
 
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct FoodStockData {
     #[serde(default)] kibble: u8,
     #[serde(default)] cod: u8,
@@ -333,6 +334,7 @@ struct FoodStockData {
 }
 
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct PotsData {
     #[serde(default)] small: u8,
     #[serde(default)] medium: u8,
@@ -341,6 +343,7 @@ struct PotsData {
 }
 
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct SeedsData {
     #[serde(default)] cat_grass: u8,
     #[serde(default)] sunflower: u8,
@@ -352,12 +355,14 @@ struct SeedsData {
 }
 
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct ToolsData {
     #[serde(default)] watering_can: bool,
     #[serde(default)] spade: bool,
 }
 
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct ToyData {
     #[serde(default)] variant: SStr,
     #[serde(default)] durability: u8,
@@ -386,6 +391,7 @@ struct PlantRecord {
 }
 
 #[derive(Default, Serialize, Deserialize)]
+#[repr(C, align(4))]
 struct MilestonesData {
     #[serde(default)] fed: bool,
     #[serde(default)] groomed: bool,
@@ -409,6 +415,7 @@ struct WifiEntryData {
 /// Placeholder for the friends map (not yet implemented). Serialises as an
 /// empty JSON object; deserialise is a no-op accept-anything.
 #[derive(Default)]
+#[repr(C, align(4))]
 struct StubMap;
 impl Serialize for StubMap {
     fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
