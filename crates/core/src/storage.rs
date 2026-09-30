@@ -123,16 +123,21 @@ fn read_header(flash: &mut FlashStorage, part: PartitionInfo, sector: usize) -> 
 
 fn find_latest(flash: &mut FlashStorage, part: PartitionInfo) -> Option<Record> {
     let mut best: Option<Record> = None;
+    let mut max_seq: u32 = 0;
+
     for i in 0..part.sectors {
         if let Some(r) = read_header(flash, part, i) {
-            match best {
-                Some(b) if b.seq >= r.seq => {}
-                _ => best = Some(r),
+            // Если мы нашли реальный заголовок, и его номер серии больше, 
+            // чем все, что мы видели до этого — он безоговорочно становится лучшим.
+            if r.seq > max_seq {
+                max_seq = r.seq;
+                best = Some(r);
             }
         }
     }
     best
 }
+
 
 /// True when at least one sector holds a syntactically valid save record.
 pub fn has_save() -> bool {
