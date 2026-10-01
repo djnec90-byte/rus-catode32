@@ -13,7 +13,7 @@ use crate::{
     },
     context::{FavWeather, FoodItem, FoodKind, GameContext, MealEntry, ToyVariant, PET_NAME_MAX},
     input::{Button, Buttons},
-    pet_seed::{PetGender, Temperament},
+    pet_seed::{PetGender, StarSign, Temperament},
     render::{Renderer, SpriteOpts},
     scene::{Scene, SceneId},
     ui::keyboard::{Charset, OnScreenKeyboard},
@@ -28,8 +28,8 @@ const CHAR_W: i32 = 6;
 /// (128 - 16 - 3) / 6 ~= 18 chars.
 const FULL_CPL: usize = 18;
 
-const LINE_CAP: usize = 48;
-const LINES_CAP: usize = 160;
+const LINE_CAP: usize = 24;
+const LINES_CAP: usize = 96;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -40,12 +40,14 @@ enum State {
 pub struct PetInfoScene {
     state: State,
     keyboard: OnScreenKeyboard,
-    portrait_poses: Vec<PoseId, 128>, // Увеличим буфер поз на всякий случай
+    portrait_poses: Vec<PoseId, 64>,
     portrait: Option<PoseId>,
-    lines: Vec<String<LINE_CAP>, LINES_CAP>, // Теперь структура точно знает про новые лимиты
+    lines: Vec<String<LINE_CAP>, LINES_CAP>,
     scroll: usize,
     max_scroll: usize,
+    /// x offset for lines that sit beside the headshot.
     narrow_x: i32,
+    /// How many leading lines use `narrow_x`.
     narrow_lines: usize,
 }
 
@@ -64,7 +66,7 @@ impl PetInfoScene {
         }
     }
 
-    fn build_portrait_poses(out: &mut Vec<PoseId, 128>) {
+    fn build_portrait_poses(out: &mut Vec<PoseId, 64>) {
         out.clear();
         for &id in ALL_POSES {
             let name = id.name();
@@ -113,10 +115,10 @@ impl PetInfoScene {
         };
         let days = ctx.day_number;
         let temper = current_temperament(ctx);
-        let sign_lower: String<48> = match ctx.star_sign {
+        let sign_lower: String<24> = match ctx.star_sign {
             Some(s) => to_lower(s.label()),
             None => {
-                let mut q: String<48> = String::new();
+                let mut q: String<24> = String::new();
                 let _ = q.push('?');
                 q
             }
@@ -139,7 +141,7 @@ impl PetInfoScene {
         );
         push_blank(&mut self.lines);
 
-        let temper_lower: String<48> = to_lower(temper.label());
+        let temper_lower: String<24> = to_lower(temper.label());
         let mut intro2: String<64> = String::new();
         substitute(
             &mut intro2,
@@ -152,10 +154,10 @@ impl PetInfoScene {
         // Body paragraphs. Each label is translated then lowercased so it
         // reads naturally embedded in a sentence (e.g. "favorite meal is
         // kibble").
-        let meal: String<48> = to_lower(food_label(ctx.fav_meal));
-        let snack: String<48> = to_lower(food_label(ctx.fav_snack));
-        let toy: String<48> = to_lower(toy_label(ctx.fav_toy));
-        let room: String<48> = to_lower(location_label(ctx.fav_location));
+        let meal: String<24> = to_lower(food_label(ctx.fav_meal));
+        let snack: String<24> = to_lower(food_label(ctx.fav_snack));
+        let toy: String<24> = to_lower(toy_label(ctx.fav_toy));
+        let room: String<24> = to_lower(location_label(ctx.fav_location));
         let weather = weather_label(ctx.fav_weather);
 
         let mut buf: String<96> = String::new();
@@ -254,7 +256,7 @@ impl PetInfoScene {
 
         // Familiar location.
         if ctx.in_familiar_location {
-            let mut s: String<64> = String::new();
+            let mut s: String<32> = String::new();
             substitute(&mut s, t!("{she} feels at home here."), &[("she", she)]);
             wrap_full(&mut self.lines, s.as_str(), FULL_CPL);
             push_blank(&mut self.lines);
@@ -408,22 +410,37 @@ fn push_blank(lines: &mut Vec<String<LINE_CAP>, LINES_CAP>) {
 }
 
 /// Wrap text to `cpl` chars per line, hyphenating words that exceed it.
-/// Безопасная версия для кириллицы (Unicode) с контролем буфера LINE_CAP.
 fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize) {
-    // Теперь буфер 48 байт, можем смело ставить лимит до 22 символов для кириллицы
-    let max_chars = cpl.min(22).max(1); 
+    let cpl = cpl.min(LINE_CAP);
     let mut current: String<LINE_CAP> = String::new();
     
-    for word in text.split(' ') {
-        if word.is_empty() {
-            continue;
+    for raw_word in text.split(' ') {
+        let mut word = raw_word;
+        
+        while word.chars().count() > cpl - 1 && cpl > 1 {
+            if !current.is_empty() {
+                let _ = out.push(current.clone());
+                current.clear();
+            }
+            let mut frag: String<LINE_CAP> = String::new();
+            for c in word.chars().take(cpl - 1) {
+                let _ = frag.push(c);
+            }
+            let _ = frag.push('-');
+            let _ = out.push(frag);
+            
+            if let Some((idx, _)) = word.char_indices().nth(cpl - 1) {
+                word = &word[idx..];
+            } else {
+                word = "";
+            }
         }
         
-        let current_len = current.chars().count();
-        let word_len = word.chars().count();
+        let needs_space = !current.is_empty();
+        let extra = if needs_space { 1 } else { 0 } + word.chars().count();
         
-        if current_len + (if current_len > 0 { 1 } else { 0 }) + word_len <= max_chars {
-            if !current.is_empty() {
+        if current.chars().count() + extra <= cpl {
+            if needs_space {
                 let _ = current.push(' ');
             }
             let _ = current.push_str(word);
@@ -432,31 +449,14 @@ fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize)
                 let _ = out.push(current.clone());
                 current.clear();
             }
-            
-            let mut word_chars = word.chars().peekable();
-            while word_chars.peek().is_some() {
-                while current.chars().count() < max_chars - 1 {
-                    if let Some(c) = word_chars.next() {
-                        let _ = current.push(c);
-                    } else {
-                        break;
-                    }
-                }
-                
-                if word_chars.peek().is_some() {
-                    let _ = current.push('-');
-                    let _ = out.push(current.clone());
-                    current.clear();
-                }
-            }
+            let _ = current.push_str(word);
         }
     }
-    
-    if !current.is_empty() {
-        let _ = out.push(current);
-    }
+    let _ = out.push(current);
 }
 
+/// Same as `wrap_full` but the first `narrow_lines` lines use `narrow_cpl`
+/// while subsequent lines use `full_cpl`.
 fn wrap_intro(
     out: &mut Vec<String<LINE_CAP>, LINES_CAP>,
     text: &str,
@@ -466,24 +466,37 @@ fn wrap_intro(
 ) {
     let initial_count = out.len();
     let mut current: String<LINE_CAP> = String::new();
+    let mut cpl = narrow_cpl.min(LINE_CAP);
 
-    for word in text.split(' ') {
-        if word.is_empty() {
-            continue;
+    for raw_word in text.split(' ') {
+        let mut word = raw_word;
+        // Recompute column width if we've crossed the narrow boundary.
+        if out.len() - initial_count >= narrow_lines {
+            cpl = full_cpl.min(LINE_CAP);
         }
-
-        let mut cpl = if out.len() - initial_count < narrow_lines {
-            narrow_cpl
-        } else {
-            full_cpl
-        };
-        let max_chars = cpl.min(22).max(1);
-
-        let current_len = current.chars().count();
-        let word_len = word.chars().count();
-
-        if current_len + (if current_len > 0 { 1 } else { 0 }) + word_len <= max_chars {
+        while word.len() > cpl - 1 && cpl > 1 {
             if !current.is_empty() {
+                let _ = out.push(current.clone());
+                current.clear();
+                if out.len() - initial_count >= narrow_lines {
+                    cpl = full_cpl.min(LINE_CAP);
+                }
+            }
+            let mut frag: String<LINE_CAP> = String::new();
+            for c in word.chars().take(cpl - 1) {
+                let _ = frag.push(c);
+            }
+            let _ = frag.push('-');
+            let _ = out.push(frag);
+            word = &word[cpl - 1..];
+            if out.len() - initial_count >= narrow_lines {
+                cpl = full_cpl.min(LINE_CAP);
+            }
+        }
+        let needs_space = !current.is_empty();
+        let extra = if needs_space { 1 } else { 0 } + word.len();
+        if current.len() + extra <= cpl {
+            if needs_space {
                 let _ = current.push(' ');
             }
             let _ = current.push_str(word);
@@ -491,47 +504,17 @@ fn wrap_intro(
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
-                
-                cpl = if out.len() - initial_count < narrow_lines {
-                    narrow_cpl
-                } else {
-                    full_cpl
-                };
-            }
-            let max_chars = cpl.min(22).max(1);
-
-            let mut word_chars = word.chars().peekable();
-            while word_chars.peek().is_some() {
-                while current.chars().count() < max_chars - 1 {
-                    if let Some(c) = word_chars.next() {
-                        let _ = current.push(c);
-                    } else {
-                        break;
-                    }
-                }
-
-                if word_chars.peek().is_some() {
-                    let _ = current.push('-');
-                    let _ = out.push(current.clone());
-                    current.clear();
-                    
-                    let next_cpl = if out.len() - initial_count < narrow_lines {
-                        narrow_cpl
-                    } else {
-                        full_cpl
-                    };
-                    let _max_chars = next_cpl.min(22).max(1);
+                if out.len() - initial_count >= narrow_lines {
+                    cpl = full_cpl.min(LINE_CAP);
                 }
             }
+            let _ = current.push_str(word);
         }
     }
-
     if !current.is_empty() {
         let _ = out.push(current);
     }
 }
-
-
 
 /// Substitute `{s}` (subject pronoun) and `{h}` (possessive pronoun)
 /// placeholders in mood-check templates.
@@ -540,22 +523,20 @@ fn expand_template(out: &mut String<64>, template: &str, she: &str, her: &str) {
     while let Some(idx) = remaining.find('{') {
         let (head, tail) = remaining.split_at(idx);
         let _ = out.push_str(head);
-        
         if tail.starts_with("{s}") {
             let _ = out.push_str(she);
-            remaining = if tail.len() >= 3 { &tail[3..] } else { "" };
+            remaining = &tail[3..];
         } else if tail.starts_with("{h}") {
             let _ = out.push_str(her);
-            remaining = if tail.len() >= 3 { &tail[3..] } else { "" };
+            remaining = &tail[3..];
         } else {
-            // Безопасный пропуск неизвестного или сломанного токена
+            // Unknown placeholder, pass through literally.
             let _ = out.push('{');
-            remaining = if !tail.is_empty() { &tail[1..] } else { "" };
+            remaining = &tail[1..];
         }
     }
     let _ = out.push_str(remaining);
 }
-
 
 use crate::i18n::{substitute, to_lower};
 
