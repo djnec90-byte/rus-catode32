@@ -40,14 +40,12 @@ enum State {
 pub struct PetInfoScene {
     state: State,
     keyboard: OnScreenKeyboard,
-    portrait_poses: Vec<PoseId, 64>,
+    portrait_poses: Vec<PoseId, 128>, // Увеличим буфер поз на всякий случай
     portrait: Option<PoseId>,
-    lines: Vec<String<LINE_CAP>, LINES_CAP>,
+    lines: Vec<String<LINE_CAP>, LINES_CAP>, // Теперь структура точно знает про новые лимиты
     scroll: usize,
     max_scroll: usize,
-    /// x offset for lines that sit beside the headshot.
     narrow_x: i32,
-    /// How many leading lines use `narrow_x`.
     narrow_lines: usize,
 }
 
@@ -542,20 +540,22 @@ fn expand_template(out: &mut String<64>, template: &str, she: &str, her: &str) {
     while let Some(idx) = remaining.find('{') {
         let (head, tail) = remaining.split_at(idx);
         let _ = out.push_str(head);
+        
         if tail.starts_with("{s}") {
             let _ = out.push_str(she);
-            remaining = &tail[3..];
+            remaining = if tail.len() >= 3 { &tail[3..] } else { "" };
         } else if tail.starts_with("{h}") {
             let _ = out.push_str(her);
-            remaining = &tail[3..];
+            remaining = if tail.len() >= 3 { &tail[3..] } else { "" };
         } else {
-            // Unknown placeholder, pass through literally.
+            // Безопасный пропуск неизвестного или сломанного токена
             let _ = out.push('{');
-            remaining = &tail[1..];
+            remaining = if !tail.is_empty() { &tail[1..] } else { "" };
         }
     }
     let _ = out.push_str(remaining);
 }
+
 
 use crate::i18n::{substitute, to_lower};
 
