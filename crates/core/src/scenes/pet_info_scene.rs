@@ -28,8 +28,8 @@ const CHAR_W: i32 = 6;
 /// (128 - 16 - 3) / 6 ~= 18 chars.
 const FULL_CPL: usize = 18;
 
-const LINE_CAP: usize = 24;
-const LINES_CAP: usize = 96;
+const LINE_CAP: usize = 48;
+const LINES_CAP: usize = 160;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -115,10 +115,10 @@ impl PetInfoScene {
         };
         let days = ctx.day_number;
         let temper = current_temperament(ctx);
-        let sign_lower: String<24> = match ctx.star_sign {
+        let sign_lower: String<48> = match ctx.star_sign {
             Some(s) => to_lower(s.label()),
             None => {
-                let mut q: String<24> = String::new();
+                let mut q: String<48> = String::new();
                 let _ = q.push('?');
                 q
             }
@@ -141,7 +141,7 @@ impl PetInfoScene {
         );
         push_blank(&mut self.lines);
 
-        let temper_lower: String<24> = to_lower(temper.label());
+        let temper_lower: String<48> = to_lower(temper.label());
         let mut intro2: String<64> = String::new();
         substitute(
             &mut intro2,
@@ -154,10 +154,10 @@ impl PetInfoScene {
         // Body paragraphs. Each label is translated then lowercased so it
         // reads naturally embedded in a sentence (e.g. "favorite meal is
         // kibble").
-        let meal: String<24> = to_lower(food_label(ctx.fav_meal));
-        let snack: String<24> = to_lower(food_label(ctx.fav_snack));
-        let toy: String<24> = to_lower(toy_label(ctx.fav_toy));
-        let room: String<24> = to_lower(location_label(ctx.fav_location));
+        let meal: String<48> = to_lower(food_label(ctx.fav_meal));
+        let snack: String<48> = to_lower(food_label(ctx.fav_snack));
+        let toy: String<48> = to_lower(toy_label(ctx.fav_toy));
+        let room: String<48> = to_lower(location_label(ctx.fav_location));
         let weather = weather_label(ctx.fav_weather);
 
         let mut buf: String<96> = String::new();
@@ -256,7 +256,7 @@ impl PetInfoScene {
 
         // Familiar location.
         if ctx.in_familiar_location {
-            let mut s: String<32> = String::new();
+            let mut s: String<64> = String::new();
             substitute(&mut s, t!("{she} feels at home here."), &[("she", she)]);
             wrap_full(&mut self.lines, s.as_str(), FULL_CPL);
             push_blank(&mut self.lines);
@@ -412,9 +412,8 @@ fn push_blank(lines: &mut Vec<String<LINE_CAP>, LINES_CAP>) {
 /// Wrap text to `cpl` chars per line, hyphenating words that exceed it.
 /// Безопасная версия для кириллицы (Unicode) с контролем буфера LINE_CAP.
 fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize) {
-    // В UTF-8 кириллица занимает 2 байта на символ. Буфер LINE_CAP = 24 байта.
-    // Максимум 11 символов в строке, иначе heapless::String переполнится и заблокирует цикл.
-    let max_chars = cpl.min(11).max(1); 
+    // Теперь буфер 48 байт, можем смело ставить лимит до 22 символов для кириллицы
+    let max_chars = cpl.min(22).max(1); 
     let mut current: String<LINE_CAP> = String::new();
     
     for word in text.split(' ') {
@@ -425,20 +424,17 @@ fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize)
         let current_len = current.chars().count();
         let word_len = word.chars().count();
         
-        // Если слово целиком помещается в текущую строку
         if current_len + (if current_len > 0 { 1 } else { 0 }) + word_len <= max_chars {
             if !current.is_empty() {
                 let _ = current.push(' ');
             }
             let _ = current.push_str(word);
         } else {
-            // Если не помещается, сохраняем текущую строку и очищаем буфер
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
             }
             
-            // Если само слово длиннее лимита строки, разбиваем его посимвольно
             let mut word_chars = word.chars().peekable();
             while word_chars.peek().is_some() {
                 while current.chars().count() < max_chars - 1 {
@@ -449,7 +445,6 @@ fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize)
                     }
                 }
                 
-                // Если в слове еще остались буквы, ставим дефис и переносим
                 if word_chars.peek().is_some() {
                     let _ = current.push('-');
                     let _ = out.push(current.clone());
@@ -464,9 +459,6 @@ fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize)
     }
 }
 
-
-/// Same as `wrap_full` but the first `narrow_lines` lines use `narrow_cpl`
-/// while subsequent lines use `full_cpl`. Безопасно для кириллицы.
 fn wrap_intro(
     out: &mut Vec<String<LINE_CAP>, LINES_CAP>,
     text: &str,
@@ -482,13 +474,12 @@ fn wrap_intro(
             continue;
         }
 
-        // Динамически определяем лимит в зависимости от того, прошли ли мы аватарку
         let mut cpl = if out.len() - initial_count < narrow_lines {
             narrow_cpl
         } else {
             full_cpl
         };
-        let max_chars = cpl.min(11).max(1);
+        let max_chars = cpl.min(22).max(1);
 
         let current_len = current.chars().count();
         let word_len = word.chars().count();
@@ -503,14 +494,13 @@ fn wrap_intro(
                 let _ = out.push(current.clone());
                 current.clear();
                 
-                // Пересчитываем лимит для новой строки
                 cpl = if out.len() - initial_count < narrow_lines {
                     narrow_cpl
                 } else {
                     full_cpl
                 };
             }
-            let max_chars = cpl.min(11).max(1);
+            let max_chars = cpl.min(22).max(1);
 
             let mut word_chars = word.chars().peekable();
             while word_chars.peek().is_some() {
@@ -532,7 +522,7 @@ fn wrap_intro(
                     } else {
                         full_cpl
                     };
-                    let _max_chars = next_cpl.min(11).max(1);
+                    let _max_chars = next_cpl.min(22).max(1);
                 }
             }
         }
@@ -542,6 +532,7 @@ fn wrap_intro(
         let _ = out.push(current);
     }
 }
+
 
 
 /// Substitute `{s}` (subject pronoun) and `{h}` (possessive pronoun)
