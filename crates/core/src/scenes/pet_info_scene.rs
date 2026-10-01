@@ -410,53 +410,63 @@ fn push_blank(lines: &mut Vec<String<LINE_CAP>, LINES_CAP>) {
 }
 
 /// Wrap text to `cpl` chars per line, hyphenating words that exceed it.
+/// Безопасная версия для кириллицы (Unicode) с контролем буфера LINE_CAP.
 fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize) {
-    let cpl = cpl.min(LINE_CAP);
+    // В UTF-8 кириллица занимает 2 байта на символ. Буфер LINE_CAP = 24 байта.
+    // Максимум 11 символов в строке, иначе heapless::String переполнится и заблокирует цикл.
+    let max_chars = cpl.min(11).max(1); 
     let mut current: String<LINE_CAP> = String::new();
     
-    for raw_word in text.split(' ') {
-        let mut word = raw_word;
-        
-        while word.chars().count() > cpl - 1 && cpl > 1 {
-            if !current.is_empty() {
-                let _ = out.push(current.clone());
-                current.clear();
-            }
-            let mut frag: String<LINE_CAP> = String::new();
-            for c in word.chars().take(cpl - 1) {
-                let _ = frag.push(c);
-            }
-            let _ = frag.push('-');
-            let _ = out.push(frag);
-            
-            if let Some((idx, _)) = word.char_indices().nth(cpl - 1) {
-                word = &word[idx..];
-            } else {
-                word = "";
-            }
+    for word in text.split(' ') {
+        if word.is_empty() {
+            continue;
         }
         
-        let needs_space = !current.is_empty();
-        let extra = if needs_space { 1 } else { 0 } + word.chars().count();
+        let current_len = current.chars().count();
+        let word_len = word.chars().count();
         
-        if current.chars().count() + extra <= cpl {
-            if needs_space {
+        // Если слово целиком помещается в текущую строку
+        if current_len + (if current_len > 0 { 1 } else { 0 }) + word_len <= max_chars {
+            if !current.is_empty() {
                 let _ = current.push(' ');
             }
             let _ = current.push_str(word);
         } else {
+            // Если не помещается, сохраняем текущую строку и очищаем буфер
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
             }
-            let _ = current.push_str(word);
+            
+            // Если само слово длиннее лимита строки, разбиваем его посимвольно
+            let mut word_chars = word.chars().peekable();
+            while word_chars.peek().is_some() {
+                while current.chars().count() < max_chars - 1 {
+                    if let Some(c) = word_chars.next() {
+                        let _ = current.push(c);
+                    } else {
+                        break;
+                    }
+                }
+                
+                // Если в слове еще остались буквы, ставим дефис и переносим
+                if word_chars.peek().is_some() {
+                    let _ = current.push('-');
+                    let _ = out.push(current.clone());
+                    current.clear();
+                }
+            }
         }
     }
-    let _ = out.push(current);
+    
+    if !current.is_empty() {
+        let _ = out.push(current);
+    }
 }
 
+
 /// Same as `wrap_full` but the first `narrow_lines` lines use `narrow_cpl`
-/// while subsequent lines use `full_cpl`.
+/// while subsequent lines use `full_cpl`. Безопасно для кириллицы.
 fn wrap_intro(
     out: &mut Vec<String<LINE_CAP>, LINES_CAP>,
     text: &str,
@@ -466,37 +476,25 @@ fn wrap_intro(
 ) {
     let initial_count = out.len();
     let mut current: String<LINE_CAP> = String::new();
-    let mut cpl = narrow_cpl.min(LINE_CAP);
 
-    for raw_word in text.split(' ') {
-        let mut word = raw_word;
-        // Recompute column width if we've crossed the narrow boundary.
-        if out.len() - initial_count >= narrow_lines {
-            cpl = full_cpl.min(LINE_CAP);
+    for word in text.split(' ') {
+        if word.is_empty() {
+            continue;
         }
-        while word.len() > cpl - 1 && cpl > 1 {
+
+        // Динамически определяем лимит в зависимости от того, прошли ли мы аватарку
+        let mut cpl = if out.len() - initial_count < narrow_lines {
+            narrow_cpl
+        } else {
+            full_cpl
+        };
+        let max_chars = cpl.min(11).max(1);
+
+        let current_len = current.chars().count();
+        let word_len = word.chars().count();
+
+        if current_len + (if current_len > 0 { 1 } else { 0 }) + word_len <= max_chars {
             if !current.is_empty() {
-                let _ = out.push(current.clone());
-                current.clear();
-                if out.len() - initial_count >= narrow_lines {
-                    cpl = full_cpl.min(LINE_CAP);
-                }
-            }
-            let mut frag: String<LINE_CAP> = String::new();
-            for c in word.chars().take(cpl - 1) {
-                let _ = frag.push(c);
-            }
-            let _ = frag.push('-');
-            let _ = out.push(frag);
-            word = &word[cpl - 1..];
-            if out.len() - initial_count >= narrow_lines {
-                cpl = full_cpl.min(LINE_CAP);
-            }
-        }
-        let needs_space = !current.is_empty();
-        let extra = if needs_space { 1 } else { 0 } + word.len();
-        if current.len() + extra <= cpl {
-            if needs_space {
                 let _ = current.push(' ');
             }
             let _ = current.push_str(word);
@@ -504,17 +502,47 @@ fn wrap_intro(
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
-                if out.len() - initial_count >= narrow_lines {
-                    cpl = full_cpl.min(LINE_CAP);
+                
+                // Пересчитываем лимит для новой строки
+                cpl = if out.len() - initial_count < narrow_lines {
+                    narrow_cpl
+                } else {
+                    full_cpl
+                };
+            }
+            let max_chars = cpl.min(11).max(1);
+
+            let mut word_chars = word.chars().peekable();
+            while word_chars.peek().is_some() {
+                while current.chars().count() < max_chars - 1 {
+                    if let Some(c) = word_chars.next() {
+                        let _ = current.push(c);
+                    } else {
+                        break;
+                    }
+                }
+
+                if word_chars.peek().is_some() {
+                    let _ = current.push('-');
+                    let _ = out.push(current.clone());
+                    current.clear();
+                    
+                    let next_cpl = if out.len() - initial_count < narrow_lines {
+                        narrow_cpl
+                    } else {
+                        full_cpl
+                    };
+                    let _max_chars = next_cpl.min(11).max(1);
                 }
             }
-            let _ = current.push_str(word);
         }
     }
+
     if !current.is_empty() {
         let _ = out.push(current);
     }
 }
+
 
 /// Substitute `{s}` (subject pronoun) and `{h}` (possessive pronoun)
 /// placeholders in mood-check templates.
