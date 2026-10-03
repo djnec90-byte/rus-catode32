@@ -162,38 +162,41 @@ impl DebugPlantsScene {
 
     fn draw_labels(&self, renderer: &mut Renderer) {
         let stage_label = STAGES[self.stage_idx].label();
+        
         let health_label = match HEALTHS[self.health_idx] {
-            Health::Healthy => "healthy",
-            Health::Wilted => "wilted",
-            Health::Dead => "dead",
+            Health::Healthy => t!("healthy"),
+            Health::Wilted => t!("wilted"),
+            Health::Dead => t!("dead"),
         };
         let seed_label = match SEEDS[self.plant_idx] {
-            SeedKind::CatGrass => "cat_grass",
-            SeedKind::Freesia => "freesia",
-            SeedKind::Rose => "rose",
-            SeedKind::Sunflower => "sunflower",
+            SeedKind::CatGrass => t!("Cat Grass"),
+            SeedKind::Freesia => t!("Freesia"),
+            SeedKind::Rose => t!("Rose"),
+            SeedKind::Sunflower => t!("Sunflower"),
         };
         let pot_label = match POTS[self.pot_idx] {
-            PotKind::Small => "small",
-            PotKind::Medium => "medium",
-            PotKind::Large => "large",
-            PotKind::Planter => "planter",
-            PotKind::Ground => "ground",
+            PotKind::Small => t!("Small"),
+            PotKind::Medium => t!("Medium"),
+            PotKind::Large => t!("Large"),
+            PotKind::Planter => t!("Planter"),
+            PotKind::Ground => t!("Ground"),
         };
-        // Render two rows with simple ASCII concat (fits 128px easily).
+
         use heapless::String;
-        let mut row1: String<32> = String::new();
+        // Расширяем буферы строк до 96 байт под массивную кириллицу
+        let mut row1: String<96> = String::new();
         let _ = row1.push_str(seed_label);
         let _ = row1.push_str(" ");
         let _ = row1.push_str(pot_label);
         renderer.draw_text(row1.as_str(), Point::new(1, 0));
 
-        let mut row2: String<32> = String::new();
+        let mut row2: String<96> = String::new();
         let _ = row2.push_str(stage_label);
         let _ = row2.push_str(" ");
         let _ = row2.push_str(health_label);
         renderer.draw_text(row2.as_str(), Point::new(1, 8));
     }
+
 
     fn apply_menu_action(&mut self, action: DebugPlantsAction) {
         match action {
