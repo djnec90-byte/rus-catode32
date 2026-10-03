@@ -411,33 +411,31 @@ fn push_blank(lines: &mut Vec<String<LINE_CAP>, LINES_CAP>) {
 
 /// Wrap text to `cpl` chars per line, hyphenating words that exceed it.
 fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize) {
-    // Ограничиваем cpl не по байтам (LINE_CAP), а даем запас, так как LINE_CAP теперь больше.
     let cpl = cpl.min(24); 
     let mut current: String<LINE_CAP> = String::new();
     
     for raw_word in text.split(' ') {
         let mut word = raw_word;
         
-        // Считаем длину слова в РЕАЛЬНЫХ СИМВОЛАХ (буквах), а не в байтах
         while word.chars().count() > cpl - 1 && cpl > 1 {
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
             }
-            let mut frag: String<24> = String::new();
+            
+            // Собираем фрагмент сразу как пустую строку нужной емкости LINE_CAP
+            let mut frag: String<LINE_CAP> = String::new();
             for c in word.chars().take(cpl - 1) {
                 let _ = frag.push(c);
             }
             let _ = frag.push('-');
             let _ = out.push(frag);
             
-            // Безопасно отрезаем остаток слова по границам Unicode-символов
             let char_byte_offset: usize = word.chars().take(cpl - 1).map(|c| c.len_utf8()).sum();
             word = &word[char_byte_offset..];
         }
         
         let needs_space = !current.is_empty();
-        // Считаем длину в буквах для проверки лимита строки
         let current_char_count = current.chars().count();
         let word_char_count = word.chars().count();
         let extra = if needs_space { 1 } else { 0 } + word_char_count;
@@ -485,14 +483,15 @@ fn wrap_intro(
                     cpl = full_cpl.min(24);
                 }
             }
-            let mut frag: String<24> = String::new();
+            
+            // Собираем фрагмент сразу как пустую строку нужной емкости LINE_CAP
+            let mut frag: String<LINE_CAP> = String::new();
             for c in word.chars().take(cpl - 1) {
                 let _ = frag.push(c);
             }
             let _ = frag.push('-');
             let _ = out.push(frag);
             
-            // Безопасно отрезаем остаток слова по границам Unicode-символов
             let char_byte_offset: usize = word.chars().take(cpl - 1).map(|c| c.len_utf8()).sum();
             word = &word[char_byte_offset..];
             
@@ -526,7 +525,6 @@ fn wrap_intro(
         let _ = out.push(current);
     }
 }
-
 
 /// Substitute `{s}` (subject pronoun) and `{h}` (possessive pronoun)
 /// placeholders in mood-check templates.
