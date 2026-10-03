@@ -8,7 +8,8 @@ use crate::{
 
 const LINE_HEIGHT: i32 = 10;
 const CHAR_WIDTH: i32 = 6;
-const MAX_LINE_CHARS: usize = 32;
+// Увеличиваем лимит байт в 2 раза, чтобы вмещать 32 русских символа (32 * 2 = 64)
+const MAX_LINE_CHARS: usize = 64;
 const MAX_LINES: usize = 16;
 
 pub struct Popup {
@@ -46,7 +47,14 @@ impl Popup {
         } else {
             for line in text.split('\n') {
                 let mut s: String<MAX_LINE_CHARS> = String::new();
-                let _ = s.push_str(&line[..line.len().min(MAX_LINE_CHARS)]);
+                // Безопасное ограничение длины строки по Unicode-символам
+                for c in line.chars() {
+                    if s.len() + c.len_utf8() <= MAX_LINE_CHARS {
+                        let _ = s.push(c);
+                    } else {
+                        break;
+                    }
+                }
                 let _ = self.lines.push(s);
             }
         }
@@ -89,7 +97,9 @@ impl Popup {
         let end = (self.scroll_offset + vis).min(self.lines.len());
         for (i, line) in self.lines[self.scroll_offset..end].iter().enumerate() {
             let line_x = if self.center {
-                self.x + (self.width as i32 - line.len() as i32 * CHAR_WIDTH) / 2
+                // Считаем РЕАЛЬНЫЕ буквы через chars().count(), чтобы центрирование не плыло
+                let char_count = line.chars().count() as i32;
+                self.x + (self.width as i32 - char_count * CHAR_WIDTH) / 2
             } else {
                 self.x + self.padding
             };
@@ -121,16 +131,20 @@ impl Popup {
     }
 
     fn wrap_text(&mut self, text: &str) {
-        let chars_per_line =
-            ((self.width as i32 - self.padding * 2) / CHAR_WIDTH).max(1) as usize;
-        let chars_per_line = chars_per_line.min(MAX_LINE_CHARS);
+        // Вычисляем лимит символов на основе ширины экрана
+        let chars_per_line = ((self.width as i32 - self.padding * 2) / CHAR_WIDTH).max(1) as usize;
+        // Максимальное количество букв, которое физически влезет в 64 байта кириллицы — около 32
+        let chars_per_line = chars_per_line.min(32);
 
         for paragraph in text.split('\n') {
             let mut current: String<MAX_LINE_CHARS> = String::new();
             for word in paragraph.split(' ') {
+                let word_chars = word.chars().count();
+                let current_chars = current.chars().count();
                 let needs_space = !current.is_empty();
-                let extra = (if needs_space { 1 } else { 0 }) + word.len();
-                if current.len() + extra <= chars_per_line {
+                let extra = (if needs_space { 1 } else { 0 }) + word_chars;
+                
+                if current_chars + extra <= chars_per_line {
                     if needs_space {
                         let _ = current.push(' ');
                     }
@@ -140,7 +154,15 @@ impl Popup {
                         let _ = self.lines.push(current.clone());
                         current.clear();
                     }
-                    let _ = current.push_str(&word[..word.len().min(chars_per_line)]);
+                    
+                    // Безопасная Unicode-обрезка слишком длинного слова
+                    for c in word.chars().take(chars_per_line) {
+                        if current.len() + c.len_utf8() <= MAX_LINE_CHARS {
+                            let _ = current.push(c);
+                        } else {
+                            break;
+                        }
+                    }
                 }
             }
             let _ = self.lines.push(current);
