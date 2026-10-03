@@ -28,8 +28,8 @@ const CHAR_W: i32 = 6;
 /// (128 - 16 - 3) / 6 ~= 18 chars.
 const FULL_CPL: usize = 18;
 
-const LINE_CAP: usize = 24;
-const LINES_CAP: usize = 96;
+const LINE_CAP: usize = 64;
+const LINES_CAP: usize = 32;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -126,7 +126,7 @@ impl PetInfoScene {
 
         let mut days_buf: String<8> = String::new();
         let _ = write!(&mut days_buf, "{}", days);
-        let mut intro1: String<96> = String::new();
+        let mut intro1: String<256> = String::new();
         substitute(
             &mut intro1,
             t!("{name} is a {days} day old {gnoun}."),
@@ -142,7 +142,7 @@ impl PetInfoScene {
         push_blank(&mut self.lines);
 
         let temper_lower: String<24> = to_lower(temper.label());
-        let mut intro2: String<64> = String::new();
+        let mut intro2: String<128> = String::new();
         substitute(
             &mut intro2,
             t!("{she} is a {temper} {sign}."),
@@ -160,7 +160,7 @@ impl PetInfoScene {
         let room: String<24> = to_lower(location_label(ctx.fav_location));
         let weather = weather_label(ctx.fav_weather);
 
-        let mut buf: String<96> = String::new();
+        let mut buf: String<256> = String::new();
 
         substitute(
             &mut buf,
@@ -225,14 +225,14 @@ impl PetInfoScene {
                 if any_mood {
                     push_blank(&mut self.lines);
                 }
-                let mut sentence: String<64> = String::new();
+                let mut sentence: String<192> = String::new();
                 expand_template(&mut sentence, template, she, her.as_str());
                 wrap_full(&mut self.lines, sentence.as_str(), FULL_CPL);
                 any_mood = true;
             }
         }
         if !any_mood {
-            let mut sentence: String<64> = String::new();
+            let mut sentence: String<192> = String::new();
             substitute(
                 &mut sentence,
                 t!("It seems like {she_l}'s feeling pretty great at the moment!"),
@@ -244,7 +244,7 @@ impl PetInfoScene {
 
         // Meal variety: 4+ of last 5 meals are the same kind.
         if recent_meal_dominance(ctx) >= 4 {
-            let mut s: String<64> = String::new();
+            let mut s: String<192> = String::new();
             substitute(
                 &mut s,
                 t!("{she} wishes {she_l} had more variety in {her} meals."),
@@ -411,28 +411,36 @@ fn push_blank(lines: &mut Vec<String<LINE_CAP>, LINES_CAP>) {
 
 /// Wrap text to `cpl` chars per line, hyphenating words that exceed it.
 fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize) {
-    let cpl = cpl.min(LINE_CAP);
+    let cpl = cpl.min(24); 
     let mut current: String<LINE_CAP> = String::new();
+    
     for raw_word in text.split(' ') {
         let mut word = raw_word;
-        // Hyphenation: append fragments before letting the leftover fall
-        // through to the normal append path.
-        while word.len() > cpl - 1 && cpl > 1 {
+        
+        while word.chars().count() > cpl - 1 && cpl > 1 {
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
             }
+            
+            // Собираем фрагмент сразу как пустую строку нужной емкости LINE_CAP
             let mut frag: String<LINE_CAP> = String::new();
             for c in word.chars().take(cpl - 1) {
                 let _ = frag.push(c);
             }
             let _ = frag.push('-');
             let _ = out.push(frag);
-            word = &word[cpl - 1..];
+            
+            let char_byte_offset: usize = word.chars().take(cpl - 1).map(|c| c.len_utf8()).sum();
+            word = &word[char_byte_offset..];
         }
+        
         let needs_space = !current.is_empty();
-        let extra = if needs_space { 1 } else { 0 } + word.len();
-        if current.len() + extra <= cpl {
+        let current_char_count = current.chars().count();
+        let word_char_count = word.chars().count();
+        let extra = if needs_space { 1 } else { 0 } + word_char_count;
+        
+        if current_char_count + extra <= cpl {
             if needs_space {
                 let _ = current.push(' ');
             }
@@ -459,36 +467,45 @@ fn wrap_intro(
 ) {
     let initial_count = out.len();
     let mut current: String<LINE_CAP> = String::new();
-    let mut cpl = narrow_cpl.min(LINE_CAP);
+    let mut cpl = narrow_cpl.min(24);
 
     for raw_word in text.split(' ') {
         let mut word = raw_word;
-        // Recompute column width if we've crossed the narrow boundary.
         if out.len() - initial_count >= narrow_lines {
-            cpl = full_cpl.min(LINE_CAP);
+            cpl = full_cpl.min(24);
         }
-        while word.len() > cpl - 1 && cpl > 1 {
+        
+        while word.chars().count() > cpl - 1 && cpl > 1 {
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
                 if out.len() - initial_count >= narrow_lines {
-                    cpl = full_cpl.min(LINE_CAP);
+                    cpl = full_cpl.min(24);
                 }
             }
+            
+            // Собираем фрагмент сразу как пустую строку нужной емкости LINE_CAP
             let mut frag: String<LINE_CAP> = String::new();
             for c in word.chars().take(cpl - 1) {
                 let _ = frag.push(c);
             }
             let _ = frag.push('-');
             let _ = out.push(frag);
-            word = &word[cpl - 1..];
+            
+            let char_byte_offset: usize = word.chars().take(cpl - 1).map(|c| c.len_utf8()).sum();
+            word = &word[char_byte_offset..];
+            
             if out.len() - initial_count >= narrow_lines {
-                cpl = full_cpl.min(LINE_CAP);
+                cpl = full_cpl.min(24);
             }
         }
+        
         let needs_space = !current.is_empty();
-        let extra = if needs_space { 1 } else { 0 } + word.len();
-        if current.len() + extra <= cpl {
+        let current_char_count = current.chars().count();
+        let word_char_count = word.chars().count();
+        let extra = if needs_space { 1 } else { 0 } + word_char_count;
+        
+        if current_char_count + extra <= cpl {
             if needs_space {
                 let _ = current.push(' ');
             }
@@ -498,7 +515,7 @@ fn wrap_intro(
                 let _ = out.push(current.clone());
                 current.clear();
                 if out.len() - initial_count >= narrow_lines {
-                    cpl = full_cpl.min(LINE_CAP);
+                    cpl = full_cpl.min(24);
                 }
             }
             let _ = current.push_str(word);
@@ -509,9 +526,10 @@ fn wrap_intro(
     }
 }
 
+
 /// Substitute `{s}` (subject pronoun) and `{h}` (possessive pronoun)
 /// placeholders in mood-check templates.
-fn expand_template(out: &mut String<64>, template: &str, she: &str, her: &str) {
+fn expand_template(out: &mut String<192>, template: &str, she: &str, her: &str) {
     let mut remaining = template;
     while let Some(idx) = remaining.find('{') {
         let (head, tail) = remaining.split_at(idx);
