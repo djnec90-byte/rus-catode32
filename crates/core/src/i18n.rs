@@ -9,15 +9,12 @@ use heapless::String;
 /// Copy `src` into a buffer, lowercased. Used for embedded forms ("kibble"
 /// in "favorite meal is kibble") so the lowercase derives from the translation
 /// rather than being hardcoded in English.
-pub fn to_lower<const N: usize>(src: &str) -> String<N> {
-    let mut out: String<N> = String::new();
-    for c in src.chars() {
-        for lc in c.to_lowercase() {
-            let _ = out.push(lc);
-        }
-    }
+fn to_lower<const N: usize>(s: &str) -> String<N> {
+    let mut out = String::new();
+    let _ = out.push_str(s);
     out
 }
+
 
 /// Runtime template substitution for translated strings whose placeholder set
 /// varies between languages. Unlike `write!`, missing or unused names don't
