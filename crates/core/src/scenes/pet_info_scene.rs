@@ -29,7 +29,7 @@ const CHAR_W: i32 = 6;
 const FULL_CPL: usize = 18;
 
 const LINE_CAP: usize = 64;
-const LINES_CAP: usize = 192;
+const LINES_CAP: usize = 32;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum State {
@@ -424,7 +424,7 @@ fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize)
                 let _ = out.push(current.clone());
                 current.clear();
             }
-            let mut frag: String<LINE_CAP> = String::new();
+            let mut frag: String<24> = String::new();
             for c in word.chars().take(cpl - 1) {
                 let _ = frag.push(c);
             }
@@ -485,7 +485,7 @@ fn wrap_intro(
                     cpl = full_cpl.min(24);
                 }
             }
-            let mut frag: String<LINE_CAP> = String::new();
+            let mut frag: String<24> = String::new();
             for c in word.chars().take(cpl - 1) {
                 let _ = frag.push(c);
             }
