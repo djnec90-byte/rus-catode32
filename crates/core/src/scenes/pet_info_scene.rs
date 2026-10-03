@@ -530,7 +530,7 @@ fn wrap_intro(
 
 /// Substitute `{s}` (subject pronoun) and `{h}` (possessive pronoun)
 /// placeholders in mood-check templates.
-fn expand_template(out: &mut String<64>, template: &str, she: &str, her: &str) {
+fn expand_template(out: &mut String<192>, template: &str, she: &str, her: &str) {
     let mut remaining = template;
     while let Some(idx) = remaining.find('{') {
         let (head, tail) = remaining.split_at(idx);
