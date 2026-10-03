@@ -4,12 +4,12 @@ use embedded_graphics::prelude::{Point, Size};
 use heapless::{String, Vec};
 use crate::t;
 
-use crate::{
-    context::{FavWeather, GameContext, PlantLayer, SeedKind, PotSize},
-    input::{Button, Buttons},
-    render::{Renderer, SpriteOpts},
-    scene::{Scene, SceneId},
-};
+use crate::context::GameContext;
+use crate::plant_system::PlantLayer; // Импортируем напрямую, обходя приватность context.rs
+use crate::input::{Button, Buttons};
+use crate::render::Renderer;
+use crate::scene::{Scene, SceneId};
+
 
 const VISIBLE: usize = 8;
 const CHAR_W: i32 = 6;
@@ -47,7 +47,7 @@ impl DebugPlantsScene {
         let _ = self.lines.push(l2);
         let _ = self.lines.push(l3);
         
-        let mut spacer = String::new();
+        let spacer = String::new();
         let _ = self.lines.push(spacer);
 
         // Динамический вывод статуса почвы и растений (на русском)
