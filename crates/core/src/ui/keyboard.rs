@@ -12,8 +12,9 @@ const SEP_Y: i32 = 9;
 const GRID_Y: i32 = 11;
 const CELL_H: i32 = 13;
 
-const FULL_COLS: usize = 11;
-const FULL_CELL_W: i32 = 128 / FULL_COLS as i32; // 11
+// Сетка из 12 столбцов идеально подходит под русский алфавит на экране 128x64
+const FULL_COLS: usize = 12;
+const FULL_CELL_W: i32 = 10; // 128 / 12 = 10 пикселей на одну стандартную букву
 
 const HEX_COLS: usize = 9;
 const HEX_CELL_W: i32 = 128 / HEX_COLS as i32; // 14
@@ -31,18 +32,20 @@ const ICON_SHIFT: &[u8] =
 const ICON_W: u16 = 7;
 const ICON_H: u16 = 9;
 
+// Полная русская раскладка (строчные буквы и цифры): 12 столбцов х 4 строки
 const FULL_LOWER: &[char] = &[
-    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', KEY_EMPTY,
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
-    'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-    'w', 'x', 'y', 'z', ' ', '.', ',', KEY_SHIFT, KEY_BACK, KEY_DONE, KEY_EMPTY,
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', KEY_BACK, KEY_DONE,
+    'а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и', 'й', 'к',
+    'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т', 'у', 'ф', 'х', 'ц',
+    'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', 'я', ' ', '.', KEY_SHIFT,
 ];
 
+// Полная русская раскладка (ЗАГЛАВНЫЕ)
 const FULL_UPPER: &[char] = &[
-    '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', KEY_EMPTY,
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
-    'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
-    'W', 'X', 'Y', 'Z', ' ', '.', ',', KEY_SHIFT, KEY_BACK, KEY_DONE, KEY_EMPTY,
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', KEY_BACK, KEY_DONE,
+    'А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И', 'Й', 'К',
+    'Л', 'М', 'Н', 'О', 'П', 'Р', 'С', 'Т', 'У', 'Ф', 'Х', 'Ц',
+    'Ч', 'Ш', 'Щ', 'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', ' ', ',', KEY_SHIFT,
 ];
 
 const HEX_CHARS: &[char] = &[
@@ -56,7 +59,8 @@ pub enum Charset {
     Hex,
 }
 
-pub const KB_MAX_TEXT: usize = 32;
+// Выделяем 64 байта под строку ввода (запас под двухбайтовую кириллицу UTF-8)
+pub const KB_MAX_TEXT: usize = 64;
 
 pub struct OnScreenKeyboard {
     charset: Charset,
@@ -81,10 +85,11 @@ impl OnScreenKeyboard {
 
     pub fn open(&mut self, initial: &str) {
         self.text.clear();
-        for c in initial.chars().take(self.max_len) {
-            if self.text.push(c).is_err() {
+        for c in initial.chars() {
+            if self.text.len() + c.len_utf8() > self.max_len {
                 break;
             }
+            let _ = self.text.push(c);
         }
         self.shift = false;
         self.cur_row = 0;
@@ -125,7 +130,6 @@ impl OnScreenKeyboard {
     fn has_shift(&self) -> bool {
         matches!(self.charset, Charset::Full)
     }
-
     /// Returns the typed string when the user confirms; None while still editing.
     pub fn handle_input(&mut self, buttons: &mut Buttons) -> Option<String<KB_MAX_TEXT>> {
         let chars = self.chars();
@@ -186,7 +190,7 @@ impl OnScreenKeyboard {
                     }
                     KEY_EMPTY => {}
                     c => {
-                        if self.text.len() < self.max_len {
+                        if self.text.len() + c.len_utf8() <= self.max_len {
                             let _ = self.text.push(c);
                         }
                     }
@@ -201,15 +205,20 @@ impl OnScreenKeyboard {
         let cols = self.cols();
         let cell_w = self.cell_w();
 
-        // Text input line with trailing caret.
-        let mut preview: String<{ KB_MAX_TEXT + 1 }> = String::new();
+        // Безопасное формирование строки предпросмотра
+        let mut preview: String<{ KB_MAX_TEXT + 4 }> = String::new();
         let _ = preview.push_str(self.text.as_str());
         let _ = preview.push('_');
-        let display = if preview.len() > 21 {
-            &preview.as_str()[..21]
+
+        // Unicode-безопасная обрезка текста для OLED экрана
+        let char_count = preview.chars().count();
+        let display = if char_count > 21 {
+            let byte_idx = preview.char_indices().map(|(idx, _)| idx).nth(21).unwrap_or(preview.len());
+            &preview.as_str()[..byte_idx]
         } else {
             preview.as_str()
         };
+        
         renderer.draw_text(display, Point::new(0, 0));
         renderer.draw_line(Point::new(0, SEP_Y), Point::new(127, SEP_Y));
 
@@ -225,14 +234,21 @@ impl OnScreenKeyboard {
             let selected = row == self.cur_row && col == self.cur_col;
             let shift_active = ch == KEY_SHIFT && self.shift;
 
+            // Динамическая ширина под спецклавиши для визуального баланса
+            let w = match ch {
+                KEY_DONE => 18,
+                KEY_BACK => 14,
+                KEY_SHIFT => 14,
+                _ => cell_w,
+            };
+
             if selected || shift_active {
-                let w = if ch == KEY_DONE { 16 } else { cell_w };
                 renderer.draw_rect(Point::new(x, y), Size::new(w as u32, CELL_H as u32), true);
             }
 
             match ch {
                 KEY_BACK => {
-                    let ix = x + (cell_w - ICON_W as i32) / 2;
+                    let ix = x + (w - ICON_W as i32) / 2;
                     let iy = y + (CELL_H - ICON_H as i32) / 2;
                     renderer.draw_sprite_raw(
                         ICON_BACK,
@@ -248,7 +264,7 @@ impl OnScreenKeyboard {
                     );
                 }
                 KEY_SHIFT => {
-                    let ix = x + (cell_w - ICON_W as i32) / 2;
+                    let ix = x + (w - ICON_W as i32) / 2;
                     let iy = y + (CELL_H - ICON_H as i32) / 2;
                     let lit = selected || shift_active;
                     renderer.draw_sprite_raw(
@@ -267,7 +283,7 @@ impl OnScreenKeyboard {
                 _ => {
                     let label_buf: [u8; 4];
                     let label: &str = if ch == KEY_DONE {
-                        "OK"
+                        "ОК"
                     } else if ch == ' ' {
                         "_"
                     } else {
@@ -276,8 +292,11 @@ impl OnScreenKeyboard {
                         let len = label_buf.iter().position(|&b| b == 0).unwrap_or(label_buf.len());
                         unsafe { core::str::from_utf8_unchecked(&label_buf[..len]) }
                     };
-                    let tx = x + (cell_w - 8) / 2;
+                    
+                    let text_w = if ch == KEY_DONE { 12 } else { 6 };
+                    let tx = x + (w - text_w) / 2;
                     let ty = y + (CELL_H - 8) / 2;
+                    
                     if selected || shift_active {
                         renderer.draw_text_inverted(label, Point::new(tx, ty));
                     } else {
@@ -289,7 +308,7 @@ impl OnScreenKeyboard {
     }
 
     fn backspace(&mut self) {
-        self.text.pop();
+        let _ = self.text.pop();
     }
 
     fn clamp_col(&mut self, chars: &[char], cols: usize) {
@@ -335,7 +354,7 @@ impl OnScreenKeyboard {
     }
 }
 
-/// Encode a single ASCII char into a 4-byte zero-padded buffer for drawing.
+/// Encode a single UTF-8 char into a 4-byte zero-padded buffer for drawing.
 fn encode_char(ch: char) -> [u8; 4] {
     let mut buf = [0u8; 4];
     let s = ch.encode_utf8(&mut buf);
