@@ -627,13 +627,12 @@ pub fn scene_plant_health_score(ctx: &GameContext, scene: SceneId) -> i32 {
 }
 
 // ---------------------------------------------------------------------------
-// Inspect helpers (Полностью Unicode-безопасные)
+// Inspect helpers
 // ---------------------------------------------------------------------------
 
 use heapless::String;
 use crate::t;
 
-// Выделяем 32 байта на строку, чтобы свободно вмещать двухбайтовую кириллицу
 pub const INSPECT_LINE_LEN: usize = 32;
 pub const INSPECT_MAX_LINES: usize = 5;
 pub type InspectLines = heapless::Vec<String<INSPECT_LINE_LEN>, INSPECT_MAX_LINES>;
@@ -653,33 +652,19 @@ fn pot_inspect_label(pot: PotKind) -> &'static str {
 
 fn push_line(lines: &mut InspectLines, s: &str) {
     let mut line: String<INSPECT_LINE_LEN> = String::new();
-    // Безопасное ограничение длины строки по Unicode-символам
-    for c in s.chars() {
-        if line.len() + c.len_utf8() <= INSPECT_LINE_LEN {
-            let _ = line.push(c);
-        } else {
-            break;
-        }
-    }
+    let _ = line.push_str(&s[..s.len().min(INSPECT_LINE_LEN)]);
     let _ = lines.push(line);
 }
 
 fn push_prefixed(lines: &mut InspectLines, prefix: &str, value: &str) {
     let mut line: String<INSPECT_LINE_LEN> = String::new();
     let _ = line.push_str(prefix);
-    
-    // Безопасное дописывание значения без побайтовых срезов
-    for c in value.chars() {
-        if line.len() + c.len_utf8() <= INSPECT_LINE_LEN {
-            let _ = line.push(c);
-        } else {
-            break;
-        }
-    }
+    let remaining = INSPECT_LINE_LEN - line.len();
+    let _ = line.push_str(&value[..value.len().min(remaining)]);
     let _ = lines.push(line);
 }
 
-/// Build the lines shown by the Inspect submenu.
+/// Build the lines shown by the Inspect submenu. Each line is at most 16 chars.
 pub fn inspect_lines(plant: &Plant) -> InspectLines {
     let mut out: InspectLines = heapless::Vec::new();
 
