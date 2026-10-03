@@ -347,7 +347,7 @@
   "{name} is a {days} day old {gnoun}.": "{name} -- это {gnoun}, возраст: {days} дн.",
   "{she} is a {temper} {sign}.": "По характеру это {temper} {sign}.",
   "{Her} favorite meal is {meal}, and {her} favorite snack is {snack}.": "Любимая еда питомца -- {meal}, а любимый перекус -- {snack}.",
-  "{She} loves to hang out in the {room}, and {she_l} really enjoys {weather} days.": "Обожает проводить время в локации «{room}» и очень любит {weather} дни.",
+  "{She} loves to hang out in the {room}, and {she_l} really enjoys {weather} days.": "Обожает проводить время в локации '{room}' и очень любит {weather} дни.",
   "Of all the toys, {she_l} loves to play with the {toy} the most.": "Больше всего на свете любит играть с такой игрушкой, как {toy}.",
   "{she} feels very sick.": "Питомец очень сильно болеет.",
   "{she} feels pretty sick.": "Питомец сильно болеет.",
