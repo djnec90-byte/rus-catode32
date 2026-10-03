@@ -18,7 +18,7 @@ use crate::{
     time_system::{Season, Weather},
 };
 
-pub const PET_NAME_MAX: usize = 12;
+pub const PET_NAME_MAX: usize = 20;
 
 /// Caps for the wifi tracker's two AP lists.
 pub const WIFI_FAMILIAR_MAX: usize = 16;
