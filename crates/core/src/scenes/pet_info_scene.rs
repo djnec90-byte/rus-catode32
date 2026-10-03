@@ -317,8 +317,7 @@ impl PetInfoScene {
 
     fn draw_browsing(&self, renderer: &mut Renderer) {
         let total = self.lines.len();
-
-        // Headshot floats with scroll for the first `narrow_lines` rows.
+    
         if let Some(pose_id) = self.portrait {
             if self.scroll < self.narrow_lines {
                 let y = -(self.scroll as i32) * 8;
@@ -332,29 +331,33 @@ impl PetInfoScene {
             }
         }
         let rows_remaining = self.narrow_lines.saturating_sub(self.scroll);
-
+    
         for i in 0..VISIBLE {
             let line_idx = self.scroll + i;
+            // Жесткая защита от выхода за пределы вектора строк
             if line_idx >= total {
                 break;
             }
             let y = (i * 8) as i32;
             let x = if i < rows_remaining { self.narrow_x } else { 3 };
-            let line = &self.lines[line_idx];
-            let is_change_name = line_idx == total - 1;
-            let at_bottom = self.scroll == self.max_scroll;
-            if is_change_name && at_bottom {
-                renderer.draw_rect(
-                    Point::new(0, y),
-                    embedded_graphics::prelude::Size::new(128, 8),
-                    true,
-                );
-                renderer.draw_text_inverted(line.as_str(), Point::new(x, y));
-            } else {
-                renderer.draw_text(line.as_str(), Point::new(x, y));
+            
+            // Используем безопасный метод .get() вместо прямого индекса [line_idx]
+            if let Some(line) = self.lines.get(line_idx) {
+                let is_change_name = line_idx == total - 1;
+                let at_bottom = self.scroll == self.max_scroll;
+                if is_change_name && at_bottom {
+                    renderer.draw_rect(
+                        Point::new(0, y),
+                        embedded_graphics::prelude::Size::new(128, 8),
+                        true,
+                    );
+                    renderer.draw_text_inverted(line.as_str(), Point::new(x, y));
+                } else {
+                    renderer.draw_text(line.as_str(), Point::new(x, y));
+                }
             }
         }
-
+    
         if self.scroll > 0 {
             renderer.draw_sprite_raw(
                 icons::UP_ARROW,
@@ -374,6 +377,7 @@ impl PetInfoScene {
             );
         }
     }
+    
 }
 
 impl Scene for PetInfoScene {
@@ -411,49 +415,47 @@ fn push_blank(lines: &mut Vec<String<LINE_CAP>, LINES_CAP>) {
 
 /// Wrap text to `cpl` chars per line, hyphenating words that exceed it.
 fn wrap_full(out: &mut Vec<String<LINE_CAP>, LINES_CAP>, text: &str, cpl: usize) {
-    let cpl = cpl.min(24); 
+    let cpl = cpl.min(22); // Даем жесткий запас по символам
     let mut current: String<LINE_CAP> = String::new();
     
-    for raw_word in text.split(' ') {
-        let mut word = raw_word;
-        
-        while word.chars().count() > cpl - 1 && cpl > 1 {
-            if !current.is_empty() {
-                let _ = out.push(current.clone());
-                current.clear();
-            }
-            
-            // Собираем фрагмент сразу как пустую строку нужной емкости LINE_CAP
-            let mut frag: String<LINE_CAP> = String::new();
-            for c in word.chars().take(cpl - 1) {
-                let _ = frag.push(c);
-            }
-            let _ = frag.push('-');
-            let _ = out.push(frag);
-            
-            let char_byte_offset: usize = word.chars().take(cpl - 1).map(|c| c.len_utf8()).sum();
-            word = &word[char_byte_offset..];
-        }
-        
+    for word in text.split(' ') {
+        let word_len = word.chars().count();
+        let current_len = current.chars().count();
         let needs_space = !current.is_empty();
-        let current_char_count = current.chars().count();
-        let word_char_count = word.chars().count();
-        let extra = if needs_space { 1 } else { 0 } + word_char_count;
-        
-        if current_char_count + extra <= cpl {
+        let extra = if needs_space { 1 } else { 0 } + word_len;
+
+        if current_len + extra <= cpl {
             if needs_space {
                 let _ = current.push(' ');
             }
             let _ = current.push_str(word);
         } else {
-            if !current.is_empty() {
-                let _ = out.push(current.clone());
-                current.clear();
+            // Если слово целиком не влезает в пустую строку (оно гигантское)
+            if word_len > cpl && current.is_empty() {
+                let mut chunk = String::new();
+                for c in word.chars() {
+                    if chunk.chars().count() < cpl - 1 {
+                        let _ = chunk.push(c);
+                    } else {
+                        let _ = chunk.push('-');
+                        let _ = out.push(chunk.clone());
+                        chunk.clear();
+                        let _ = chunk.push(c);
+                    }
+                }
+                current = chunk;
+            } else {
+                if !current.is_empty() {
+                    let _ = out.push(current.clone());
+                    current.clear();
+                }
+                let _ = current.push_str(word);
             }
-            let _ = current.push_str(word);
         }
     }
-    let _ = out.push(current);
+    if !current.is_empty() {
+        let _ = out.push(current);
+    }
 }
 
 /// Same as `wrap_full` but the first `narrow_lines` lines use `narrow_cpl`
@@ -467,45 +469,21 @@ fn wrap_intro(
 ) {
     let initial_count = out.len();
     let mut current: String<LINE_CAP> = String::new();
-    let mut cpl = narrow_cpl.min(24);
 
-    for raw_word in text.split(' ') {
-        let mut word = raw_word;
-        if out.len() - initial_count >= narrow_lines {
-            cpl = full_cpl.min(24);
-        }
-        
-        while word.chars().count() > cpl - 1 && cpl > 1 {
-            if !current.is_empty() {
-                let _ = out.push(current.clone());
-                current.clear();
-                if out.len() - initial_count >= narrow_lines {
-                    cpl = full_cpl.min(24);
-                }
-            }
-            
-            // Собираем фрагмент сразу как пустую строку нужной емкости LINE_CAP
-            let mut frag: String<LINE_CAP> = String::new();
-            for c in word.chars().take(cpl - 1) {
-                let _ = frag.push(c);
-            }
-            let _ = frag.push('-');
-            let _ = out.push(frag);
-            
-            let char_byte_offset: usize = word.chars().take(cpl - 1).map(|c| c.len_utf8()).sum();
-            word = &word[char_byte_offset..];
-            
-            if out.len() - initial_count >= narrow_lines {
-                cpl = full_cpl.min(24);
-            }
-        }
-        
+    for word in text.split(' ') {
+        let current_lines_generated = out.len() - initial_count;
+        let cpl = if current_lines_generated < narrow_lines {
+            narrow_cpl.min(22)
+        } else {
+            full_cpl.min(22)
+        };
+
+        let word_len = word.chars().count();
+        let current_len = current.chars().count();
         let needs_space = !current.is_empty();
-        let current_char_count = current.chars().count();
-        let word_char_count = word.chars().count();
-        let extra = if needs_space { 1 } else { 0 } + word_char_count;
-        
-        if current_char_count + extra <= cpl {
+        let extra = if needs_space { 1 } else { 0 } + word_len;
+
+        if current_len + extra <= cpl {
             if needs_space {
                 let _ = current.push(' ');
             }
@@ -514,9 +492,6 @@ fn wrap_intro(
             if !current.is_empty() {
                 let _ = out.push(current.clone());
                 current.clear();
-                if out.len() - initial_count >= narrow_lines {
-                    cpl = full_cpl.min(24);
-                }
             }
             let _ = current.push_str(word);
         }
@@ -525,6 +500,7 @@ fn wrap_intro(
         let _ = out.push(current);
     }
 }
+
 
 /// Substitute `{s}` (subject pronoun) and `{h}` (possessive pronoun)
 /// placeholders in mood-check templates.
